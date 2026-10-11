@@ -24,7 +24,20 @@ func NewImageRenderer() *ImageRenderer {
 }
 
 func (ir *ImageRenderer) Render(target *ebiten.Image, rc *rendering.RenderCandidate, viewport geom.Rect, matrix ebiten.GeoM) {
-	ir.drawOptions.GeoM = transform.GetGeoMOf(rc.Transform, rc.Matrix)
+	img, iOk := GetImage(rc.Entry)
+	if !iOk {
+		return
+	}
+
+	src := ir.missing
+
+	ir.drawOptions.GeoM.Reset()
+	ir.drawOptions.GeoM.Translate(
+		-float64(src.Bounds().Dx())*img.ax,
+		-float64(src.Bounds().Dy())*img.ay,
+	)
+	ir.drawOptions.GeoM.Concat(transform.GetGeoMOf(rc.Transform, rc.Matrix))
 	ir.drawOptions.GeoM.Concat(matrix)
+
 	target.DrawImage(ir.missing, ir.drawOptions)
 }

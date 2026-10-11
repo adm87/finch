@@ -82,12 +82,10 @@ func (p *partitions) remove(entry *donburi.Entry) error {
 	return p.delete(idx)
 }
 
-func (p *partitions) rangeOver(region geom.Rect, yield func(donburi.Entity) bool) {
+func (p *partitions) rangeOver(region geom.Rect, fn func(donburi.Entity)) {
 	for _, g := range p.grids {
 		for _, obj := range g.Range(region) {
-			if !yield(obj) {
-				return
-			}
+			fn(obj)
 		}
 	}
 }

@@ -17,7 +17,7 @@ type View interface {
 }
 
 type World interface {
-	RangeOver(region geom.Rect, yield func(*donburi.Entry) bool)
+	RangeOver(region geom.Rect, fn func(*donburi.Entry))
 }
 
 // RenderPipeline is responsible for managing render adapters and rendering entities within a specified viewport.
@@ -86,30 +86,30 @@ func (rp *RenderPipeline) Draw(target *ebiten.Image) error {
 }
 
 func (rp *RenderPipeline) buildRenderQueue(region geom.Rect) {
-	rp.world.RangeOver(region, func(entry *donburi.Entry) bool {
+	rp.world.RangeOver(region, func(entry *donburi.Entry) {
 		if !entry.HasComponent(renderer.RendererComponent) {
-			return true
+			return
 		}
 
 		r := renderer.RendererComponent.Get(entry)
 		if !r.Visible() {
-			return true
+			return
 		}
 
 		t, tOk := transform.GetTransform(entry)
 		m, mOk := transform.GetMatrix(entry)
 
 		if !tOk || !mOk {
-			return true
+			return
 		}
 
 		bounds := transform.GetRect(entry)
 		if bounds.Area() == 0 {
-			return true
+			return
 		}
 
 		if !transform.TransformRect(t, m, bounds).Intersects(region) {
-			return true
+			return
 		}
 
 		rp.queue.Enqueue(RenderCandidate{
@@ -118,6 +118,5 @@ func (rp *RenderPipeline) buildRenderQueue(region geom.Rect) {
 			Transform: t,
 			Matrix:    m,
 		})
-		return true
 	})
 }
