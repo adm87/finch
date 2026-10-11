@@ -1,24 +1,123 @@
 package rendering
 
 import (
+	"errors"
+	"fmt"
+
+	"github.com/adm87/finch/pkg/ecs/components/renderer"
+	"github.com/adm87/finch/pkg/ecs/components/transform"
 	"github.com/adm87/finch/pkg/geom"
+	"github.com/adm87/finch/pkg/types/slotmap"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/yohamta/donburi"
 )
 
 type View interface {
 	Viewport() (geom.Rect, ebiten.GeoM)
 }
 
-type RenderPipeline struct {
-	view View
+type World interface {
+	RangeOver(region geom.Rect, yield func(*donburi.Entry) bool)
 }
 
-func NewRenderPipeline(viewport View) *RenderPipeline {
+// RenderPipeline is responsible for managing render adapters and rendering entities within a specified viewport.
+//
+// Renderables must be partitioned within the World in order to be rendered, otherwise they will not appear in the render output.
+type RenderPipeline struct {
+	view     View
+	world    World
+	adapters *slotmap.SlotMap[RenderAdapter]
+	queue    *RenderQueue
+}
+
+func NewRenderPipeline(viewport View, world World) *RenderPipeline {
 	return &RenderPipeline{
-		view: viewport,
+		view:     viewport,
+		world:    world,
+		adapters: slotmap.New[RenderAdapter](64),
+		queue:    NewRenderQueue(),
 	}
 }
 
+func (rp *RenderPipeline) AddAdapter(adapter RenderAdapter) uint64 {
+	k := rp.adapters.Insert(adapter)
+	return k.Pack()
+}
+
 func (rp *RenderPipeline) Draw(target *ebiten.Image) error {
+	rp.queue.Clear()
+
+	rect, geoM := rp.view.Viewport()
+	if rect.Area() == 0 {
+		return nil
+	}
+
+	rp.buildRenderQueue(rect)
+
+	var errs []error
+
+	keys := rp.queue.SortedKeys()
+	for i := range keys {
+		idx := keys[i].Index()
+
+		rc := rp.queue.CandidateAt(idx)
+		if rc == nil || !rc.IsValid() {
+			continue
+		}
+
+		key := slotmap.Unpack(rc.Renderer.ID())
+		adapter, err := rp.adapters.Get(key)
+
+		if err != nil {
+			rc.Clear()
+			errs = append(errs, err)
+			continue
+		}
+
+		adapter.Render(target, rc, rect, geoM)
+		rc.Clear()
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("render pipeline errors: %w", errors.Join(errs...))
+	}
+
 	return nil
+}
+
+func (rp *RenderPipeline) buildRenderQueue(region geom.Rect) {
+	rp.world.RangeOver(region, func(entry *donburi.Entry) bool {
+		if !entry.HasComponent(renderer.RendererComponent) {
+			return true
+		}
+
+		r := renderer.RendererComponent.Get(entry)
+		if !r.Visible() {
+			return true
+		}
+
+		t, tOk := transform.GetTransform(entry)
+		m, mOk := transform.GetMatrix(entry)
+
+		if !tOk || !mOk {
+			return true
+		}
+
+		bounds := transform.GetRect(entry)
+		if bounds.Area() == 0 {
+			return true
+		}
+
+		if !transform.TransformRect(t, m, bounds).Intersects(region) {
+			return true
+		}
+
+		rp.queue.Enqueue(RenderCandidate{
+			Entry:     entry,
+			Renderer:  r,
+			Transform: t,
+			Matrix:    m,
+		})
+		return true
+	})
 }
