@@ -16,3 +16,29 @@ func (r Rect) Max() (float64, float64) {
 func (r Rect) Center() (float64, float64) {
 	return r.X + r.Width/2, r.Y + r.Height/2
 }
+
+func (r Rect) Area() float64 {
+	return r.Width * r.Height
+}
+
+func (r Rect) Intersects(other Rect) bool {
+	rMinX, rMinY := r.Min()
+	rMaxX, rMaxY := r.Max()
+	oMinX, oMinY := other.Min()
+	oMaxX, oMaxY := other.Max()
+	return rMinX < oMaxX && rMaxX > oMinX && rMinY < oMaxY && rMaxY > oMinY
+}
+
+func (r Rect) Contains(other Rect) bool {
+	rMinX, rMinY := r.Min()
+	rMaxX, rMaxY := r.Max()
+	oMinX, oMinY := other.Min()
+	oMaxX, oMaxY := other.Max()
+	return rMinX <= oMinX && rMaxX >= oMaxX && rMinY <= oMinY && rMaxY >= oMaxY
+}
+
+func (r Rect) ContainsPoint(x, y float64) bool {
+	rMinX, rMinY := r.Min()
+	rMaxX, rMaxY := r.Max()
+	return x >= rMinX && x <= rMaxX && y >= rMinY && y <= rMaxY
+}

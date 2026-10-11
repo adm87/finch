@@ -173,7 +173,7 @@ func TestNearestFit(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := p.nearestFit(geom.Rect{0, 0, tc.w, tc.h}); got != tc.want {
+			if got := p.nearestFit(geom.Rect{X: 0, Y: 0, Width: tc.w, Height: tc.h}); got != tc.want {
 				t.Fatalf("nearestFit(%vx%v) = %d, want %d", tc.w, tc.h, got, tc.want)
 			}
 		})
@@ -185,7 +185,7 @@ func TestNearestFitNonFinite(t *testing.T) {
 	last := len(p.grids) - 1
 
 	for _, v := range []float64{math.NaN(), math.Inf(1)} {
-		if got := p.nearestFit(geom.Rect{0, 0, v, 1}); got != last {
+		if got := p.nearestFit(geom.Rect{X: 0, Y: 0, Width: v, Height: 1}); got != last {
 			t.Fatalf("nearestFit with width %v = %d, want %d", v, got, last)
 		}
 	}
@@ -197,7 +197,7 @@ func TestNearestFitNonFinite(t *testing.T) {
 
 func TestFreshEntryIsUnindexed(t *testing.T) {
 	w := donburi.NewWorld()
-	entry := ptNewEntry(w, geom.Rect{0, 0, 12, 10})
+	entry := ptNewEntry(w, geom.Rect{X: 0, Y: 0, Width: 12, Height: 10})
 
 	idx := ptIndex(t, entry)
 	if idx.partition != -1 || idx.key != 0 {
@@ -208,7 +208,7 @@ func TestFreshEntryIsUnindexed(t *testing.T) {
 func TestAddIndexesEntry(t *testing.T) {
 	w := donburi.NewWorld()
 	p := newPartitions(ptResolutions)
-	entry := ptNewEntry(w, geom.Rect{0, 0, 12, 10})
+	entry := ptNewEntry(w, geom.Rect{X: 0, Y: 0, Width: 12, Height: 10})
 
 	ptMustAdd(t, p, entry)
 
