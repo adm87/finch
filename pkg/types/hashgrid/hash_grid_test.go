@@ -3,12 +3,19 @@ package hashgrid_test
 import (
 	"testing"
 
-	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/types/hashgrid"
 	"github.com/go-openapi/testify/require"
 )
 
 type bounds[T ~int32 | ~float64] struct{ minX, minY, maxX, maxY T }
+
+func (b bounds[T]) Min() (T, T) {
+	return b.minX, b.minY
+}
+
+func (b bounds[T]) Max() (T, T) {
+	return b.maxX, b.maxY
+}
 
 type (
 	region = bounds[float64] // world-space input for Snap / PaddedRegion
@@ -149,7 +156,7 @@ func TestHashGrid_PaddedRegion(t *testing.T) {
 func TestHashGrid_Insert(t *testing.T) {
 	t.Run("insert single item", func(t *testing.T) {
 		hg := hashgrid.New[int](10, 100)
-		key, err := hg.Insert(42, geom.Rect{X: 0, Y: 0, Width: 10, Height: 10})
+		key, err := hg.Insert(42, bounds[float64]{minX: 0, minY: 0, maxX: 10, maxY: 10})
 		require.NoError(t, err)
 		require.True(t, hg.Has(key))
 		require.Equal(t, hg.GridLen(), 1)
@@ -158,11 +165,11 @@ func TestHashGrid_Insert(t *testing.T) {
 
 	t.Run("insert multiple items at different cells", func(t *testing.T) {
 		hg := hashgrid.New[int](10, 100)
-		key1, err := hg.Insert(42, geom.Rect{X: 0, Y: 0, Width: 10, Height: 10})
+		key1, err := hg.Insert(42, bounds[float64]{minX: 0, minY: 0, maxX: 10, maxY: 10})
 		require.NoError(t, err)
 		require.True(t, hg.Has(key1))
 
-		key2, err := hg.Insert(84, geom.Rect{X: 10, Y: 10, Width: 10, Height: 10})
+		key2, err := hg.Insert(84, bounds[float64]{minX: 10, minY: 10, maxX: 20, maxY: 20})
 		require.NoError(t, err)
 		require.True(t, hg.Has(key2))
 
@@ -172,11 +179,11 @@ func TestHashGrid_Insert(t *testing.T) {
 
 	t.Run("insert multiple items at the same cell", func(t *testing.T) {
 		hg := hashgrid.New[int](10, 100)
-		key1, err := hg.Insert(42, geom.Rect{X: 0, Y: 0, Width: 10, Height: 10})
+		key1, err := hg.Insert(42, bounds[float64]{minX: 0, minY: 0, maxX: 10, maxY: 10})
 		require.NoError(t, err)
 		require.True(t, hg.Has(key1))
 
-		key2, err := hg.Insert(84, geom.Rect{X: 0, Y: 0, Width: 10, Height: 10})
+		key2, err := hg.Insert(84, bounds[float64]{minX: 0, minY: 0, maxX: 10, maxY: 10})
 		require.NoError(t, err)
 		require.True(t, hg.Has(key2))
 
@@ -186,11 +193,11 @@ func TestHashGrid_Insert(t *testing.T) {
 
 	t.Run("insert multiple items with overlapping cells", func(t *testing.T) {
 		hg := hashgrid.New[int](10, 100)
-		key1, err := hg.Insert(42, geom.Rect{X: 0, Y: 0, Width: 15, Height: 15})
+		key1, err := hg.Insert(42, bounds[float64]{minX: 0, minY: 0, maxX: 15, maxY: 15})
 		require.NoError(t, err)
 		require.True(t, hg.Has(key1))
 
-		key2, err := hg.Insert(84, geom.Rect{X: 10, Y: 10, Width: 10, Height: 10})
+		key2, err := hg.Insert(84, bounds[float64]{minX: 10, minY: 10, maxX: 20, maxY: 20})
 		require.NoError(t, err)
 		require.True(t, hg.Has(key2))
 
@@ -200,7 +207,7 @@ func TestHashGrid_Insert(t *testing.T) {
 
 	t.Run("insert item with zero-size region", func(t *testing.T) {
 		hg := hashgrid.New[int](10, 100)
-		key, err := hg.Insert(42, geom.Rect{X: 5, Y: 5, Width: 0, Height: 0})
+		key, err := hg.Insert(42, region{minX: 5, minY: 5, maxX: 5, maxY: 5})
 		require.NoError(t, err)
 		require.True(t, hg.Has(key))
 		require.Equal(t, hg.GridLen(), 1)
@@ -209,7 +216,7 @@ func TestHashGrid_Insert(t *testing.T) {
 
 	t.Run("insert item with negative coordinates at a single cell", func(t *testing.T) {
 		hg := hashgrid.New[int](10, 100)
-		key, err := hg.Insert(42, geom.Rect{X: -5, Y: -5, Width: 5, Height: 5})
+		key, err := hg.Insert(42, region{minX: -5, minY: -5, maxX: 0, maxY: 0})
 		require.NoError(t, err)
 		require.True(t, hg.Has(key))
 		require.Equal(t, hg.GridLen(), 1)
@@ -218,7 +225,7 @@ func TestHashGrid_Insert(t *testing.T) {
 
 	t.Run("insert item with negative coordinates at multiple cells", func(t *testing.T) {
 		hg := hashgrid.New[int](10, 100)
-		key, err := hg.Insert(42, geom.Rect{X: -5, Y: -5, Width: 10, Height: 10})
+		key, err := hg.Insert(42, region{minX: -5, minY: -5, maxX: 5, maxY: 5})
 		require.NoError(t, err)
 		require.True(t, hg.Has(key))
 		require.Equal(t, hg.GridLen(), 4)
@@ -229,7 +236,7 @@ func TestHashGrid_Insert(t *testing.T) {
 func TestHashGrid_Delete(t *testing.T) {
 	t.Run("delete existing item", func(t *testing.T) {
 		hg := hashgrid.New[int](10, 100)
-		key, err := hg.Insert(42, geom.Rect{X: 0, Y: 0, Width: 10, Height: 10})
+		key, err := hg.Insert(42, region{minX: 0, minY: 0, maxX: 10, maxY: 10})
 		require.NoError(t, err)
 		require.True(t, hg.Has(key))
 
@@ -248,11 +255,11 @@ func TestHashGrid_Delete(t *testing.T) {
 
 	t.Run("delete item with shared cells", func(t *testing.T) {
 		hg := hashgrid.New[int](10, 100)
-		key1, err := hg.Insert(42, geom.Rect{X: 0, Y: 0, Width: 10, Height: 10})
+		key1, err := hg.Insert(42, region{minX: 0, minY: 0, maxX: 10, maxY: 10})
 		require.NoError(t, err)
 		require.True(t, hg.Has(key1))
 
-		key2, err := hg.Insert(84, geom.Rect{X: 0, Y: 0, Width: 10, Height: 10})
+		key2, err := hg.Insert(84, region{minX: 0, minY: 0, maxX: 10, maxY: 10})
 		require.NoError(t, err)
 		require.True(t, hg.Has(key2))
 
@@ -266,11 +273,11 @@ func TestHashGrid_Delete(t *testing.T) {
 
 	t.Run("delete item spanning multiple shared cells", func(t *testing.T) {
 		hg := hashgrid.New[int](10, 100)
-		key1, err := hg.Insert(42, geom.Rect{X: 0, Y: 0, Width: 20, Height: 20})
+		key1, err := hg.Insert(42, region{minX: 0, minY: 0, maxX: 20, maxY: 20})
 		require.NoError(t, err)
 		require.True(t, hg.Has(key1))
 
-		key2, err := hg.Insert(84, geom.Rect{X: 10, Y: 10, Width: 10, Height: 10})
+		key2, err := hg.Insert(84, region{minX: 10, minY: 10, maxX: 20, maxY: 20})
 		require.NoError(t, err)
 		require.True(t, hg.Has(key2))
 
@@ -286,11 +293,11 @@ func TestHashGrid_Delete(t *testing.T) {
 func TestHashGrid_Update(t *testing.T) {
 	t.Run("update existing item", func(t *testing.T) {
 		hg := hashgrid.New[int](10, 100)
-		key, err := hg.Insert(42, geom.Rect{X: 0, Y: 0, Width: 10, Height: 10})
+		key, err := hg.Insert(42, region{minX: 0, minY: 0, maxX: 10, maxY: 10})
 		require.NoError(t, err)
 		require.True(t, hg.Has(key))
 
-		err = hg.Update(key, geom.Rect{X: 10, Y: 10, Width: 10, Height: 10})
+		err = hg.Update(key, region{minX: 10, minY: 10, maxX: 20, maxY: 20})
 		require.NoError(t, err)
 		require.True(t, hg.Has(key))
 		require.Equal(t, hg.GridLen(), 1)
@@ -299,17 +306,17 @@ func TestHashGrid_Update(t *testing.T) {
 
 	t.Run("update non-existing item", func(t *testing.T) {
 		hg := hashgrid.New[int](10, 100)
-		err := hg.Update(999, geom.Rect{X: 0, Y: 0, Width: 10, Height: 10})
+		err := hg.Update(999, region{minX: 0, minY: 0, maxX: 10, maxY: 10})
 		require.Error(t, err)
 	})
 
 	t.Run("update item spanning multiple shared cells", func(t *testing.T) {
 		hg := hashgrid.New[int](10, 100)
-		key, err := hg.Insert(42, geom.Rect{X: 0, Y: 0, Width: 20, Height: 20})
+		key, err := hg.Insert(42, region{minX: 0, minY: 0, maxX: 20, maxY: 20})
 		require.NoError(t, err)
 		require.True(t, hg.Has(key))
 
-		err = hg.Update(key, geom.Rect{X: 10, Y: 10, Width: 10, Height: 10})
+		err = hg.Update(key, region{minX: 10, minY: 10, maxX: 20, maxY: 20})
 		require.NoError(t, err)
 		require.True(t, hg.Has(key))
 		require.Equal(t, hg.GridLen(), 1)
