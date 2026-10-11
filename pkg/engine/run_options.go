@@ -1,6 +1,9 @@
 package engine
 
-import "github.com/adm87/finch/pkg/logger"
+import (
+	"github.com/adm87/finch/pkg/logger"
+	"github.com/hajimehoshi/ebiten/v2"
+)
 
 type RunOptions struct {
 	Update GameUpdate
@@ -12,6 +15,8 @@ type RunOptions struct {
 	WindowWidth  int
 	WindowHeight int
 	Fullscreen   bool
+
+	ResizeMode ebiten.WindowResizingModeType
 }
 
 type RunOption func(*RunOptions)
@@ -25,6 +30,7 @@ func DefaultRunOptions() *RunOptions {
 		WindowWidth:  800,
 		WindowHeight: 600,
 		Fullscreen:   false,
+		ResizeMode:   ebiten.WindowResizingModeDisabled,
 	}
 }
 
@@ -62,5 +68,11 @@ func WithWindowSize(width, height int) RunOption {
 func WithFullscreen(fullscreen bool) RunOption {
 	return func(ro *RunOptions) {
 		ro.Fullscreen = fullscreen
+	}
+}
+
+func WithResizeMode(resizeMode ebiten.WindowResizingModeType) RunOption {
+	return func(ro *RunOptions) {
+		ro.ResizeMode = resizeMode
 	}
 }

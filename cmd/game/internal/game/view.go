@@ -24,6 +24,15 @@ func (v *View) Camera() *donburi.Entry {
 
 func (v *View) SetCamera(camera *donburi.Entry) {
 	v.camera = camera
+
+	if v.camera != nil {
+		t, tOk := transform.GetTransform(v.camera)
+		m, mOk := transform.GetMatrix(v.camera)
+
+		if tOk && mOk {
+			v.refresh(t, m)
+		}
+	}
 }
 
 func (v *View) Viewport() (geom.Rect, ebiten.GeoM) {
@@ -41,17 +50,14 @@ func (v *View) Viewport() (geom.Rect, ebiten.GeoM) {
 		return geom.Rect{}, ebiten.GeoM{}
 	}
 
-	safeArea := v.screen.SafeArea()
-	t.SetOrigin(safeArea.Center())
-
-	bounds := transform.TransformRect(t, m, safeArea)
-	transform.SetRect(v.camera, bounds)
+	bounds := v.refresh(t, m)
 
 	geoM := transform.GetGeoMOf(t, m)
-	if geoM.IsInvertible() {
-		geoM.Invert()
+	if !geoM.IsInvertible() {
+		return bounds, ebiten.GeoM{}
 	}
 
+	geoM.Invert()
 	return bounds, geoM
 }
 
@@ -81,4 +87,14 @@ func (v *View) ScreenToWorld(screenX, screenY float64) (worldX, worldY float64) 
 
 	geoM := transform.GetGeoMOf(t, m)
 	return geoM.Apply(v.screen.ScreenToSafeArea(screenX, screenY))
+}
+
+func (v *View) refresh(t *transform.Transform, m *transform.Matrix) geom.Rect {
+	safeArea := v.screen.SafeArea()
+	t.SetOrigin(safeArea.Center())
+
+	bounds := transform.TransformRect(t, m, safeArea)
+	transform.SetRect(v.camera, bounds)
+
+	return bounds
 }
