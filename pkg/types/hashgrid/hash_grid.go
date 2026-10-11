@@ -7,7 +7,6 @@ import (
 	"math"
 	"slices"
 
-	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/types/slotmap"
 )
 
@@ -16,6 +15,11 @@ var (
 	ErrUpdateFailed = errors.New("update failed")
 	ErrDeleteFailed = errors.New("delete failed")
 )
+
+type Region interface {
+	Min() (float64, float64)
+	Max() (float64, float64)
+}
 
 type number interface {
 	~int | ~int32 | ~int64 | ~float32 | ~float64
@@ -114,7 +118,7 @@ func (hg *HashGrid[T]) KeysAt(x, y int32) []Key {
 	return slices.Clone(hg.grid[PackCell(x, y)])
 }
 
-func (hg *HashGrid[T]) Insert(value T, region geom.Rect) (Key, error) {
+func (hg *HashGrid[T]) Insert(value T, region Region) (Key, error) {
 	hg.rl.Check()
 
 	minX, minY := region.Min()
@@ -149,7 +153,7 @@ func (hg *HashGrid[T]) Delete(key Key) error {
 // Update modifies the cell range of an existing entry identified by key. If the new region
 // results in the same cell range as the current one, no changes are made. Otherwise,
 // the entry is removed from the old cells and added to the new cells.
-func (hg *HashGrid[T]) Update(key Key, region geom.Rect) error {
+func (hg *HashGrid[T]) Update(key Key, region Region) error {
 	hg.rl.Check()
 
 	item, err := hg.items.GetPtr(key.slot())
@@ -191,7 +195,7 @@ func (hg *HashGrid[T]) Update(key Key, region geom.Rect) error {
 // Query appends to dst every entry whose padded cell range overlaps the cells
 // covered by region. This is a broad phase: callers must test exact bounds.
 // Pass dst[:0] to reuse a buffer. Safe to mutate the grid afterward.
-func (hg *HashGrid[T]) Query(region geom.Rect, dst []T) []T {
+func (hg *HashGrid[T]) Query(region Region, dst []T) []T {
 	minX, minY := region.Min()
 	maxX, maxY := region.Max()
 
@@ -208,7 +212,7 @@ func (hg *HashGrid[T]) Query(region geom.Rect, dst []T) []T {
 
 // Range returns an iterator over all entries that intersect the given region.
 // Insert, Update and Delete panic during iteration; use Query to collect first.
-func (hg *HashGrid[T]) Range(region geom.Rect) iter.Seq2[Key, T] {
+func (hg *HashGrid[T]) Range(region Region) iter.Seq2[Key, T] {
 	minX, minY := region.Min()
 	maxX, maxY := region.Max()
 
