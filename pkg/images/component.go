@@ -16,9 +16,8 @@ func GetImage(entry *donburi.Entry) (*Image, bool) {
 	return ImageComponent.Get(entry), true
 }
 
-func (i *Image) Anchor(ax, ay float64) {
-	i.ax = ax
-	i.ay = ay
+func (i *Image) Anchor() (float64, float64) {
+	return i.ax, i.ay
 }
 
 func (i *Image) SetAnchor(ax, ay float64) {
