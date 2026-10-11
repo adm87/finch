@@ -1,24 +1,24 @@
 package internal
 
 import (
+	"image/color"
 	"os"
 
 	"github.com/adm87/finch/cmd/game/internal/game"
-	"github.com/adm87/finch/pkg/ecs/components/camera"
-	"github.com/adm87/finch/pkg/ecs/components/transform"
 	"github.com/adm87/finch/pkg/ecs/rendering"
+	"github.com/adm87/finch/pkg/ecs/world"
 	"github.com/adm87/finch/pkg/engine"
 	"github.com/adm87/finch/pkg/logger"
-	"github.com/yohamta/donburi"
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 const (
-	window_width  = 800
-	window_height = 600
+	window_width  = 1280
+	window_height = 720
 )
 
 func Run() error {
-	w := donburi.NewWorld()
+	w := world.NewWorld()
 
 	l := logger.NewLogger(
 		os.Stdout,
@@ -31,11 +31,13 @@ func Run() error {
 	v := game.NewViewport(s)
 	rp := rendering.NewRenderPipeline(v)
 
-	c := makeCamera(w)
+	c := w.Create(world.DontPartition)
 	v.SetCamera(c)
 
 	gu := game.NewGameUpdate(c)
-	gd := game.NewGameDraw(rp, s, v)
+	gd := game.NewGameDraw(rp, s, v,
+		game.WithClearColor(color.RGBA{R: 100, G: 149, B: 237, A: 255}),
+	)
 
 	return engine.Run(
 		engine.WithUpdate(gu),
@@ -45,20 +47,9 @@ func Run() error {
 			window_width,
 			window_height,
 		),
+		engine.WithResizeMode(
+			ebiten.WindowResizingModeEnabled,
+		),
 		engine.WithLogger(l),
 	)
-}
-
-func makeCamera(world donburi.World) *donburi.Entry {
-	entry := world.Entry(world.Create(
-		transform.BoundsComponent,
-		transform.MatrixComponent,
-		transform.TransformComponent,
-		camera.MainCamera,
-	))
-
-	t := transform.TransformComponent.Get(entry)
-	t.SetOrigin(window_width/2, window_height/2)
-
-	return entry
 }

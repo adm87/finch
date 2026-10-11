@@ -17,7 +17,7 @@ func Run(opts ...RunOption) error {
 
 	ebiten.SetWindowSize(options.WindowWidth, options.WindowHeight)
 	ebiten.SetFullscreen(options.Fullscreen)
-	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
+	ebiten.SetWindowResizingMode(options.ResizeMode)
 
 	return ebiten.RunGame(&sh)
 }
