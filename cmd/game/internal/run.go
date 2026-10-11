@@ -62,17 +62,23 @@ func Run() error {
 }
 
 func makeTestRenderables(w world.World, rendererID uint64) {
-	for range 1000 {
+	for range 100 {
 		x := -window_width*0.5 + rand.Float64()*window_width
 		y := -window_height*0.5 + rand.Float64()*window_height
 
-		entry := w.Create(renderer.RendererComponent)
+		entry := w.Create(
+			renderer.RendererComponent,
+			images.ImageComponent,
+		)
 
 		r, _ := renderer.GetRenderer(entry)
 		r.SetID(rendererID)
 
 		t, _ := transform.GetTransform(entry)
 		t.SetPosition(float64(x), float64(y))
+
+		i, _ := images.GetImage(entry)
+		i.SetAnchor(0.5, 1.0)
 
 		transform.SetRect(entry, geom.Rect{
 			X:      0,

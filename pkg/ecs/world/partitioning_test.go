@@ -589,18 +589,16 @@ func TestWorldQueryAndRangeOver(t *testing.T) {
 	}
 
 	count := 0
-	w.RangeOver(region, func(e *donburi.Entry) bool {
+	w.RangeOver(region, func(e *donburi.Entry) {
 		count++
-		return false
 	})
 	if count != 1 {
 		t.Fatalf("RangeOver stopped too late: count=%d, want 1", count)
 	}
 
 	count = 0
-	w.RangeOver(region, func(e *donburi.Entry) bool {
+	w.RangeOver(region, func(e *donburi.Entry) {
 		count++
-		return true
 	})
 	if count != 2 {
 		t.Fatalf("RangeOver should visit exactly 2 entities in the region, got %d", count)
