@@ -12,32 +12,42 @@ import (
 type ImageRenderer struct {
 	missing     *ebiten.Image
 	drawOptions *ebiten.DrawImageOptions
+	cache       *ImageCache
 }
 
-func NewImageRenderer() *ImageRenderer {
+func NewImageRenderer(cache *ImageCache) *ImageRenderer {
 	missing := ebiten.NewImage(10, 10)
 	missing.Fill(color.RGBA{R: 255, B: 255, A: 255})
 	return &ImageRenderer{
 		missing:     missing,
 		drawOptions: &ebiten.DrawImageOptions{},
+		cache:       cache,
 	}
 }
 
 func (ir *ImageRenderer) Render(target *ebiten.Image, rc *rendering.RenderCandidate, viewport geom.Rect, matrix ebiten.GeoM) {
-	img, iOk := GetImage(rc.Entry)
-	if !iOk {
-		return
-	}
-
 	src := ir.missing
+	ax, ay := 0.0, 0.0
+
+	ir.drawOptions.ColorScale.Reset()
+
+	if img, iOk := GetImage(rc.Entry); iOk {
+		ax, ay = img.Anchor()
+
+		ir.drawOptions.ColorScale.ScaleWithColor(img.color)
+
+		if cached, _ := ir.cache.Get(img.handle); cached != nil {
+			src = cached
+		}
+	}
 
 	ir.drawOptions.GeoM.Reset()
 	ir.drawOptions.GeoM.Translate(
-		-float64(src.Bounds().Dx())*img.ax,
-		-float64(src.Bounds().Dy())*img.ay,
+		-float64(src.Bounds().Dx())*ax,
+		-float64(src.Bounds().Dy())*ay,
 	)
 	ir.drawOptions.GeoM.Concat(transform.GetGeoMOf(rc.Transform, rc.Matrix))
 	ir.drawOptions.GeoM.Concat(matrix)
 
-	target.DrawImage(ir.missing, ir.drawOptions)
+	target.DrawImage(src, ir.drawOptions)
 }
