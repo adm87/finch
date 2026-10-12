@@ -1,12 +1,21 @@
 package images
 
-import "github.com/yohamta/donburi"
+import (
+	"image/color"
+
+	"github.com/yohamta/donburi"
+)
 
 type Image struct {
+	handle uint64
 	ax, ay float64
+	frame  int
+	color  color.RGBA
 }
 
-var ImageComponent = donburi.NewComponentType[Image]()
+var ImageComponent = donburi.NewComponentType[Image](Image{
+	color: color.RGBA{R: 255, G: 255, B: 255, A: 255},
+})
 
 func GetImage(entry *donburi.Entry) (*Image, bool) {
 	if !entry.HasComponent(ImageComponent) {
@@ -16,6 +25,14 @@ func GetImage(entry *donburi.Entry) (*Image, bool) {
 	return ImageComponent.Get(entry), true
 }
 
+func (i *Image) Handle() uint64 {
+	return i.handle
+}
+
+func (i *Image) SetHandle(handle uint64) {
+	i.handle = handle
+}
+
 func (i *Image) Anchor() (float64, float64) {
 	return i.ax, i.ay
 }
@@ -23,4 +40,12 @@ func (i *Image) Anchor() (float64, float64) {
 func (i *Image) SetAnchor(ax, ay float64) {
 	i.ax = ax
 	i.ay = ay
+}
+
+func (i *Image) Color() color.RGBA {
+	return i.color
+}
+
+func (i *Image) SetColor(c color.RGBA) {
+	i.color = c
 }
