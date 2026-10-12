@@ -28,29 +28,21 @@ var initialResourceBundle = []resources.Resource{
 }
 
 func Run() error {
+	l := logger.NewLogger(os.Stdout)
+
 	w := world.NewWorld()
 	res := resources.NewResources()
 
-	dc := data.NewDataCache()
-	dl := data.NewDataLoader(dc)
-	res.RegisterImporter(dl, data.DataTypes())
-
-	ic := images.NewImageCache()
-	il := images.NewImageLoader(ic)
-	res.RegisterImporter(il, images.ImageTypes())
-
-	if err := res.Load(content.EmbeddedFiles, initialResourceBundle...); err != nil {
-		return err
-	}
-
-	cfg, err := makeGameConfig(res, dc)
+	cache, err := setupResourceCache(res)
 	if err != nil {
 		return err
 	}
 
-	l := logger.NewLogger(
-		os.Stdout,
-	)
+	cfg, err := makeGameConfig(res, cache.Data)
+	if err != nil {
+		return err
+	}
+
 	s := game.NewScreen(
 		cfg.Window.Width,
 		cfg.Window.Height,
@@ -59,12 +51,12 @@ func Run() error {
 	v := game.NewViewport(s)
 	rp := rendering.NewRenderPipeline(v, w)
 
-	ir := rp.AddAdapter(images.NewImageRenderer(ic))
+	renderers := setupGameRenderers(rp, cache)
 
 	c := w.Create(world.DontPartition)
 	v.SetCamera(c)
 
-	if err := makeTestRenderables(cfg, w, res, ic, ir); err != nil {
+	if err := makeTestRenderables(cfg, w, res, cache, renderers); err != nil {
 		return err
 	}
 
@@ -92,6 +84,31 @@ func Run() error {
 	)
 }
 
+func setupResourceCache(res resources.Resources) (*game.GameCache, error) {
+	dc := data.NewDataCache()
+	dl := data.NewDataLoader(dc)
+	res.RegisterImporter(dl, data.DataTypes())
+
+	ic := images.NewImageCache()
+	il := images.NewImageLoader(ic)
+	res.RegisterImporter(il, images.ImageTypes())
+
+	if err := res.Load(content.EmbeddedFiles, initialResourceBundle...); err != nil {
+		return nil, err
+	}
+
+	return &game.GameCache{
+		Data:   dc,
+		Images: ic,
+	}, nil
+}
+
+func setupGameRenderers(rp *rendering.RenderPipeline, cache *game.GameCache) *game.GameRenderers {
+	return &game.GameRenderers{
+		Images: rp.AddAdapter(images.NewImageRenderer(cache.Images)),
+	}
+}
+
 func makeGameConfig(res resources.Resources, dc *data.DataCache) (*config.GameConfig, error) {
 	handle, err := res.GetHandle(content.GameConfig)
 	if err != nil {
@@ -104,13 +121,18 @@ func makeGameConfig(res resources.Resources, dc *data.DataCache) (*config.GameCo
 	return config.LoadConfig(raw)
 }
 
-func makeTestRenderables(cfg *config.GameConfig, w world.World, res resources.Resources, ic *images.ImageCache, rendererID uint64) error {
+func makeTestRenderables(
+	cfg *config.GameConfig,
+	w world.World,
+	res resources.Resources,
+	cache *game.GameCache,
+	renderers *game.GameRenderers) error {
 	imgHandle, err := res.GetHandle(content.DefaultImage10x10)
 	if err != nil {
 		return err
 	}
 
-	img, _ := ic.Get(imgHandle)
+	img, _ := cache.Images.Get(imgHandle)
 	width := img.Bounds().Dx()
 	height := img.Bounds().Dy()
 
@@ -128,7 +150,7 @@ func makeTestRenderables(cfg *config.GameConfig, w world.World, res resources.Re
 		)
 
 		r, _ := renderer.GetRenderer(entry)
-		r.SetID(rendererID)
+		r.SetID(renderers.Images)
 
 		t, _ := transform.GetTransform(entry)
 		t.SetPosition(float64(x), float64(y))
