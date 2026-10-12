@@ -21,8 +21,8 @@ import (
 )
 
 const (
-	window_width  = 1280
-	window_height = 720
+	windowWidth  = 1280
+	windowHeight = 720
 )
 
 func Run() error {
@@ -32,8 +32,8 @@ func Run() error {
 		os.Stdout,
 	)
 	s := game.NewScreen(
-		window_width,
-		window_height,
+		windowWidth,
+		windowHeight,
 	)
 
 	v := game.NewViewport(s)
@@ -52,7 +52,7 @@ func Run() error {
 	if err := loadTestContent(res); err != nil {
 		return err
 	}
-	if err := makeTestRenderables(w, res, ir); err != nil {
+	if err := makeTestRenderables(w, res, ic, ir); err != nil {
 		return err
 	}
 
@@ -65,8 +65,8 @@ func Run() error {
 		),
 		engine.WithLayout(s),
 		engine.WithWindowSize(
-			window_width,
-			window_height,
+			windowWidth,
+			windowHeight,
 		),
 		engine.WithResizeMode(
 			ebiten.WindowResizingModeEnabled,
@@ -82,16 +82,20 @@ func loadTestContent(res resources.Resources) error {
 	return nil
 }
 
-func makeTestRenderables(w world.World, res resources.Resources, rendererID uint64) error {
+func makeTestRenderables(w world.World, res resources.Resources, ic *images.ImageCache, rendererID uint64) error {
 	imgHandle, err := res.GetHandle(content.DefaultImage10x10)
 	if err != nil {
 		return err
 	}
 
+	img, _ := ic.Get(imgHandle)
+	width := img.Bounds().Dx()
+	height := img.Bounds().Dy()
+
 	var errs []error
-	for range 100 {
-		x := -window_width*0.5 + rand.Float64()*window_width
-		y := -window_height*0.5 + rand.Float64()*window_height
+	for range 1000 {
+		x := -windowWidth*0.5 + rand.Float64()*windowWidth
+		y := -windowHeight*0.5 + rand.Float64()*windowHeight
 
 		entry := w.Create(
 			renderer.RendererComponent,
@@ -104,9 +108,11 @@ func makeTestRenderables(w world.World, res resources.Resources, rendererID uint
 		t, _ := transform.GetTransform(entry)
 		t.SetPosition(float64(x), float64(y))
 
+		ax, ay := 0.5, 0.5
+
 		i, _ := images.GetImage(entry)
 		i.SetHandle(imgHandle)
-		i.SetAnchor(0.5, 0.5)
+		i.SetAnchor(ax, ay)
 		i.SetColor(color.RGBA{
 			R: uint8(rand.Uint() * 255),
 			G: uint8(rand.Uint() * 255),
@@ -115,10 +121,10 @@ func makeTestRenderables(w world.World, res resources.Resources, rendererID uint
 		})
 
 		transform.SetRect(entry, geom.Rect{
-			X:      0,
-			Y:      0,
-			Width:  10,
-			Height: 10,
+			X:      -float64(width) * ax,
+			Y:      -float64(height) * ay,
+			Width:  float64(width),
+			Height: float64(height),
 		})
 
 		if err := w.Add(entry); err != nil {
