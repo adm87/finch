@@ -6,6 +6,7 @@ import (
 	"math/rand/v2"
 	"os"
 
+	"github.com/adm87/finch/cmd/game/internal/config"
 	"github.com/adm87/finch/cmd/game/internal/game"
 	"github.com/adm87/finch/content"
 	"github.com/adm87/finch/pkg/ecs/components/renderer"
@@ -17,42 +18,53 @@ import (
 	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/logger"
 	"github.com/adm87/finch/pkg/resources"
+	"github.com/adm87/finch/pkg/resources/data"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-const (
-	windowWidth  = 1280
-	windowHeight = 720
-)
+var initialResourceBundle = []resources.Resource{
+	content.GameConfig,
+	content.DefaultImage10x10,
+}
 
 func Run() error {
 	w := world.NewWorld()
+	res := resources.NewResources()
+
+	dc := data.NewDataCache()
+	dl := data.NewDataLoader(dc)
+	res.RegisterImporter(dl, data.DataTypes())
+
+	ic := images.NewImageCache()
+	il := images.NewImageLoader(ic)
+	res.RegisterImporter(il, images.ImageTypes())
+
+	if err := res.Load(content.EmbeddedFiles, initialResourceBundle...); err != nil {
+		return err
+	}
+
+	cfg, err := makeGameConfig(res, dc)
+	if err != nil {
+		return err
+	}
 
 	l := logger.NewLogger(
 		os.Stdout,
 	)
 	s := game.NewScreen(
-		windowWidth,
-		windowHeight,
+		cfg.Window.Width,
+		cfg.Window.Height,
 	)
 
 	v := game.NewViewport(s)
-
 	rp := rendering.NewRenderPipeline(v, w)
-	res := resources.NewResources()
 
-	ic := images.NewImageCache()
-	il := images.NewImageLoader(ic)
 	ir := rp.AddAdapter(images.NewImageRenderer(ic))
-	res.RegisterImporter(il, images.ImageTypes())
 
 	c := w.Create(world.DontPartition)
 	v.SetCamera(c)
 
-	if err := loadTestContent(res); err != nil {
-		return err
-	}
-	if err := makeTestRenderables(w, res, ic, ir); err != nil {
+	if err := makeTestRenderables(cfg, w, res, ic, ir); err != nil {
 		return err
 	}
 
@@ -61,28 +73,38 @@ func Run() error {
 			game.NewGameUpdate(c),
 		),
 		engine.WithDraw(
-			game.NewGameDraw(rp, s, v),
+			game.NewGameDraw(rp, s, v,
+				game.WithClearColor(cfg.Rendering.ClearColor),
+			),
 		),
 		engine.WithLayout(s),
 		engine.WithWindowSize(
-			windowWidth,
-			windowHeight,
+			cfg.Window.Width,
+			cfg.Window.Height,
 		),
 		engine.WithResizeMode(
 			ebiten.WindowResizingModeEnabled,
+		),
+		engine.WithFullscreen(
+			cfg.Window.Fullscreen,
 		),
 		engine.WithLogger(l),
 	)
 }
 
-func loadTestContent(res resources.Resources) error {
-	if err := res.Load(content.EmbeddedFiles, content.DefaultImage10x10); err != nil {
-		return err
+func makeGameConfig(res resources.Resources, dc *data.DataCache) (*config.GameConfig, error) {
+	handle, err := res.GetHandle(content.GameConfig)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	raw, err := dc.Get(handle)
+	if err != nil {
+		return nil, err
+	}
+	return config.LoadConfig(raw)
 }
 
-func makeTestRenderables(w world.World, res resources.Resources, ic *images.ImageCache, rendererID uint64) error {
+func makeTestRenderables(cfg *config.GameConfig, w world.World, res resources.Resources, ic *images.ImageCache, rendererID uint64) error {
 	imgHandle, err := res.GetHandle(content.DefaultImage10x10)
 	if err != nil {
 		return err
@@ -91,6 +113,9 @@ func makeTestRenderables(w world.World, res resources.Resources, ic *images.Imag
 	img, _ := ic.Get(imgHandle)
 	width := img.Bounds().Dx()
 	height := img.Bounds().Dy()
+
+	windowWidth := float64(cfg.Window.Width)
+	windowHeight := float64(cfg.Window.Height)
 
 	var errs []error
 	for range 1000 {

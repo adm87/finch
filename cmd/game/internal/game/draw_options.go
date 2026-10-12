@@ -1,20 +1,22 @@
 package game
 
-import "image/color"
+import (
+	"github.com/adm87/finch/pkg/types"
+)
 
 type DrawOptions struct {
-	ClearColor color.RGBA
+	ClearColor types.HexColor
 }
 
 type DrawOption func(*DrawOptions)
 
 func DefaultDrawOptions() *DrawOptions {
 	return &DrawOptions{
-		ClearColor: color.RGBA{A: 255},
+		ClearColor: types.HexColor{A: 255},
 	}
 }
 
-func WithClearColor(c color.RGBA) DrawOption {
+func WithClearColor(c types.HexColor) DrawOption {
 	return func(opts *DrawOptions) {
 		opts.ClearColor = c
 	}

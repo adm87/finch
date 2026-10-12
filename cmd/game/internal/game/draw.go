@@ -2,9 +2,9 @@ package game
 
 import (
 	"fmt"
-	"image/color"
 
 	"github.com/adm87/finch/pkg/engine"
+	"github.com/adm87/finch/pkg/types"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
@@ -13,7 +13,7 @@ type GameDraw struct {
 	drawer     engine.GameDraw
 	screen     *Screen
 	view       *View
-	clearColor color.RGBA
+	clearColor types.HexColor
 }
 
 func NewGameDraw(drawer engine.GameDraw, screen *Screen, view *View, options ...DrawOption) *GameDraw {
@@ -31,7 +31,7 @@ func NewGameDraw(drawer engine.GameDraw, screen *Screen, view *View, options ...
 }
 
 func (gd *GameDraw) Draw(target *ebiten.Image) error {
-	gd.screen.buffer.Fill(gd.clearColor)
+	gd.screen.buffer.Fill(gd.clearColor.ToColorRGBA())
 
 	if err := gd.drawer.Draw(gd.screen.buffer); err != nil {
 		return err
