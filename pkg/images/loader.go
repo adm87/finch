@@ -33,9 +33,16 @@ func (l *ImageLoader) Import(data []byte) (uint64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("%w: %v", ErrImageDecode, err)
 	}
+
 	return l.cache.Put(img), nil
 }
 
 func (l *ImageLoader) Delete(handle uint64) error {
+	img, err := l.cache.Delete(handle)
+	if err != nil {
+		return err
+	}
+
+	img.Deallocate()
 	return nil
 }
