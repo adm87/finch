@@ -1,6 +1,7 @@
 package resources
 
 import (
+	"io/fs"
 	"path/filepath"
 	"strings"
 )
@@ -17,4 +18,10 @@ func (r Resource) Type() string {
 
 func normalizeType(resourceType string) string {
 	return strings.ToLower(strings.Trim(resourceType, "."))
+}
+
+type ResourceBundle []Resource
+
+func (rb ResourceBundle) Load(res Resources, filesystem fs.FS) error {
+	return res.Load(filesystem, rb...)
 }

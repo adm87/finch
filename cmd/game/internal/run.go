@@ -22,41 +22,43 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-var initialResourceBundle = []resources.Resource{
+var initialResourceBundle = resources.ResourceBundle{
 	content.GameConfig,
 	content.DefaultImage10x10,
 }
 
 func Run() error {
 	l := logger.NewLogger(os.Stdout)
-
 	w := world.NewWorld()
-	res := resources.NewResources()
 
-	cache, err := setupResourceCache(res)
+	gr, err := initializeGameResources()
 	if err != nil {
 		return err
 	}
 
-	cfg, err := makeGameConfig(res, cache.Data)
+	// Load the initial resource bundle into the game resources.
+	if err := initialResourceBundle.Load(gr.Resources, content.EmbeddedFiles); err != nil {
+		return err
+	}
+
+	gc, err := makeGameConfig(gr)
 	if err != nil {
 		return err
 	}
 
 	s := game.NewScreen(
-		cfg.Window.Width,
-		cfg.Window.Height,
+		gc.Window.Width,
+		gc.Window.Height,
 	)
 
 	v := game.NewViewport(s)
 	rp := rendering.NewRenderPipeline(v, w)
-
-	renderers := setupGameRenderers(rp, cache)
+	grr := initializeGameRenderers(rp, gr)
 
 	c := w.Create(world.DontPartition)
 	v.SetCamera(c)
 
-	if err := makeTestRenderables(cfg, w, res, cache, renderers); err != nil {
+	if err := makeTestRenderables(w, gc, gr, grr); err != nil {
 		return err
 	}
 
@@ -66,25 +68,27 @@ func Run() error {
 		),
 		engine.WithDraw(
 			game.NewGameDraw(rp, s, v,
-				game.WithClearColor(cfg.Rendering.ClearColor),
+				game.WithClearColor(gc.Rendering.ClearColor),
 			),
 		),
 		engine.WithLayout(s),
 		engine.WithWindowSize(
-			cfg.Window.Width,
-			cfg.Window.Height,
+			gc.Window.Width,
+			gc.Window.Height,
 		),
 		engine.WithResizeMode(
 			ebiten.WindowResizingModeEnabled,
 		),
 		engine.WithFullscreen(
-			cfg.Window.Fullscreen,
+			gc.Window.Fullscreen,
 		),
 		engine.WithLogger(l),
 	)
 }
 
-func setupResourceCache(res resources.Resources) (*game.GameCache, error) {
+func initializeGameResources() (*game.GameResources, error) {
+	res := resources.NewResources()
+
 	dc := data.NewDataCache()
 	dl := data.NewDataLoader(dc)
 	res.RegisterImporter(dl, data.DataTypes())
@@ -93,46 +97,40 @@ func setupResourceCache(res resources.Resources) (*game.GameCache, error) {
 	il := images.NewImageLoader(ic)
 	res.RegisterImporter(il, images.ImageTypes())
 
-	if err := res.Load(content.EmbeddedFiles, initialResourceBundle...); err != nil {
-		return nil, err
-	}
-
-	return &game.GameCache{
-		Data:   dc,
-		Images: ic,
+	return &game.GameResources{
+		Resources: res,
+		Cache: &game.GameCache{
+			Data:   dc,
+			Images: ic,
+		},
 	}, nil
 }
 
-func setupGameRenderers(rp *rendering.RenderPipeline, cache *game.GameCache) *game.GameRenderers {
+func initializeGameRenderers(rp *rendering.RenderPipeline, gr *game.GameResources) *game.GameRenderers {
 	return &game.GameRenderers{
-		Images: rp.AddAdapter(images.NewImageRenderer(cache.Images)),
+		Images: rp.AddAdapter(images.NewImageRenderer(gr.Cache.Images)),
 	}
 }
 
-func makeGameConfig(res resources.Resources, dc *data.DataCache) (*config.GameConfig, error) {
-	handle, err := res.GetHandle(content.GameConfig)
+func makeGameConfig(gr *game.GameResources) (*config.GameConfig, error) {
+	handle, err := gr.Resources.GetHandle(content.GameConfig)
 	if err != nil {
 		return nil, err
 	}
-	raw, err := dc.Get(handle)
+	raw, err := gr.Cache.Data.Get(handle)
 	if err != nil {
 		return nil, err
 	}
 	return config.LoadConfig(raw)
 }
 
-func makeTestRenderables(
-	cfg *config.GameConfig,
-	w world.World,
-	res resources.Resources,
-	cache *game.GameCache,
-	renderers *game.GameRenderers) error {
-	imgHandle, err := res.GetHandle(content.DefaultImage10x10)
+func makeTestRenderables(w world.World, cfg *config.GameConfig, gr *game.GameResources, grr *game.GameRenderers) error {
+	imgHandle, err := gr.Resources.GetHandle(content.DefaultImage10x10)
 	if err != nil {
 		return err
 	}
 
-	img, _ := cache.Images.Get(imgHandle)
+	img, _ := gr.Cache.Images.Get(imgHandle)
 	width := img.Bounds().Dx()
 	height := img.Bounds().Dy()
 
@@ -150,7 +148,7 @@ func makeTestRenderables(
 		)
 
 		r, _ := renderer.GetRenderer(entry)
-		r.SetID(renderers.Images)
+		r.SetID(grr.Images)
 
 		t, _ := transform.GetTransform(entry)
 		t.SetPosition(float64(x), float64(y))
