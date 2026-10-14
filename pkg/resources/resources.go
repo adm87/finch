@@ -13,10 +13,12 @@ import (
 
 var (
 	ErrNotFound                  = errors.New("resource not found")
+	ErrInvalidFileSystemName     = errors.New("invalid file system name")
 	ErrImporterNotFound          = errors.New("importer not found")
 	ErrNilImporter               = errors.New("nil importer")
 	ErrNilFileSystem             = errors.New("nil file system")
 	ErrDuplicateImporterRegister = errors.New("duplicate importer register")
+	ErrDuplicateFileSystem       = errors.New("duplicate file system")
 	ErrAlreadyLoaded             = errors.New("resource already loaded")
 	ErrReadFile                  = errors.New("failed to read file")
 	ErrImportFailed              = errors.New("failed to import resource")
@@ -37,13 +39,18 @@ type Resources interface {
 
 	Unload(batch ...Resource) error
 
+	RegisterImporter(importer ResourceImporter, resourceTypes []string) error
+
+	AddFileSystem(name string, filesystem fs.FS) error
+
 	GetHandle(resource Resource) (uint64, error)
 
-	RegisterImporter(importer ResourceImporter, resourceTypes []string) error
+	GetFileSystem(name string) (fs.FS, error)
 }
 
 type res struct {
 	importers   map[string]ResourceImporter
+	filesystems map[string]fs.FS
 	handles     map[Resource]uint64
 	concurrency int
 	mu          sync.Mutex
@@ -52,6 +59,7 @@ type res struct {
 func NewResources() Resources {
 	return &res{
 		importers:   make(map[string]ResourceImporter),
+		filesystems: make(map[string]fs.FS),
 		handles:     make(map[Resource]uint64),
 		concurrency: 100, // TODO: Make this configurable
 	}
@@ -68,6 +76,18 @@ func (r *res) GetHandle(resource Resource) (uint64, error) {
 	}
 
 	return handle, nil
+}
+
+func (r *res) GetFileSystem(name string) (fs.FS, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	fsys, exists := r.filesystems[name]
+	if !exists {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidFileSystemName, name)
+	}
+
+	return fsys, nil
 }
 
 func (r *res) RegisterImporter(importer ResourceImporter, resourceTypes []string) error {
@@ -95,6 +115,22 @@ func (r *res) RegisterImporter(importer ResourceImporter, resourceTypes []string
 		r.importers[normalized] = importer
 	}
 
+	return nil
+}
+
+func (r *res) AddFileSystem(name string, filesystem fs.FS) error {
+	if filesystem == nil {
+		return ErrNilFileSystem
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if _, exists := r.filesystems[name]; exists {
+		return fmt.Errorf("%w: %s", ErrDuplicateFileSystem, name)
+	}
+
+	r.filesystems[name] = filesystem
 	return nil
 }
 

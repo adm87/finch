@@ -3,8 +3,10 @@ package internal
 import (
 	"errors"
 	"image/color"
+	"log"
 	"math/rand/v2"
 	"os"
+	"path/filepath"
 
 	"github.com/adm87/finch/cmd/game/internal/config"
 	"github.com/adm87/finch/cmd/game/internal/game"
@@ -19,30 +21,44 @@ import (
 	"github.com/adm87/finch/pkg/logger"
 	"github.com/adm87/finch/pkg/resources"
 	"github.com/adm87/finch/pkg/resources/data"
+	"github.com/alexflint/go-arg"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-var initialResourceBundle = resources.ResourceBundle{
-	content.GameConfig,
-	content.DefaultImage10x10,
+type CmdArgs struct {
+	WorkingDir string `arg:"--working-dir"`
 }
 
 func Run() error {
+	var args CmdArgs
+	arg.MustParse(&args)
+
+	root, err := filepath.Abs(args.WorkingDir)
+	if err != nil {
+		log.Fatalf("failed to get absolute path for root: %v", err)
+	}
+
+	contentRoot := filepath.Join(root, "content")
+	if _, err := os.Stat(contentRoot); os.IsNotExist(err) {
+		log.Fatalf("content directory does not exist: %v", contentRoot)
+	}
+
+	var gc config.GameConfig
+	config.MustLoadConfig(contentRoot, &gc)
+
+	return run(&gc, contentRoot)
+}
+
+func run(gc *config.GameConfig, contentRoot string) error {
 	l := logger.NewLogger(os.Stdout)
 	w := world.NewWorld()
 
-	gr, err := initializeGameResources()
+	gr, err := initializeGameResources(contentRoot)
 	if err != nil {
 		return err
 	}
 
-	// Load the initial resource bundle into the game resources.
-	if err := initialResourceBundle.Load(gr.Resources, content.EmbeddedFiles); err != nil {
-		return err
-	}
-
-	gc, err := makeGameConfig(gr)
-	if err != nil {
+	if err := gc.Resources.Load(gr.Resources); err != nil {
 		return err
 	}
 
@@ -86,8 +102,11 @@ func Run() error {
 	)
 }
 
-func initializeGameResources() (*game.GameResources, error) {
+func initializeGameResources(contentRoot string) (*game.GameResources, error) {
 	res := resources.NewResources()
+
+	res.AddFileSystem("embedded", content.EmbeddedFiles)
+	res.AddFileSystem("assets", os.DirFS(filepath.Join(contentRoot, "assets")))
 
 	dc := data.NewDataCache()
 	dl := data.NewDataLoader(dc)
@@ -110,18 +129,6 @@ func initializeGameRenderers(rp *rendering.RenderPipeline, gr *game.GameResource
 	return &game.GameRenderers{
 		Images: rp.AddAdapter(images.NewImageRenderer(gr.Cache.Images)),
 	}
-}
-
-func makeGameConfig(gr *game.GameResources) (*config.GameConfig, error) {
-	handle, err := gr.Resources.GetHandle(content.GameConfig)
-	if err != nil {
-		return nil, err
-	}
-	raw, err := gr.Cache.Data.Get(handle)
-	if err != nil {
-		return nil, err
-	}
-	return config.LoadConfig(raw)
 }
 
 func makeTestRenderables(w world.World, cfg *config.GameConfig, gr *game.GameResources, grr *game.GameRenderers) error {
