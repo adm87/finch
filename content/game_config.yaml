@@ -1,0 +1,12 @@
+window:
+  width: 1280
+  height: 720
+  fullscreen: false
+
+rendering:
+  clear_color: "#000000FF"
+
+resources:
+  filesystem: "embedded"
+  bundle: 
+    - "embedded/default_10x10.png"
