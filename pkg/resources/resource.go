@@ -31,7 +31,7 @@ func (rb ResourceBundle) Unload(res Resources) error {
 }
 
 type ResourceConfig struct {
-	FileSystem string         `yaml:"filesystem"`
+	FileSystem FileSystem     `yaml:"filesystem"`
 	Bundle     ResourceBundle `yaml:"bundle"`
 }
 

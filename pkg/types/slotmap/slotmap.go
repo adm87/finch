@@ -81,16 +81,16 @@ type SlotMap[T any] struct {
 // New creates a new SlotMap with an initial capacity.
 // The capacity is the maximum number of values the SlotMap can hold without calling Grow.
 // Panics if cap is negative or excessively large.
-func New[T any](cap int) *SlotMap[T] {
-	cap = max(cap, 0)
-	checkCapacity(cap + 1)
+func New[T any](capacity int) *SlotMap[T] {
+	capacity = max(capacity, 0)
+	checkCapacity(capacity + 1)
 
 	slotMap := &SlotMap[T]{
-		slots: make([]slot[T], cap+1),
+		slots: make([]slot[T], capacity+1),
 		head:  0,
 	}
 
-	if cap == 0 {
+	if capacity == 0 {
 		return slotMap
 	}
 
