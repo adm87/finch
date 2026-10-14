@@ -1,20 +1,25 @@
 package config
 
 import (
-	"log"
-	"os"
-	"path/filepath"
-
-	"gopkg.in/yaml.v3"
-
 	"github.com/adm87/finch/pkg/resources"
 	"github.com/adm87/finch/pkg/types"
 )
 
+type StatusResources []resources.ResourceConfig
+
+func (sr StatusResources) Load(res resources.Resources) error {
+	for _, r := range sr {
+		if err := r.Load(res); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type GameConfig struct {
-	Window    WindowConfig             `yaml:"window"`
-	Rendering RenderingConfig          `yaml:"rendering"`
-	Resources resources.ResourceConfig `yaml:"resources"`
+	StaticResources StatusResources `yaml:"static_resources"`
+	Window          WindowConfig    `yaml:"window"`
+	Rendering       RenderingConfig `yaml:"rendering"`
 }
 
 type WindowConfig struct {
@@ -25,17 +30,4 @@ type WindowConfig struct {
 
 type RenderingConfig struct {
 	ClearColor types.HexColor `yaml:"clear_color"`
-}
-
-func MustLoadConfig(root string, cfg *GameConfig) {
-	filePath := filepath.Join(root, "game_config.yaml")
-
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		log.Fatalf("failed to read config file: %v", err)
-	}
-
-	if err := yaml.Unmarshal(data, cfg); err != nil {
-		log.Fatalf("failed to unmarshal config file: %v", err)
-	}
 }

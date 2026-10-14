@@ -39,9 +39,10 @@ func NewRenderPipeline(viewport View, world World) *RenderPipeline {
 	}
 }
 
-func (rp *RenderPipeline) AddAdapter(adapter RenderAdapter) uint64 {
+func (rp *RenderPipeline) RegisterRenderer(adapter RenderAdapter) (uint64, error) {
 	k := rp.adapters.Insert(adapter)
-	return k.Pack()
+	// TODO: Should probably add support for checking if an item exists in a slotmap.
+	return k.Pack(), nil
 }
 
 func (rp *RenderPipeline) Draw(target *ebiten.Image) error {

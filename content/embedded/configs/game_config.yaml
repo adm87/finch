@@ -1,0 +1,14 @@
+window:
+  width: 1280
+  height: 720
+  fullscreen: false
+
+rendering:
+  clear_color: "#000000FF"
+
+# Resource bundles that will be loaded when the game starts.
+# These resources are loaded once and remain available throughout the game.
+static_resources:
+  - filesystem: "embedded"
+    bundle: 
+      - "embedded/images/default_10x10.png"

@@ -1,14 +1,17 @@
 package game
 
 import (
+	"github.com/adm87/finch/cmd/game/internal/config"
 	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/resources"
 	"github.com/adm87/finch/pkg/resources/data"
 )
 
-type GameResources struct {
+type Game struct {
 	Resources resources.Resources
+	Config    *config.GameConfig
 	Cache     *GameCache
+	Renderers *GameRenderers
 }
 
 type GameCache struct {
@@ -17,5 +20,5 @@ type GameCache struct {
 }
 
 type GameRenderers struct {
-	Images uint64
+	Image uint64
 }

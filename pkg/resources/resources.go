@@ -34,6 +34,8 @@ func ConvertToResourceError(err error) error {
 	return err
 }
 
+type FileSystem string
+
 type Resources interface {
 	Load(filesystem fs.FS, batch ...Resource) error
 
@@ -41,16 +43,16 @@ type Resources interface {
 
 	RegisterImporter(importer ResourceImporter, resourceTypes []string) error
 
-	AddFileSystem(name string, filesystem fs.FS) error
+	RegisterFileSystem(name FileSystem, filesystem fs.FS) error
 
 	GetHandle(resource Resource) (uint64, error)
 
-	GetFileSystem(name string) (fs.FS, error)
+	GetFileSystem(name FileSystem) (fs.FS, error)
 }
 
 type res struct {
 	importers   map[string]ResourceImporter
-	filesystems map[string]fs.FS
+	filesystems map[FileSystem]fs.FS
 	handles     map[Resource]uint64
 	concurrency int
 	mu          sync.Mutex
@@ -59,7 +61,7 @@ type res struct {
 func NewResources() Resources {
 	return &res{
 		importers:   make(map[string]ResourceImporter),
-		filesystems: make(map[string]fs.FS),
+		filesystems: make(map[FileSystem]fs.FS),
 		handles:     make(map[Resource]uint64),
 		concurrency: 100, // TODO: Make this configurable
 	}
@@ -78,7 +80,7 @@ func (r *res) GetHandle(resource Resource) (uint64, error) {
 	return handle, nil
 }
 
-func (r *res) GetFileSystem(name string) (fs.FS, error) {
+func (r *res) GetFileSystem(name FileSystem) (fs.FS, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -118,7 +120,7 @@ func (r *res) RegisterImporter(importer ResourceImporter, resourceTypes []string
 	return nil
 }
 
-func (r *res) AddFileSystem(name string, filesystem fs.FS) error {
+func (r *res) RegisterFileSystem(name FileSystem, filesystem fs.FS) error {
 	if filesystem == nil {
 		return ErrNilFileSystem
 	}
