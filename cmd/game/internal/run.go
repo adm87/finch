@@ -29,7 +29,7 @@ import (
 func Boot() error {
 	var g game.Game
 
-	if err := content.InitFileSytems(); err != nil {
+	if err := content.InitializeFileSystems(); err != nil {
 		return fmt.Errorf("setup file systems: %w", err)
 	}
 	if err := initializeGameResources(&g); err != nil {
@@ -76,7 +76,7 @@ func initializeGameResources(g *game.Game) error {
 func registerFileSystem(r resources.Resources, id content.FileSystemID) error {
 	fsys, err := content.GetFileSystem(id)
 	if err != nil {
-		return &errs.NotFoundError{Kind: "file system", Key: fmt.Sprint(id), Inner: err}
+		return &errs.NotFoundError{Kind: "file system", Key: id.String(), Inner: err}
 	}
 	if err := r.RegisterFileSystem(resources.FileSystem(id), fsys); err != nil {
 		return &errs.InvalidOperationError{Message: fmt.Sprintf("register file system %q", id), Inner: err}
@@ -98,35 +98,33 @@ func initializeGameRenderers(g *game.Game, rp *rendering.RenderPipeline) error {
 }
 
 func loadGameConfig(g *game.Game) (err error) {
-	key := fmt.Sprint(content.GAME_CONFIG)
-
 	fsys, err := content.GetFileSystem(content.FS_EMBEDDED)
 	if err != nil {
-		return &errs.NotFoundError{Kind: "file system", Key: fmt.Sprint(content.FS_EMBEDDED), Inner: err}
+		return &errs.NotFoundError{Kind: "file system", Key: content.FS_EMBEDDED.String(), Inner: err}
 	}
 	if err := g.Resources.Load(fsys, content.GAME_CONFIG); err != nil {
-		return fmt.Errorf("load %q: %w", key, err)
+		return fmt.Errorf("load %q: %w", content.GAME_CONFIG, err)
 	}
 
 	defer func() {
 		if uerr := g.Resources.Unload(content.GAME_CONFIG); uerr != nil {
-			err = errors.Join(err, fmt.Errorf("unload %q: %w", key, uerr))
+			err = errors.Join(err, fmt.Errorf("unload %q: %w", content.GAME_CONFIG, uerr))
 		}
 	}()
 
 	handle, err := g.Resources.GetHandle(content.GAME_CONFIG)
 	if err != nil {
-		return &errs.NotFoundError{Kind: "resource handle", Key: key, Inner: err}
+		return &errs.NotFoundError{Kind: "resource handle", Key: content.GAME_CONFIG, Inner: err}
 	}
 
 	raw, err := g.Cache.Data.Get(handle)
 	if err != nil {
-		return &errs.NotFoundError{Kind: "cached data", Key: key, Inner: err}
+		return &errs.NotFoundError{Kind: "cached data", Key: content.GAME_CONFIG, Inner: err}
 	}
 
 	var cfg config.GameConfig
 	if err := yaml.Unmarshal(raw, &cfg); err != nil {
-		return &errs.FormatError{Input: key, Message: "invalid yaml", Inner: err}
+		return &errs.FormatError{Input: content.GAME_CONFIG, Message: "invalid yaml", Inner: err}
 	}
 	if err := validateGameConfig(&cfg); err != nil {
 		return err
@@ -193,16 +191,15 @@ func run(g *game.Game) error {
 }
 
 func makeTestRenderables(w world.World, g *game.Game) error {
-	key := fmt.Sprint(content.DEFAULT_IMAGE_10X10)
 
 	imgHandle, err := g.Resources.GetHandle(content.DEFAULT_IMAGE_10X10)
 	if err != nil {
-		return &errs.NotFoundError{Kind: "resource handle", Key: key, Inner: err}
+		return &errs.NotFoundError{Kind: "resource handle", Key: content.DEFAULT_IMAGE_10X10, Inner: err}
 	}
 
 	img, err := g.Cache.Images.Get(imgHandle)
 	if err != nil {
-		return &errs.NotFoundError{Kind: "image", Key: key, Inner: err}
+		return &errs.NotFoundError{Kind: "image", Key: content.DEFAULT_IMAGE_10X10, Inner: err}
 	}
 
 	width := float64(img.Bounds().Dx())
