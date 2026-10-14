@@ -10,6 +10,10 @@ import (
 
 type FileSystemID string
 
+func (f FileSystemID) String() string {
+	return string(f)
+}
+
 type FileSystems map[FileSystemID]fs.FS
 
 const (
@@ -29,7 +33,7 @@ var fileSystems = FileSystems{
 	FS_EMBEDDED: embeddedFiles,
 }
 
-func InitFileSytems() error {
+func InitializeFileSystems() error {
 	root, err := os.Getwd()
 	if err != nil {
 		return err
