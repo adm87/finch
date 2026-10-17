@@ -1,0 +1,297 @@
+{ "frames": [
+   {
+    "filename": "Captain Clown Nose Idle 0",
+    "frame": { "x": 0, "y": 27, "w": 24, "h": 28 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 26, "y": 36, "w": 24, "h": 28 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Idle 1",
+    "frame": { "x": 0, "y": 55, "w": 24, "h": 27 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 26, "y": 37, "w": 24, "h": 27 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Idle 2",
+    "frame": { "x": 120, "y": 83, "w": 24, "h": 25 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 26, "y": 39, "w": 24, "h": 25 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Idle 3",
+    "frame": { "x": 69, "y": 83, "w": 24, "h": 26 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 26, "y": 38, "w": 24, "h": 26 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Idle 4",
+    "frame": { "x": 24, "y": 28, "w": 24, "h": 28 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 26, "y": 36, "w": 24, "h": 28 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Run 5",
+    "frame": { "x": 73, "y": 31, "w": 24, "h": 27 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 26, "y": 34, "w": 24, "h": 27 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Run 6",
+    "frame": { "x": 97, "y": 27, "w": 24, "h": 28 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 26, "y": 35, "w": 24, "h": 28 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Run 7",
+    "frame": { "x": 0, "y": 82, "w": 24, "h": 26 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 26, "y": 38, "w": 24, "h": 26 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Run 8",
+    "frame": { "x": 97, "y": 0, "w": 25, "h": 27 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 25, "y": 34, "w": 25, "h": 27 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Run 9",
+    "frame": { "x": 121, "y": 27, "w": 24, "h": 28 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 26, "y": 35, "w": 24, "h": 28 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Run 10",
+    "frame": { "x": 45, "y": 82, "w": 24, "h": 26 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 26, "y": 38, "w": 24, "h": 26 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Jump 11",
+    "frame": { "x": 0, "y": 0, "w": 26, "h": 27 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 25, "y": 35, "w": 26, "h": 27 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Jump 12",
+    "frame": { "x": 75, "y": 0, "w": 22, "h": 31 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 27, "y": 33, "w": 22, "h": 31 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Jump 13",
+    "frame": { "x": 51, "y": 0, "w": 24, "h": 29 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 26, "y": 34, "w": 24, "h": 29 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 5000
+   },
+   {
+    "filename": "Captain Clown Nose Fall 14",
+    "frame": { "x": 26, "y": 0, "w": 25, "h": 28 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 25, "y": 35, "w": 25, "h": 28 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Ground 15",
+    "frame": { "x": 54, "y": 109, "w": 26, "h": 23 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 25, "y": 41, "w": 26, "h": 23 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Ground 16",
+    "frame": { "x": 48, "y": 55, "w": 24, "h": 27 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 26, "y": 37, "w": 24, "h": 27 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Hit 17",
+    "frame": { "x": 97, "y": 55, "w": 23, "h": 28 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 27, "y": 35, "w": 23, "h": 28 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Hit 18",
+    "frame": { "x": 24, "y": 56, "w": 21, "h": 30 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 28, "y": 34, "w": 21, "h": 30 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Hit 19",
+    "frame": { "x": 48, "y": 29, "w": 25, "h": 26 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 26, "y": 36, "w": 25, "h": 26 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Hit 20",
+    "frame": { "x": 120, "y": 55, "w": 23, "h": 28 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 27, "y": 35, "w": 23, "h": 28 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 5000
+   },
+   {
+    "filename": "Captain Clown Nose Dead Hit 21",
+    "frame": { "x": 93, "y": 83, "w": 27, "h": 23 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 24, "y": 40, "w": 27, "h": 23 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Dead Hit 22",
+    "frame": { "x": 72, "y": 58, "w": 25, "h": 25 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 25, "y": 39, "w": 25, "h": 25 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Dead Hit 23",
+    "frame": { "x": 0, "y": 108, "w": 29, "h": 21 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 23, "y": 41, "w": 29, "h": 21 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Dead Hit 24",
+    "frame": { "x": 93, "y": 106, "w": 27, "h": 23 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 24, "y": 40, "w": 27, "h": 23 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 5000
+   },
+   {
+    "filename": "Captain Clown Nose Dead Ground 25",
+    "frame": { "x": 107, "y": 129, "w": 29, "h": 18 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 23, "y": 48, "w": 29, "h": 18 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Dead Ground 26",
+    "frame": { "x": 29, "y": 108, "w": 25, "h": 24 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 25, "y": 42, "w": 25, "h": 24 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Dead Ground 27",
+    "frame": { "x": 0, "y": 129, "w": 27, "h": 21 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 24, "y": 45, "w": 27, "h": 21 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 100
+   },
+   {
+    "filename": "Captain Clown Nose Dead Ground 28",
+    "frame": { "x": 80, "y": 129, "w": 27, "h": 20 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 24, "y": 46, "w": 27, "h": 20 },
+    "sourceSize": { "w": 96, "h": 96 },
+    "duration": 5000
+   }
+ ],
+ "meta": {
+  "app": "https://www.aseprite.org/",
+  "version": "1.3.17.2-arm64",
+  "image": "captain.png",
+  "format": "RGBA8888",
+  "size": { "w": 145, "h": 150 },
+  "scale": "1",
+  "frameTags": [
+   { "name": "Idle", "from": 0, "to": 4, "direction": "forward", "color": "#000000ff" },
+   { "name": "Run", "from": 5, "to": 10, "direction": "forward", "color": "#000000ff" },
+   { "name": "Jump", "from": 11, "to": 13, "direction": "forward", "color": "#000000ff" },
+   { "name": "Fall", "from": 14, "to": 14, "direction": "forward", "color": "#000000ff" },
+   { "name": "Ground", "from": 15, "to": 16, "direction": "forward", "color": "#000000ff" },
+   { "name": "Hit", "from": 17, "to": 20, "direction": "forward", "color": "#000000ff" },
+   { "name": "Dead Hit", "from": 21, "to": 24, "direction": "forward", "color": "#000000ff" },
+   { "name": "Dead Ground", "from": 25, "to": 28, "direction": "forward", "color": "#000000ff" },
+   { "name": "Idle S", "from": 29, "to": 33, "direction": "forward", "color": "#fe5b59ff" },
+   { "name": "Run S", "from": 34, "to": 39, "direction": "forward", "color": "#fe5b59ff" },
+   { "name": "Jump S", "from": 40, "to": 42, "direction": "forward", "color": "#fe5b59ff" },
+   { "name": "Fall S", "from": 43, "to": 43, "direction": "forward", "color": "#fe5b59ff" },
+   { "name": "Ground S", "from": 44, "to": 45, "direction": "forward", "color": "#fe5b59ff" },
+   { "name": "Dead Hit S", "from": 46, "to": 49, "direction": "forward", "color": "#fe5b59ff" },
+   { "name": "Attack 1", "from": 50, "to": 52, "direction": "forward", "color": "#fe5b59ff" },
+   { "name": "Attack 2", "from": 53, "to": 55, "direction": "forward", "color": "#fe5b59ff" },
+   { "name": "Attack 3", "from": 56, "to": 58, "direction": "forward", "color": "#fe5b59ff" },
+   { "name": "Air Attack 1", "from": 59, "to": 61, "direction": "forward", "color": "#fe5b59ff" },
+   { "name": "Air Attack 2", "from": 62, "to": 64, "direction": "forward", "color": "#fe5b59ff" },
+   { "name": "Throw Sword", "from": 65, "to": 67, "direction": "forward", "color": "#fe5b59ff" },
+   { "name": "Sword Idle", "from": 68, "to": 75, "direction": "forward", "color": "#6acd5bff" },
+   { "name": "Sword Spinning", "from": 76, "to": 79, "direction": "forward", "color": "#6acd5bff" },
+   { "name": "Sword Embedded", "from": 80, "to": 83, "direction": "forward", "color": "#6acd5bff" }
+  ]
+ }
+}

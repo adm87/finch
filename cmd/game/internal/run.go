@@ -13,6 +13,7 @@ import (
 	"github.com/adm87/finch/cmd/game/internal/config"
 	"github.com/adm87/finch/cmd/game/internal/game"
 	"github.com/adm87/finch/content"
+	"github.com/adm87/finch/pkg/aseprite"
 	"github.com/adm87/finch/pkg/ecs/components/renderer"
 	"github.com/adm87/finch/pkg/ecs/components/transform"
 	"github.com/adm87/finch/pkg/ecs/rendering"
@@ -26,7 +27,13 @@ import (
 	"github.com/adm87/finch/pkg/types/errs"
 )
 
+const resourceHandle = "resource handle"
+
 func Boot() error {
+	return boot(logger.NewLogger(os.Stdout, loggerOptions))
+}
+
+func boot(l logger.Logger) error {
 	var g game.Game
 
 	if err := content.InitializeFileSystems(); err != nil {
@@ -38,11 +45,14 @@ func Boot() error {
 	if err := loadGameConfig(&g); err != nil {
 		return fmt.Errorf("load game config: %w", err)
 	}
-	if err := g.Config.StaticResources.Load(g.Resources); err != nil {
-		return fmt.Errorf("load static resources: %w", err)
+	if err := g.Config.StaticContent.Load(g.Resources); err != nil {
+		return fmt.Errorf("load static content: %w", err)
+	}
+	if err := initializeAseprite(&g, l); err != nil {
+		return fmt.Errorf("initialize aseprite: %w", err)
 	}
 
-	return run(&g)
+	return run(&g, l)
 }
 
 func initializeGameResources(g *game.Game) error {
@@ -76,31 +86,18 @@ func initializeGameResources(g *game.Game) error {
 func registerFileSystem(r resources.Resources, id content.FileSystemID) error {
 	fsys, err := content.GetFileSystem(id)
 	if err != nil {
-		return &errs.NotFoundError{Kind: "file system", Key: id.String(), Inner: err}
+		return errs.NotFound("file system", id.String()).Wrap(err)
 	}
 	if err := r.RegisterFileSystem(resources.FileSystem(id), fsys); err != nil {
-		return &errs.InvalidOperationError{Message: fmt.Sprintf("register file system %q", id), Inner: err}
+		return errs.InvalidOperation(fmt.Sprintf("register file system %q", id)).Wrap(err)
 	}
-	return nil
-}
-
-func initializeGameRenderers(g *game.Game, rp *rendering.RenderPipeline) error {
-	ir, err := rp.RegisterRenderer(images.NewImageRenderer(g.Cache.Images))
-	if err != nil {
-		return &errs.InvalidOperationError{Message: "register image renderer", Inner: err}
-	}
-
-	g.Renderers = &game.GameRenderers{
-		Image: ir,
-	}
-
 	return nil
 }
 
 func loadGameConfig(g *game.Game) (err error) {
 	fsys, err := content.GetFileSystem(content.FS_EMBEDDED)
 	if err != nil {
-		return &errs.NotFoundError{Kind: "file system", Key: content.FS_EMBEDDED.String(), Inner: err}
+		return errs.NotFound("file system", content.FS_EMBEDDED.String()).Wrap(err)
 	}
 	if err := g.Resources.Load(fsys, content.GAME_CONFIG); err != nil {
 		return fmt.Errorf("load %q: %w", content.GAME_CONFIG, err)
@@ -114,23 +111,61 @@ func loadGameConfig(g *game.Game) (err error) {
 
 	handle, err := g.Resources.GetHandle(content.GAME_CONFIG)
 	if err != nil {
-		return &errs.NotFoundError{Kind: "resource handle", Key: content.GAME_CONFIG, Inner: err}
+		return errs.NotFound(resourceHandle, content.GAME_CONFIG).Wrap(err)
 	}
 
 	raw, err := g.Cache.Data.Get(handle)
 	if err != nil {
-		return &errs.NotFoundError{Kind: "cached data", Key: content.GAME_CONFIG, Inner: err}
+		return errs.NotFound("cached data", content.GAME_CONFIG).Wrap(err)
 	}
 
 	var cfg config.GameConfig
 	if err := yaml.Unmarshal(raw, &cfg); err != nil {
-		return &errs.FormatError{Input: content.GAME_CONFIG, Message: "invalid yaml", Inner: err}
+		return errs.Format(content.GAME_CONFIG, "invalid yaml").Wrap(err)
 	}
 	if err := validateGameConfig(&cfg); err != nil {
 		return err
 	}
 
 	g.Config = &cfg
+	return nil
+}
+
+func initializeGameRenderers(g *game.Game, rp *rendering.RenderPipeline) error {
+	ir, err := rp.RegisterRenderer(images.NewImageRenderer(g.Cache.Images))
+	if err != nil {
+		return errs.InvalidOperation("register image renderer").Wrap(err)
+	}
+
+	g.Renderers = &game.GameRenderers{
+		Image: ir,
+	}
+
+	return nil
+}
+
+func initializeAseprite(g *game.Game, logger logger.Logger) error {
+	handle, err := g.Resources.GetHandle(content.ASEPRITE_CONFIG)
+	if err != nil {
+		return errs.NotFound(resourceHandle, content.ASEPRITE_CONFIG).Wrap(err)
+	}
+
+	raw, err := g.Cache.Data.Get(handle)
+	if err != nil {
+		return errs.NotFound("cached data", content.ASEPRITE_CONFIG).Wrap(err)
+	}
+
+	var aseConfig aseprite.Config
+	if err := yaml.Unmarshal(raw, &aseConfig); err != nil {
+		return errs.Format(content.ASEPRITE_CONFIG, "invalid yaml").Wrap(err)
+	}
+
+	ase, err := aseprite.New(g.Resources, logger, g.Cache.Data, g.Cache.Images, &aseConfig)
+	if err != nil {
+		return errs.InvalidOperation("initialize aseprite").Wrap(err)
+	}
+
+	g.Aseprite = ase
 	return nil
 }
 
@@ -141,15 +176,12 @@ func validateGameConfig(cfg *config.GameConfig) error {
 	)
 }
 
-func run(g *game.Game) error {
-	l := logger.NewLogger(os.Stdout)
+func run(g *game.Game, l logger.Logger) error {
 	w := world.NewWorld()
-
 	s := game.NewScreen(
 		g.Config.Window.Width,
 		g.Config.Window.Height,
 	)
-
 	v := game.NewViewport(s)
 	rp := rendering.NewRenderPipeline(v, w)
 
@@ -160,7 +192,7 @@ func run(g *game.Game) error {
 	c := w.Create(world.DontPartition)
 	v.SetCamera(c)
 
-	if err := makeTestRenderables(w, g); err != nil {
+	if err := makeTestScene(g, w); err != nil {
 		return fmt.Errorf("create test renderables: %w", err)
 	}
 
@@ -190,16 +222,15 @@ func run(g *game.Game) error {
 	)
 }
 
-func makeTestRenderables(w world.World, g *game.Game) error {
-
+func makeTestScene(g *game.Game, w world.World) error {
 	imgHandle, err := g.Resources.GetHandle(content.DEFAULT_IMAGE_10X10)
 	if err != nil {
-		return &errs.NotFoundError{Kind: "resource handle", Key: content.DEFAULT_IMAGE_10X10, Inner: err}
+		return errs.NotFound(resourceHandle, content.DEFAULT_IMAGE_10X10).Wrap(err)
 	}
 
 	img, err := g.Cache.Images.Get(imgHandle)
 	if err != nil {
-		return &errs.NotFoundError{Kind: "image", Key: content.DEFAULT_IMAGE_10X10, Inner: err}
+		return errs.NotFound("image", content.DEFAULT_IMAGE_10X10).Wrap(err)
 	}
 
 	width := float64(img.Bounds().Dx())
@@ -207,6 +238,12 @@ func makeTestRenderables(w world.World, g *game.Game) error {
 
 	windowWidth := float64(g.Config.Window.Width)
 	windowHeight := float64(g.Config.Window.Height)
+
+	libHandle, err := g.Aseprite.CreateLibrary("captain", true)
+	if err != nil {
+		return fmt.Errorf("create aseprite library: %w", err)
+	}
+	_ = libHandle
 
 	const ax, ay = 0.5, 0.5
 

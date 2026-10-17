@@ -9,7 +9,6 @@ import (
 type Image struct {
 	handle uint64
 	ax, ay float64
-	frame  int
 	color  color.RGBA
 }
 

@@ -2,12 +2,14 @@ package game
 
 import (
 	"github.com/adm87/finch/cmd/game/internal/config"
+	"github.com/adm87/finch/pkg/aseprite"
 	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/resources"
 	"github.com/adm87/finch/pkg/resources/data"
 )
 
 type Game struct {
+	Aseprite  aseprite.Aseprite
 	Resources resources.Resources
 	Config    *config.GameConfig
 	Cache     *GameCache

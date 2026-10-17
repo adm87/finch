@@ -3,7 +3,6 @@ module github.com/adm87/finch
 go 1.27.1
 
 require (
-	github.com/alexflint/go-arg v1.6.1
 	github.com/go-openapi/testify v0.0.0-20251001202347-e909893202bd
 	github.com/hajimehoshi/ebiten/v2 v2.10.4
 	github.com/yohamta/donburi v1.15.8
@@ -13,7 +12,6 @@ require (
 )
 
 require (
-	github.com/alexflint/go-scalar v1.2.0 // indirect
 	github.com/ebitengine/gomobile v0.0.0-20260820040257-d11f821a26a6 // indirect
 	github.com/ebitengine/hideconsole v1.0.0 // indirect
 	github.com/ebitengine/purego v0.11.0 // indirect

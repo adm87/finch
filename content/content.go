@@ -2,10 +2,11 @@ package content
 
 import (
 	"embed"
-	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+
+	"github.com/adm87/finch/pkg/types/errs"
 )
 
 type FileSystemID string
@@ -22,6 +23,7 @@ const (
 )
 
 const (
+	ASEPRITE_CONFIG     = "embedded/configs/aseprite_config.yaml"
 	GAME_CONFIG         = "embedded/configs/game_config.yaml"
 	DEFAULT_IMAGE_10X10 = "embedded/images/default_10x10.png"
 )
@@ -48,7 +50,7 @@ func InitializeFileSystems() error {
 func GetFileSystem(id FileSystemID) (fs.FS, error) {
 	fs, ok := fileSystems[id]
 	if !ok {
-		return nil, fmt.Errorf("file system with ID %s not found", id)
+		return nil, errs.NotFound("file system", id.String())
 	}
 	return fs, nil
 }

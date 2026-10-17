@@ -9,8 +9,26 @@ import (
 
 type Field = zap.Field
 
+type LogLevel = zapcore.Level
+
+const (
+	DebugLevel  = zapcore.DebugLevel
+	InfoLevel   = zapcore.InfoLevel
+	WarnLevel   = zapcore.WarnLevel
+	ErrorLevel  = zapcore.ErrorLevel
+	DPanicLevel = zapcore.DPanicLevel
+	PanicLevel  = zapcore.PanicLevel
+	FatalLevel  = zapcore.FatalLevel
+)
+
+type Options struct {
+	Level      LogLevel
+	WithCaller bool
+}
+
 type Logger interface {
 	With(fields ...Field) Logger
+	Named(name string) Logger
 	Debug(msg string, fields ...Field)
 	Info(msg string, fields ...Field)
 	Warn(msg string, fields ...Field)
@@ -19,17 +37,21 @@ type Logger interface {
 	Sync()
 }
 
-func NewLogger(out io.Writer) Logger {
-	encCfg := zap.NewProductionEncoderConfig()
-	encCfg.EncodeTime = zapcore.TimeEncoderOfLayout("2006/01/02 15:04:05")
-	encCfg.EncodeLevel = zapcore.CapitalColorLevelEncoder
-	encCfg.CallerKey = ""
-	encCfg.ConsoleSeparator = " "
+func NewLogger(out io.Writer, opts Options) Logger {
+	cfg := zap.NewProductionEncoderConfig()
+	cfg.EncodeTime = zapcore.TimeEncoderOfLayout("2006/01/02 15:04:05")
+	cfg.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	cfg.ConsoleSeparator = " "
 
-	encoder := zapcore.NewConsoleEncoder(encCfg)
-	core := zapcore.NewCore(encoder, zapcore.AddSync(out), zap.InfoLevel)
+	var zOpts []zap.Option
+	if opts.WithCaller {
+		zOpts = append(zOpts, zap.AddCaller(), zap.AddCallerSkip(1))
+	} else {
+		cfg.CallerKey = ""
+	}
 
-	return &logger{zap: zap.New(core)}
+	core := zapcore.NewCore(zapcore.NewConsoleEncoder(cfg), zapcore.AddSync(out), opts.Level)
+	return &logger{zap: zap.New(core, zOpts...)}
 }
 
 type logger struct {
@@ -38,6 +60,10 @@ type logger struct {
 
 func (l *logger) With(fields ...Field) Logger {
 	return &logger{zap: l.zap.With(fields...)}
+}
+
+func (l *logger) Named(name string) Logger {
+	return &logger{zap: l.zap.Named(name)}
 }
 
 func (l *logger) Debug(msg string, fields ...Field) {
@@ -66,6 +92,10 @@ func (l *logger) Sync() {
 
 func String(key, value string) Field {
 	return zap.String(key, value)
+}
+
+func Strings(key string, value []string) Field {
+	return zap.Strings(key, value)
 }
 
 func Int(key string, value int) Field {
@@ -97,6 +127,10 @@ var N Logger = &noopLogger{}
 type noopLogger struct{}
 
 func (n *noopLogger) With(fields ...Field) Logger {
+	return n
+}
+
+func (n *noopLogger) Named(name string) Logger {
 	return n
 }
 

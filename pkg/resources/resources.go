@@ -7,32 +7,9 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/adm87/finch/pkg/types/slotmap"
+	"github.com/adm87/finch/pkg/types/errs"
 	"golang.org/x/sync/errgroup"
 )
-
-var (
-	ErrNotFound                  = errors.New("resource not found")
-	ErrInvalidFileSystemName     = errors.New("invalid file system name")
-	ErrImporterNotFound          = errors.New("importer not found")
-	ErrNilImporter               = errors.New("nil importer")
-	ErrNilFileSystem             = errors.New("nil file system")
-	ErrDuplicateImporterRegister = errors.New("duplicate importer register")
-	ErrDuplicateFileSystem       = errors.New("duplicate file system")
-	ErrAlreadyLoaded             = errors.New("resource already loaded")
-	ErrReadFile                  = errors.New("failed to read file")
-	ErrImportFailed              = errors.New("failed to import resource")
-	ErrNotLoaded                 = errors.New("resource not loaded")
-	ErrUnloadFailed              = errors.New("failed to unload resource")
-)
-
-func ConvertToResourceError(err error) error {
-	switch {
-	case errors.Is(err, slotmap.ErrNotFound):
-		return ErrNotFound
-	}
-	return err
-}
 
 type FileSystem string
 
@@ -74,7 +51,7 @@ func (r *res) GetHandle(resource Resource) (uint64, error) {
 
 	handle, exists := r.handles[resource]
 	if !exists {
-		return 0, fmt.Errorf("%w: %s", ErrNotFound, resource.String())
+		return 0, errs.NotFound("resource", resource.String())
 	}
 
 	return handle, nil
@@ -86,7 +63,7 @@ func (r *res) GetFileSystem(name FileSystem) (fs.FS, error) {
 
 	fsys, exists := r.filesystems[name]
 	if !exists {
-		return nil, fmt.Errorf("%w: %s", ErrInvalidFileSystemName, name)
+		return nil, errs.NotFound("file system", string(name))
 	}
 
 	return fsys, nil
@@ -94,7 +71,7 @@ func (r *res) GetFileSystem(name FileSystem) (fs.FS, error) {
 
 func (r *res) RegisterImporter(importer ResourceImporter, resourceTypes []string) error {
 	if importer == nil {
-		return ErrNilImporter
+		return errs.ArgumentNil("importer")
 	}
 
 	types := make([]string, 0, len(resourceTypes))
@@ -109,7 +86,7 @@ func (r *res) RegisterImporter(importer ResourceImporter, resourceTypes []string
 
 	for i, normalized := range types {
 		if _, exists := r.importers[normalized]; exists || slices.Contains(types[:i], normalized) {
-			return fmt.Errorf("%w: %s", ErrDuplicateImporterRegister, normalized)
+			return errs.AlreadyExists("importer", normalized)
 		}
 	}
 
@@ -122,14 +99,14 @@ func (r *res) RegisterImporter(importer ResourceImporter, resourceTypes []string
 
 func (r *res) RegisterFileSystem(name FileSystem, filesystem fs.FS) error {
 	if filesystem == nil {
-		return ErrNilFileSystem
+		return errs.ArgumentNil("filesystem")
 	}
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	if _, exists := r.filesystems[name]; exists {
-		return fmt.Errorf("%w: %s", ErrDuplicateFileSystem, name)
+		return errs.AlreadyExists("file system", string(name))
 	}
 
 	r.filesystems[name] = filesystem
@@ -138,7 +115,7 @@ func (r *res) RegisterFileSystem(name FileSystem, filesystem fs.FS) error {
 
 func (r *res) Load(filesystem fs.FS, batch ...Resource) error {
 	if filesystem == nil {
-		return ErrNilFileSystem
+		return errs.ArgumentNil("filesystem")
 	}
 
 	return r.run(batch, func(resource Resource) error {
@@ -176,32 +153,37 @@ func (r *res) run(batch []Resource, operation func(Resource) error) error {
 	_ = grp.Wait()
 
 	if len(errs) > 0 {
-		return fmt.Errorf("resource errors: %w", errors.Join(errs...))
+		return errors.Join(errs...)
 	}
 	return nil
 }
 
 func (r *res) loadResource(fsys fs.FS, resource Resource) error {
+	name := resource.String()
+
 	r.mu.Lock()
 	_, loaded := r.handles[resource]
 	importer, ok := r.importers[resource.Type()]
 	r.mu.Unlock()
 
 	if loaded {
-		return fmt.Errorf("%w: %s", ErrAlreadyLoaded, resource)
+		return errs.AlreadyExists("resource", name)
 	}
 	if !ok {
-		return fmt.Errorf("%w: %s", ErrImporterNotFound, resource.Type())
+		return errs.NotFound("importer", resource.Type())
 	}
 
-	data, err := fs.ReadFile(fsys, resource.String())
+	data, err := fs.ReadFile(fsys, name)
 	if err != nil {
-		return fmt.Errorf("%w: %s: %w", ErrReadFile, resource, err)
+		if errors.Is(err, fs.ErrNotExist) {
+			return errs.NotFound("resource", name).Wrap(err)
+		}
+		return fmt.Errorf("read %q: %w", name, err)
 	}
 
 	handle, err := importer.Import(data)
 	if err != nil {
-		return fmt.Errorf("%w: %s: %w", ErrImportFailed, resource, err)
+		return fmt.Errorf("import %q: %w", name, err)
 	}
 
 	r.mu.Lock()
@@ -211,14 +193,17 @@ func (r *res) loadResource(fsys fs.FS, resource Resource) error {
 	}
 	r.mu.Unlock()
 
-	if loaded {
-		// The resource was loaded concurrently by another goroutine. Discard the handle we just imported.
-		if err := importer.Delete(handle); err != nil {
-			return fmt.Errorf("discard duplicate %s: %w", resource, err)
-		}
-		return fmt.Errorf("%w: %s", ErrAlreadyLoaded, resource)
+	if !loaded {
+		return nil
 	}
-	return nil
+
+	dup := errs.AlreadyExists("resource", name)
+	if err := importer.Delete(handle); err != nil {
+		// The resource was loaded concurrently by another goroutine.
+		// Discard the handle we just imported.
+		return errors.Join(dup, fmt.Errorf("discard duplicate %q: %w", name, err))
+	}
+	return dup
 }
 
 func (r *res) unloadResource(resource Resource) error {
@@ -231,14 +216,14 @@ func (r *res) unloadResource(resource Resource) error {
 	r.mu.Unlock()
 
 	if !loaded {
-		return fmt.Errorf("%w: %s", ErrNotLoaded, resource)
+		return errs.NotFound("resource", resource.String())
 	}
 	if !hasImporter {
-		return fmt.Errorf("%w: %s", ErrImporterNotFound, resource.Type())
+		return errs.NotFound("importer", resource.Type())
 	}
 
 	if err := importer.Delete(handle); err != nil {
-		return fmt.Errorf("%w: %s: %w", ErrUnloadFailed, resource, err)
+		return fmt.Errorf("unload %q: %w", resource, err)
 	}
 	return nil
 }
