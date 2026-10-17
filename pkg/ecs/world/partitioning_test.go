@@ -6,7 +6,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/adm87/finch/pkg/ecs/components/transform"
+	"github.com/adm87/finch/pkg/ecs/transform"
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/types/hashgrid"
 	"github.com/yohamta/donburi"
@@ -589,16 +589,18 @@ func TestWorldQueryAndRangeOver(t *testing.T) {
 	}
 
 	count := 0
-	w.RangeOver(region, func(e *donburi.Entry) {
+	w.RangeOver(region, func(e *donburi.Entry) bool {
 		count++
+		return false // stop after the first
 	})
 	if count != 1 {
-		t.Fatalf("RangeOver stopped too late: count=%d, want 1", count)
+		t.Fatalf("RangeOver did not stop early: count=%d, want 1", count)
 	}
 
 	count = 0
-	w.RangeOver(region, func(e *donburi.Entry) {
+	w.RangeOver(region, func(e *donburi.Entry) bool {
 		count++
+		return true
 	})
 	if count != 2 {
 		t.Fatalf("RangeOver should visit exactly 2 entities in the region, got %d", count)

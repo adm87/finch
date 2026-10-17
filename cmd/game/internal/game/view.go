@@ -1,7 +1,7 @@
 package game
 
 import (
-	"github.com/adm87/finch/pkg/ecs/components/transform"
+	"github.com/adm87/finch/pkg/ecs/transform"
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/adm87/finch/pkg/ecs/components/transform"
+	"github.com/adm87/finch/pkg/ecs/transform"
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/yohamta/donburi"
 )
@@ -60,7 +60,7 @@ type World interface {
 
 	// RangeOver iterates over all entities within the specified region and calls the yield function for each entity.
 	// If the yield function returns false, the iteration stops immediately.
-	RangeOver(region geom.Rect, fn func(*donburi.Entry))
+	RangeOver(region geom.Rect, fn func(*donburi.Entry) bool)
 }
 
 type wrld struct {
@@ -194,14 +194,15 @@ func (w *wrld) Valid(entry *donburi.Entry) bool {
 }
 
 func (w *wrld) Query(region geom.Rect, dst []*donburi.Entry) []*donburi.Entry {
-	w.partitions.rangeOver(region, func(e donburi.Entity) {
+	w.partitions.rangeOver(region, func(e donburi.Entity) bool {
 		dst = append(dst, w.ecs.Entry(e))
+		return true
 	})
 	return dst
 }
 
-func (w *wrld) RangeOver(region geom.Rect, fn func(*donburi.Entry)) {
-	w.partitions.rangeOver(region, func(e donburi.Entity) {
-		fn(w.ecs.Entry(e))
+func (w *wrld) RangeOver(region geom.Rect, fn func(*donburi.Entry) bool) {
+	w.partitions.rangeOver(region, func(e donburi.Entity) bool {
+		return fn(w.ecs.Entry(e))
 	})
 }

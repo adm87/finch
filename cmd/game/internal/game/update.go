@@ -3,7 +3,7 @@ package game
 import (
 	"math"
 
-	"github.com/adm87/finch/pkg/ecs/components/transform"
+	"github.com/adm87/finch/pkg/ecs/transform"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/yohamta/donburi"

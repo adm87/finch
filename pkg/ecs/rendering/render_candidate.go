@@ -1,8 +1,8 @@
 package rendering
 
 import (
-	"github.com/adm87/finch/pkg/ecs/components/renderer"
-	"github.com/adm87/finch/pkg/ecs/components/transform"
+	"github.com/adm87/finch/pkg/ecs/renderer"
+	"github.com/adm87/finch/pkg/ecs/transform"
 	"github.com/yohamta/donburi"
 )
 
