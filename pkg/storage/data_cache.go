@@ -1,11 +1,6 @@
-package data
+package storage
 
 import (
-	"errors"
-	"fmt"
-	"strconv"
-
-	"github.com/adm87/finch/pkg/types/errs"
 	"github.com/adm87/finch/pkg/types/slotmap"
 )
 
@@ -22,14 +17,14 @@ func NewDataCache() *DataCache {
 func (dc *DataCache) Get(handle uint64) ([]byte, error) {
 	img, err := dc.store.Get(slotmap.Unpack(handle))
 	if err != nil {
-		return nil, storeError("get", handle, err)
+		return nil, cacheError("get", "data", handle, err)
 	}
 	return img, nil
 }
 
 func (dc *DataCache) Set(handle uint64, data []byte) error {
 	if err := dc.store.Set(slotmap.Unpack(handle), data); err != nil {
-		return storeError("set", handle, err)
+		return cacheError("set", "data", handle, err)
 	}
 	return nil
 }
@@ -42,19 +37,7 @@ func (dc *DataCache) Put(raw []byte) uint64 {
 func (dc *DataCache) Delete(handle uint64) ([]byte, error) {
 	data, err := dc.store.Delete(slotmap.Unpack(handle))
 	if err != nil {
-		return nil, storeError("delete", handle, err)
+		return nil, cacheError("delete", "data", handle, err)
 	}
 	return data, nil
-}
-
-func storeError(op string, handle uint64, err error) error {
-	key := strconv.FormatUint(handle, 10)
-	switch {
-	case errors.Is(err, slotmap.ErrInvalidKey):
-		return errs.Argument("handle", fmt.Sprintf("malformed image handle %s", key)).Wrap(err)
-	case errors.Is(err, slotmap.ErrNotFound):
-		return errs.NotFound("image", key).Wrap(err)
-	default:
-		return fmt.Errorf("%s image %s: %w", op, key, err)
-	}
 }

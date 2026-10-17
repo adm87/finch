@@ -4,7 +4,7 @@ import (
 	"errors"
 	"slices"
 
-	"github.com/adm87/finch/pkg/ecs/components/transform"
+	"github.com/adm87/finch/pkg/ecs/transform"
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/types/hashgrid"
 	"github.com/adm87/finch/pkg/types/slotmap"
@@ -82,10 +82,12 @@ func (p *partitions) remove(entry *donburi.Entry) error {
 	return p.delete(idx)
 }
 
-func (p *partitions) rangeOver(region geom.Rect, fn func(donburi.Entity)) {
+func (p *partitions) rangeOver(region geom.Rect, fn func(donburi.Entity) bool) {
 	for _, g := range p.grids {
-		for _, obj := range g.Range(region) {
-			fn(obj)
+		for _, e := range g.Range(region) {
+			if !fn(e) {
+				return
+			}
 		}
 	}
 }

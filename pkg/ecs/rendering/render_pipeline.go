@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/adm87/finch/pkg/ecs/components/renderer"
-	"github.com/adm87/finch/pkg/ecs/components/transform"
+	"github.com/adm87/finch/pkg/ecs/renderer"
+	"github.com/adm87/finch/pkg/ecs/transform"
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/types/slotmap"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -17,7 +17,7 @@ type View interface {
 }
 
 type World interface {
-	RangeOver(region geom.Rect, fn func(*donburi.Entry))
+	RangeOver(region geom.Rect, fn func(*donburi.Entry) bool)
 }
 
 // RenderPipeline is responsible for managing render adapters and rendering entities within a specified viewport.
@@ -87,30 +87,30 @@ func (rp *RenderPipeline) Draw(target *ebiten.Image) error {
 }
 
 func (rp *RenderPipeline) buildRenderQueue(region geom.Rect) {
-	rp.world.RangeOver(region, func(entry *donburi.Entry) {
+	rp.world.RangeOver(region, func(entry *donburi.Entry) bool {
 		if !entry.HasComponent(renderer.RendererComponent) {
-			return
+			return true
 		}
 
 		r := renderer.RendererComponent.Get(entry)
 		if !r.Visible() {
-			return
+			return true
 		}
 
 		t, tOk := transform.GetTransform(entry)
 		m, mOk := transform.GetMatrix(entry)
 
 		if !tOk || !mOk {
-			return
+			return true
 		}
 
 		bounds := transform.GetRect(entry)
 		if bounds.Area() == 0 {
-			return
+			return true
 		}
 
 		if !transform.TransformRect(t, m, bounds).Intersects(region) {
-			return
+			return true
 		}
 
 		rp.queue.Enqueue(RenderCandidate{
@@ -119,5 +119,6 @@ func (rp *RenderPipeline) buildRenderQueue(region geom.Rect) {
 			Transform: t,
 			Matrix:    m,
 		})
+		return true
 	})
 }

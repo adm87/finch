@@ -1,21 +1,22 @@
-package images
+package image
 
 import (
 	"image/color"
 
-	"github.com/adm87/finch/pkg/ecs/components/transform"
 	"github.com/adm87/finch/pkg/ecs/rendering"
+	"github.com/adm87/finch/pkg/ecs/transform"
 	"github.com/adm87/finch/pkg/geom"
+	"github.com/adm87/finch/pkg/storage"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
 type ImageRenderer struct {
 	missing     *ebiten.Image
 	drawOptions *ebiten.DrawImageOptions
-	cache       *ImageCache
+	cache       *storage.ImageCache
 }
 
-func NewImageRenderer(cache *ImageCache) *ImageRenderer {
+func NewImageRenderer(cache *storage.ImageCache) *ImageRenderer {
 	missing := ebiten.NewImage(10, 10)
 	missing.Fill(color.RGBA{R: 255, B: 255, A: 255})
 	return &ImageRenderer{

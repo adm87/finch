@@ -6,17 +6,25 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/logger"
 	"github.com/adm87/finch/pkg/resources"
-	"github.com/adm87/finch/pkg/resources/data"
+	"github.com/adm87/finch/pkg/storage"
 	"github.com/adm87/finch/pkg/types/errs"
 	"github.com/adm87/finch/pkg/types/slotmap"
 )
 
+// Aseprite represents the interface for interacting with Aseprite libraries and atlases.
 type Aseprite interface {
+	// CreateLibrary creates a new Aseprite library with the given ID. It returns the atlas ID of the created library.
+	// If dynamicLoad is true, the library will be loaded dynamically if it is not already loaded.
 	CreateLibrary(id LibraryID, dynamicLoad bool) (uint64, error)
+
+	// ClearLibrary clears the Aseprite library with the given ID.
+	// If dynamicUnload is true, the library will be unloaded dynamically if it is no longer needed.
 	ClearLibrary(id LibraryID, dynamicUnload bool) error
+
+	// GetAtlas retrieves the atlas with the given ID.
+	GetAtlas(id uint64) (*Atlas, error)
 }
 
 type Atlases map[uint64]Atlas
@@ -24,15 +32,15 @@ type Atlases map[uint64]Atlas
 type ase struct {
 	res       resources.Resources
 	logger    logger.Logger
-	dc        *data.DataCache
-	ic        *images.ImageCache
+	dc        *storage.DataCache
+	ic        *storage.ImageCache
 	config    *Config
 	atlases   *slotmap.SlotMap[*Atlas]
 	libraries map[LibraryID]uint64
 	mu        sync.Mutex
 }
 
-func New(res resources.Resources, log logger.Logger, dc *data.DataCache, ic *images.ImageCache, config *Config) (Aseprite, error) {
+func New(res resources.Resources, log logger.Logger, dc *storage.DataCache, ic *storage.ImageCache, config *Config) (Aseprite, error) {
 	var errList []error
 	if res == nil {
 		errList = append(errList, errs.ArgumentNil("res"))

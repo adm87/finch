@@ -1,4 +1,4 @@
-package data
+package storage
 
 var dataTypes = []string{"json", "yml", "yaml"}
 

@@ -14,16 +14,16 @@ import (
 	"github.com/adm87/finch/cmd/game/internal/game"
 	"github.com/adm87/finch/content"
 	"github.com/adm87/finch/pkg/aseprite"
-	"github.com/adm87/finch/pkg/ecs/components/renderer"
-	"github.com/adm87/finch/pkg/ecs/components/transform"
+	"github.com/adm87/finch/pkg/ecs/image"
+	"github.com/adm87/finch/pkg/ecs/renderer"
 	"github.com/adm87/finch/pkg/ecs/rendering"
+	"github.com/adm87/finch/pkg/ecs/transform"
 	"github.com/adm87/finch/pkg/ecs/world"
 	"github.com/adm87/finch/pkg/engine"
 	"github.com/adm87/finch/pkg/geom"
-	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/logger"
 	"github.com/adm87/finch/pkg/resources"
-	"github.com/adm87/finch/pkg/resources/data"
+	"github.com/adm87/finch/pkg/storage"
 	"github.com/adm87/finch/pkg/types/errs"
 )
 
@@ -65,13 +65,13 @@ func initializeGameResources(g *game.Game) error {
 		return err
 	}
 
-	dc := data.NewDataCache()
-	if err := g.Resources.RegisterImporter(data.NewDataLoader(dc), data.DataTypes()); err != nil {
+	dc := storage.NewDataCache()
+	if err := g.Resources.RegisterImporter(storage.NewDataLoader(dc), storage.DataTypes()); err != nil {
 		return &errs.InvalidOperationError{Message: "register data importer", Inner: err}
 	}
 
-	ic := images.NewImageCache()
-	if err := g.Resources.RegisterImporter(images.NewImageLoader(ic), images.ImageTypes()); err != nil {
+	ic := storage.NewImageCache()
+	if err := g.Resources.RegisterImporter(storage.NewImageLoader(ic), storage.ImageTypes()); err != nil {
 		return &errs.InvalidOperationError{Message: "register image importer", Inner: err}
 	}
 
@@ -132,7 +132,7 @@ func loadGameConfig(g *game.Game) (err error) {
 }
 
 func initializeGameRenderers(g *game.Game, rp *rendering.RenderPipeline) error {
-	ir, err := rp.RegisterRenderer(images.NewImageRenderer(g.Cache.Images))
+	ir, err := rp.RegisterRenderer(image.NewImageRenderer(g.Cache.Images))
 	if err != nil {
 		return errs.InvalidOperation("register image renderer").Wrap(err)
 	}
@@ -251,7 +251,7 @@ func makeTestScene(g *game.Game, w world.World) error {
 	for n := range 1000 {
 		entry := w.Create(
 			renderer.RendererComponent,
-			images.ImageComponent,
+			image.ImageComponent,
 		)
 
 		r, ok := renderer.GetRenderer(entry)
@@ -264,7 +264,7 @@ func makeTestScene(g *game.Game, w world.World) error {
 			errList = append(errList, missingComponent(n, "transform"))
 			continue
 		}
-		i, ok := images.GetImage(entry)
+		i, ok := image.GetImage(entry)
 		if !ok {
 			errList = append(errList, missingComponent(n, "image"))
 			continue
