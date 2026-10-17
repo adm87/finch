@@ -30,7 +30,7 @@ import (
 const resourceHandle = "resource handle"
 
 func Boot() error {
-	return boot(logger.NewLogger(os.Stdout, loggerOptions))
+	return boot(logger.NewLogger(os.Stdout, loggerOptions).Named("finch"))
 }
 
 func boot(l logger.Logger) error {
@@ -223,12 +223,17 @@ func run(g *game.Game, l logger.Logger) error {
 }
 
 func makeTestScene(g *game.Game, w world.World) error {
-	imgHandle, err := g.Resources.GetHandle(content.DEFAULT_IMAGE_10X10)
+	libraryID, err := g.Aseprite.CreateLibrary("captain", aseprite.LoadModeDynamic)
 	if err != nil {
-		return errs.NotFound(resourceHandle, content.DEFAULT_IMAGE_10X10).Wrap(err)
+		return fmt.Errorf("create aseprite library: %w", err)
 	}
 
-	img, err := g.Cache.Images.Get(imgHandle)
+	library, err := g.Aseprite.GetLibrary(libraryID)
+	if err != nil {
+		return fmt.Errorf("get aseprite image handle: %w", err)
+	}
+
+	img, err := g.Cache.Images.Get(library.ImageHandle)
 	if err != nil {
 		return errs.NotFound("image", content.DEFAULT_IMAGE_10X10).Wrap(err)
 	}
@@ -238,12 +243,6 @@ func makeTestScene(g *game.Game, w world.World) error {
 
 	windowWidth := float64(g.Config.Window.Width)
 	windowHeight := float64(g.Config.Window.Height)
-
-	libHandle, err := g.Aseprite.CreateLibrary("captain", true)
-	if err != nil {
-		return fmt.Errorf("create aseprite library: %w", err)
-	}
-	_ = libHandle
 
 	const ax, ay = 0.5, 0.5
 
@@ -277,7 +276,7 @@ func makeTestScene(g *game.Game, w world.World) error {
 			-windowHeight*0.5+rand.Float64()*windowHeight,
 		)
 
-		i.SetHandle(imgHandle)
+		i.SetHandle(library.ImageHandle)
 		i.SetAnchor(ax, ay)
 		i.SetColor(color.RGBA{
 			R: uint8(rand.UintN(256)),
