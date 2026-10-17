@@ -1,0 +1,8 @@
+libraries:
+  captain:
+    manifest: aseprite/captain/captain.json
+    content:
+      filesystem: assets
+      resources:
+        - aseprite/captain/captain.png
+        - aseprite/captain/captain.json

@@ -8,7 +8,8 @@ rendering:
 
 # Resource bundles that will be loaded when the game starts.
 # These resources are loaded once and remain available throughout the game.
-static_resources:
-  - filesystem: "embedded"
-    bundle: 
-      - "embedded/images/default_10x10.png"
+static_content:
+  - filesystem: embedded
+    resources: 
+      - embedded/configs/aseprite_config.yaml
+      - embedded/images/default_10x10.png

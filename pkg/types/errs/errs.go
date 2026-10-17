@@ -15,6 +15,7 @@ var (
 	ErrNotSupported       = errors.New("not supported")
 	ErrNotImplemented     = errors.New("not implemented")
 	ErrNotFound           = errors.New("not found")
+	ErrAlreadyExists      = errors.New("already exists")
 	ErrFormat             = errors.New("format error")
 )
 
@@ -23,6 +24,19 @@ func withInner(msg string, inner error) string {
 		return msg
 	}
 	return msg + ": " + inner.Error()
+}
+
+func keyed(kind, key, suffix string) string {
+	switch {
+	case kind != "" && key != "":
+		return fmt.Sprintf("%s %q %s", kind, key, suffix)
+	case key != "":
+		return fmt.Sprintf("key %q %s", key, suffix)
+	case kind != "":
+		return kind + " " + suffix
+	default:
+		return suffix
+	}
 }
 
 // ArgumentError reports that a caller passed an invalid value for a parameter.
@@ -34,8 +48,13 @@ type ArgumentError struct {
 	Message string
 }
 
-func Argument(param, message string) error {
+func Argument(param, message string) *ArgumentError {
 	return &ArgumentError{Param: param, Message: message}
+}
+
+func (e *ArgumentError) Wrap(err error) *ArgumentError {
+	e.Inner = err
+	return e
 }
 
 func (e *ArgumentError) Error() string {
@@ -57,7 +76,7 @@ type ArgumentNilError struct {
 	Param string
 }
 
-func ArgumentNil(param string) error {
+func ArgumentNil(param string) *ArgumentNilError {
 	return &ArgumentNilError{Param: param}
 }
 
@@ -86,7 +105,7 @@ type ArgumentOutOfRangeError struct {
 	Message string
 }
 
-func ArgumentOutOfRange(param string, value any, message string) error {
+func ArgumentOutOfRange(param string, value any, message string) *ArgumentOutOfRangeError {
 	return &ArgumentOutOfRangeError{Param: param, Value: value, Message: message}
 }
 
@@ -110,14 +129,11 @@ func (e *ArgumentOutOfRangeError) As(target any) bool {
 	return false
 }
 
-// CheckRange returns nil when min <= value <= max.
+// CheckRange returns nil when min <= value <= max. It returns error rather
+// than a concrete pointer so the nil case is a true nil interface.
 func CheckRange[T cmp.Ordered](param string, value, min, max T) error {
 	if value < min || value > max {
-		return &ArgumentOutOfRangeError{
-			Param:   param,
-			Value:   value,
-			Message: fmt.Sprintf("must be between %v and %v", min, max),
-		}
+		return ArgumentOutOfRange(param, value, fmt.Sprintf("must be between %v and %v", min, max))
 	}
 	return nil
 }
@@ -130,8 +146,13 @@ type InvalidOperationError struct {
 	Message string
 }
 
-func InvalidOperation(message string) error {
+func InvalidOperation(message string) *InvalidOperationError {
 	return &InvalidOperationError{Message: message}
+}
+
+func (e *InvalidOperationError) Wrap(err error) *InvalidOperationError {
+	e.Inner = err
+	return e
 }
 
 func (e *InvalidOperationError) Error() string {
@@ -151,7 +172,7 @@ type DisposedError struct {
 	Object string
 }
 
-func Disposed(object string) error {
+func Disposed(object string) *DisposedError {
 	return &DisposedError{Object: object}
 }
 
@@ -177,7 +198,7 @@ type NotSupportedError struct {
 	Message string
 }
 
-func NotSupported(message string) error {
+func NotSupported(message string) *NotSupportedError {
 	return &NotSupportedError{Message: message}
 }
 
@@ -196,7 +217,7 @@ type NotImplementedError struct {
 	Message string
 }
 
-func NotImplemented(message string) error {
+func NotImplemented(message string) *NotImplementedError {
 	return &NotImplementedError{Message: message}
 }
 
@@ -217,38 +238,70 @@ type NotFoundError struct {
 	Key   string
 }
 
-func NotFound(kind, key string) error {
+func NotFound(kind, key string) *NotFoundError {
 	return &NotFoundError{Kind: kind, Key: key}
 }
 
+func IsNotFound(err error) bool {
+	return errors.Is(err, ErrNotFound)
+}
+
+func (e *NotFoundError) Wrap(err error) *NotFoundError {
+	e.Inner = err
+	return e
+}
+
 func (e *NotFoundError) Error() string {
-	var msg string
-	switch {
-	case e.Kind != "" && e.Key != "":
-		msg = fmt.Sprintf("%s %q not found", e.Kind, e.Key)
-	case e.Key != "":
-		msg = fmt.Sprintf("key %q not found", e.Key)
-	case e.Kind != "":
-		msg = e.Kind + " not found"
-	default:
-		msg = "not found"
-	}
-	return withInner(msg, e.Inner)
+	return withInner(keyed(e.Kind, e.Key, "not found"), e.Inner)
 }
 
 func (e *NotFoundError) Unwrap() error        { return e.Inner }
 func (e *NotFoundError) Is(target error) bool { return target == ErrNotFound }
 
-// FormatError reports input that could not be parsed. Input is the raw text
-// and Inner is usually the underlying parser error.
+// AlreadyExistsError reports that an add or register call used a key that is
+// already taken. Kind names what was being added ("file system", "importer",
+// "renderer") and Key is the conflicting identifier.
+type AlreadyExistsError struct {
+	Inner error
+	Kind  string
+	Key   string
+}
+
+func AlreadyExists(kind, key string) *AlreadyExistsError {
+	return &AlreadyExistsError{Kind: kind, Key: key}
+}
+
+func IsAlreadyExists(err error) bool {
+	return errors.Is(err, ErrAlreadyExists)
+}
+
+func (e *AlreadyExistsError) Wrap(err error) *AlreadyExistsError {
+	e.Inner = err
+	return e
+}
+
+func (e *AlreadyExistsError) Error() string {
+	return withInner(keyed(e.Kind, e.Key, "already exists"), e.Inner)
+}
+
+func (e *AlreadyExistsError) Unwrap() error        { return e.Inner }
+func (e *AlreadyExistsError) Is(target error) bool { return target == ErrAlreadyExists }
+
+// FormatError reports input that could not be parsed or decoded. Input names
+// what was being parsed, such as a file name or the raw text itself.
 type FormatError struct {
 	Inner   error
 	Input   string
 	Message string
 }
 
-func Format(input, message string, inner error) error {
-	return &FormatError{Input: input, Message: message, Inner: inner}
+func Format(input, message string) *FormatError {
+	return &FormatError{Input: input, Message: message}
+}
+
+func (e *FormatError) Wrap(err error) *FormatError {
+	e.Inner = err
+	return e
 }
 
 func (e *FormatError) Error() string {

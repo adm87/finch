@@ -5,10 +5,10 @@ import (
 	"github.com/adm87/finch/pkg/types"
 )
 
-type StatusResources []resources.ResourceConfig
+type StaticContent []resources.ResourceBundle
 
-func (sr StatusResources) Load(res resources.Resources) error {
-	for _, r := range sr {
+func (sc StaticContent) Load(res resources.Resources) error {
+	for _, r := range sc {
 		if err := r.Load(res); err != nil {
 			return err
 		}
@@ -17,9 +17,9 @@ func (sr StatusResources) Load(res resources.Resources) error {
 }
 
 type GameConfig struct {
-	StaticResources StatusResources `yaml:"static_resources"`
-	Window          WindowConfig    `yaml:"window"`
-	Rendering       RenderingConfig `yaml:"rendering"`
+	StaticContent StaticContent   `yaml:"static_content"`
+	Window        WindowConfig    `yaml:"window"`
+	Rendering     RenderingConfig `yaml:"rendering"`
 }
 
 type WindowConfig struct {
