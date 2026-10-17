@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"sync"
 
 	"github.com/adm87/finch/pkg/logger"
@@ -13,33 +14,73 @@ import (
 	"github.com/adm87/finch/pkg/types/slotmap"
 )
 
-// Aseprite represents the interface for interacting with Aseprite libraries and atlases.
+const aseprite_library = "aseprite library"
+
+// LoadMode controls whether CreateLibrary may load missing content.
+type LoadMode int
+
+const (
+	// LoadModeRequired fails if the library's content isn't already loaded.
+	LoadModeRequired LoadMode = iota
+	// LoadModeDynamic loads the library's content if it isn't loaded.
+	LoadModeDynamic
+)
+
+// UnloadMode controls whether ClearLibrary unloads the library's content.
+type UnloadMode int
+
+const (
+	// UnloadModeKeep leaves the content loaded.
+	UnloadModeKeep UnloadMode = iota
+	// UnloadModeIfOwned unloads the content only if CreateLibrary loaded it.
+	UnloadModeIfOwned
+)
+
+// LibraryID uniquely identifies an Aseprite library.
+type LibraryID uint64
+
+// Aseprite manages Aseprite libraries and their atlases.
+//
+// Ownership is all-or-nothing: if a library's content was partially preloaded,
+// ClearLibrary with UnloadModeIfOwned may unload the preloaded parts too.
+// Preload a library's content entirely or not at all.
 type Aseprite interface {
-	// CreateLibrary creates a new Aseprite library with the given ID. It returns the atlas ID of the created library.
-	// If dynamicLoad is true, the library will be loaded dynamically if it is not already loaded.
-	CreateLibrary(id LibraryID, dynamicLoad bool) (uint64, error)
+	// CreateLibrary returns the ID of the named library, loading and decoding it on first use.
+	// If the library's content isn't loaded, it is loaded only when dynamicLoad is true.
+	CreateLibrary(name string, mode LoadMode) (LibraryID, error)
 
-	// ClearLibrary clears the Aseprite library with the given ID.
-	// If dynamicUnload is true, the library will be unloaded dynamically if it is no longer needed.
-	ClearLibrary(id LibraryID, dynamicUnload bool) error
+	// ClearLibrary removes the named library.
+	// If dynamicUnload is true, its content is unloaded when nothing else needs it.
+	ClearLibrary(name string, mode UnloadMode) error
 
-	// GetAtlas retrieves the atlas with the given ID.
-	GetAtlas(id uint64) (*Atlas, error)
+	// GetLibrary returns the library with the given ID.
+	// The Atlas is shared and must not be modified.
+	GetLibrary(id LibraryID) (LibraryInfo, error)
 }
 
-type Atlases map[uint64]Atlas
+// LibraryInfo contains information about an Aseprite library, including its atlas, image handle, and data handle.
+type LibraryInfo struct {
+	Atlas       *Atlas
+	ImageHandle uint64
+	DataHandle  uint64
+	owned       bool
+}
 
 type ase struct {
-	res       resources.Resources
-	logger    logger.Logger
+	res    resources.Resources
+	logger logger.Logger
+
 	dc        *storage.DataCache
 	ic        *storage.ImageCache
+	libraries *slotmap.SlotMap[LibraryInfo]
 	config    *Config
-	atlases   *slotmap.SlotMap[*Atlas]
-	libraries map[LibraryID]uint64
-	mu        sync.Mutex
+
+	libsByName map[string]LibraryID
+
+	mu sync.Mutex
 }
 
+// New creates a new Aseprite instance with the given resources, logger, data cache, image cache, and configuration.
 func New(res resources.Resources, log logger.Logger, dc *storage.DataCache, ic *storage.ImageCache, config *Config) (Aseprite, error) {
 	var errList []error
 	if res == nil {
@@ -59,126 +100,159 @@ func New(res resources.Resources, log logger.Logger, dc *storage.DataCache, ic *
 	if err := errors.Join(errList...); err != nil {
 		return nil, err
 	}
+	if log == nil {
+		log = logger.N
+	}
 	return &ase{
-		res:       res,
-		logger:    log.Named("aseprite"),
-		dc:        dc,
-		ic:        ic,
-		config:    config,
-		atlases:   slotmap.New[*Atlas](128),
-		libraries: make(map[LibraryID]uint64),
+		res:        res,
+		logger:     log.Named("aseprite"),
+		dc:         dc,
+		ic:         ic,
+		config:     config,
+		libraries:  slotmap.New[LibraryInfo](128),
+		libsByName: make(map[string]LibraryID),
 	}, nil
 }
 
 func validateConfig(cfg *Config) error {
 	var errList []error
-	for id, lib := range cfg.Libraries {
-		if lib.Manifest == "" {
-			errList = append(errList, errs.Argument("config", fmt.Sprintf("library %q: manifest is missing", id)))
-		}
-		if lib.Content.FileSystem == "" {
-			errList = append(errList, errs.Argument("config", fmt.Sprintf("library %q: content file system is missing", id)))
-		}
-		if len(lib.Content.Resources) == 0 {
-			errList = append(errList, errs.Argument("config", fmt.Sprintf("library %q: content has no resources", id)))
+	for name, lib := range cfg.Libraries {
+		if err := lib.Validate(); err != nil {
+			errList = append(errList, errs.Argument("config", fmt.Sprintf("library %q", name)).Wrap(err))
 		}
 	}
 	return errors.Join(errList...)
 }
 
-func (a *ase) CreateLibrary(id LibraryID, dynamicLoad bool) (uint64, error) {
+func (a *ase) CreateLibrary(name string, mode LoadMode) (LibraryID, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	if atlasID, exists := a.libraries[id]; exists {
-		return atlasID, nil
+	if id, exists := a.libsByName[name]; exists {
+		return id, nil
 	}
 
-	library, err := a.GetLibrary(id)
+	library, err := a.getLibraryConfig(name)
 	if err != nil {
 		return 0, err
 	}
 
-	loaded, err := a.isLibraryLoaded(&library.Content)
+	loaded, err := a.isLibraryLoaded(library)
 	if err != nil {
-		return 0, fmt.Errorf("check library %q: %w", id, err)
+		return 0, fmt.Errorf("check library %q: %w", name, err)
 	}
 
+	owned := false
 	if !loaded {
-		if !dynamicLoad {
-			return 0, errs.InvalidOperation(fmt.Sprintf("library %q is not loaded and dynamic loading is disabled", id))
+		if mode == LoadModeRequired {
+			return 0, errs.InvalidOperation(fmt.Sprintf("library %q is not loaded and mode is LoadModeRequired", name))
 		}
-		if err := library.Content.Load(a.res); err != nil && !errs.IsAlreadyExists(err) {
-			return 0, fmt.Errorf("load library %q: %w", id, err)
+		if err := a.loadLibrary(library); err != nil && !errs.IsAlreadyExists(err) {
+			return 0, fmt.Errorf("load library %q: %w", name, err)
 		}
+		owned = true
 	}
 
-	atlas, err := a.decodeAtlas(library.Manifest)
+	info, err := a.decodeLibrary(library)
 	if err != nil {
-		return 0, fmt.Errorf("library %q: %w", id, err)
+		if owned {
+			err = errors.Join(err, a.unloadLibrary(library))
+		}
+		return 0, fmt.Errorf("library %q: %w", name, err)
 	}
+	info.owned = owned
 
-	atlasID := a.atlases.Insert(atlas).Pack()
-	a.libraries[id] = atlasID
-
-	return atlasID, nil
+	id := LibraryID(a.libraries.Insert(info).Pack())
+	a.libsByName[name] = id
+	return id, nil
 }
 
-func (a *ase) ClearLibrary(id LibraryID, dynamicUnload bool) error {
-	return errs.NotImplemented("ClearLibrary")
-}
+func (a *ase) ClearLibrary(name string, mode UnloadMode) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
 
-func (a *ase) GetLibrary(id LibraryID) (*Library, error) {
-	if id.IsEmpty() {
-		return nil, errs.Argument("id", "library id cannot be empty")
-	}
-	library, exists := a.config.Libraries[id]
+	id, exists := a.libsByName[name]
 	if !exists {
-		return nil, errs.NotFound("aseprite library", id.String())
+		return errs.NotFound("aseprite library", name)
+	}
+
+	info, err := a.libraries.Delete(slotmap.Unpack(uint64(id)))
+	delete(a.libsByName, name)
+	if err != nil {
+		return fmt.Errorf("clear library %q: %w", name, err)
+	}
+
+	if mode != UnloadModeIfOwned || !info.owned {
+		return nil
+	}
+
+	cfg, err := a.getLibraryConfig(name)
+	if err != nil {
+		return err
+	}
+	if err := a.unloadLibrary(cfg); err != nil {
+		return fmt.Errorf("unload library %q: %w", name, err)
+	}
+	return nil
+}
+
+func (a *ase) GetLibrary(id LibraryID) (LibraryInfo, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	info, err := a.libraries.Get(slotmap.Unpack(uint64(id)))
+	if err != nil {
+		return LibraryInfo{}, errs.NotFound(aseprite_library, strconv.FormatUint(uint64(id), 10)).Wrap(err)
+	}
+	return info, nil
+}
+
+func (a *ase) getLibraryConfig(name string) (*LibraryConfig, error) {
+	if name == "" {
+		return nil, errs.Argument("name", "library name cannot be empty")
+	}
+	library, exists := a.config.Libraries[name]
+	if !exists {
+		return nil, errs.NotFound(aseprite_library, name)
 	}
 	return &library, nil
 }
 
-func (a *ase) GetAtlas(id uint64) (*Atlas, error) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
+func (a *ase) decodeLibrary(library *LibraryConfig) (LibraryInfo, error) {
+	atlasPath := library.Atlas.String()
 
-	atlas, err := a.atlases.Get(slotmap.Unpack(id))
+	dataHandle, err := a.res.GetHandle(library.Atlas)
 	if err != nil {
-		return nil, errs.NotFound("aseprite atlas", fmt.Sprintf("%d", id)).Wrap(err)
+		return LibraryInfo{}, fmt.Errorf("atlas %q: %w", atlasPath, err)
+	}
+	imageHandle, err := a.res.GetHandle(library.Image)
+	if err != nil {
+		return LibraryInfo{}, fmt.Errorf("image %q: %w", library.Image.String(), err)
+	}
+	raw, err := a.dc.Get(dataHandle)
+	if err != nil {
+		return LibraryInfo{}, fmt.Errorf("atlas %q: %w", atlasPath, err)
 	}
 
-	return atlas, nil
+	info := LibraryInfo{ImageHandle: imageHandle, DataHandle: dataHandle}
+	if err := json.Unmarshal(raw, &info.Atlas); err != nil {
+		return LibraryInfo{}, errs.Format(atlasPath, "invalid aseprite json").Wrap(err)
+	}
+	if info.Atlas == nil {
+		return LibraryInfo{}, errs.Format(atlasPath, "atlas is empty")
+	}
+	if dropped := info.Atlas.DropMissingTags(); len(dropped) > 0 {
+		a.logger.Warn("dropping missing tags", logger.String("atlas", atlasPath), logger.Strings("tags", dropped))
+	}
+	if err := info.Atlas.Validate(); err != nil {
+		return LibraryInfo{}, fmt.Errorf("atlas %q: %w", atlasPath, err)
+	}
+	return info, nil
 }
 
-func (a *ase) decodeAtlas(manifest resources.Resource) (*Atlas, error) {
-	name := manifest.String()
-
-	handle, err := a.res.GetHandle(manifest)
-	if err != nil {
-		return nil, fmt.Errorf("manifest %q: %w", name, err)
-	}
-	raw, err := a.dc.Get(handle)
-	if err != nil {
-		return nil, fmt.Errorf("manifest %q: %w", name, err)
-	}
-
-	var atlas Atlas
-	if err := json.Unmarshal(raw, &atlas); err != nil {
-		return nil, errs.Format(name, "invalid aseprite json").Wrap(err)
-	}
-	if dropped := atlas.DropMissingTags(); len(dropped) > 0 {
-		a.logger.Warn("dropping missing tags", logger.Strings("tags", dropped))
-	}
-	if err := atlas.Validate(); err != nil {
-		return nil, fmt.Errorf("manifest %q: %w", name, err)
-	}
-	return &atlas, nil
-}
-
-func (a *ase) isLibraryLoaded(bundle *resources.ResourceBundle) (bool, error) {
-	for _, resource := range bundle.Resources {
-		_, err := a.res.GetHandle(resource)
+func (a *ase) isLibraryLoaded(cfg *LibraryConfig) (bool, error) {
+	for _, r := range cfg.Resources() {
+		_, err := a.res.GetHandle(r)
 		if errs.IsNotFound(err) {
 			return false, nil
 		}
@@ -187,4 +261,20 @@ func (a *ase) isLibraryLoaded(bundle *resources.ResourceBundle) (bool, error) {
 		}
 	}
 	return true, nil
+}
+
+func (a *ase) loadLibrary(cfg *LibraryConfig) error {
+	bundle := resources.ResourceBundle{
+		FileSystem: resources.FileSystem(cfg.FileSystem),
+		Resources:  cfg.Resources(),
+	}
+	return bundle.Load(a.res)
+}
+
+func (a *ase) unloadLibrary(cfg *LibraryConfig) error {
+	bundle := resources.ResourceBundle{
+		FileSystem: resources.FileSystem(cfg.FileSystem),
+		Resources:  cfg.Resources(),
+	}
+	return bundle.Unload(a.res)
 }

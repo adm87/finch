@@ -21,7 +21,7 @@ func (c *HexColor) ToColorRGBA() color.RGBA {
 	}
 }
 
-func (c *HexColor) parseHex(s string) error {
+func (c *HexColor) ParseHexColor(s string) error {
 	s = strings.TrimPrefix(s, "#")
 	b, err := hex.DecodeString(s)
 	if err != nil {
@@ -39,7 +39,7 @@ func (c *HexColor) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &s); err != nil {
 		return err
 	}
-	return c.parseHex(s)
+	return c.ParseHexColor(s)
 }
 
 func (c *HexColor) UnmarshalYAML(value *yaml.Node) error {
@@ -47,5 +47,5 @@ func (c *HexColor) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&s); err != nil {
 		return err
 	}
-	return c.parseHex(s)
+	return c.ParseHexColor(s)
 }
