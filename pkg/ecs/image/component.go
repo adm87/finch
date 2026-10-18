@@ -8,6 +8,7 @@ import (
 
 type Image struct {
 	handle uint64
+	frame  int
 	ax, ay float64
 	color  color.RGBA
 }
@@ -30,6 +31,14 @@ func (i *Image) Handle() uint64 {
 
 func (i *Image) SetHandle(handle uint64) {
 	i.handle = handle
+}
+
+func (i *Image) Frame() int {
+	return i.frame
+}
+
+func (i *Image) SetFrame(frame int) {
+	i.frame = frame
 }
 
 func (i *Image) Anchor() (float64, float64) {

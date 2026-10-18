@@ -1,5 +1,7 @@
 package geom
 
+import "image"
+
 type Rect struct {
 	X      float64 `json:"x"`
 	Y      float64 `json:"y"`
@@ -43,4 +45,10 @@ func (r Rect) ContainsPoint(x, y float64) bool {
 	rMinX, rMinY := r.Min()
 	rMaxX, rMaxY := r.Max()
 	return x >= rMinX && x <= rMaxX && y >= rMinY && y <= rMaxY
+}
+
+func (r Rect) ToImageRectangle() image.Rectangle {
+	minX, minY := r.Min()
+	maxX, maxY := r.Max()
+	return image.Rect(int(minX), int(minY), int(maxX), int(maxY))
 }

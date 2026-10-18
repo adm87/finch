@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"image"
 	"time"
 
 	"github.com/adm87/finch/pkg/geom"
@@ -51,6 +52,15 @@ func (a *Atlas) Validate() error {
 
 // Frames holds an atlas's frames in file order.
 type Frames []Frame
+
+// Rectangles returns the bounding rectangles of all frames in the atlas.
+func (f *Frames) Rectangles() []image.Rectangle {
+	rects := make([]image.Rectangle, len(*f))
+	for i, frame := range *f {
+		rects[i] = frame.FrameRect.ToImageRectangle()
+	}
+	return rects
+}
 
 // UnmarshalJSON decodes both the Array and Hash export layouts.
 // Hash keys become each frame's FileName.
