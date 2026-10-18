@@ -129,8 +129,8 @@ func (e *ArgumentOutOfRangeError) As(target any) bool {
 	return false
 }
 
-// CheckRange returns nil when min <= value <= max. It returns error rather
-// than a concrete pointer so the nil case is a true nil interface.
+// CheckRange checks if a value is within the specified range [min, max].
+// It returns an ArgumentOutOfRangeError if the value is out of range.
 func CheckRange[T cmp.Ordered](param string, value, min, max T) error {
 	if value < min || value > max {
 		return ArgumentOutOfRange(param, value, fmt.Sprintf("must be between %v and %v", min, max))
@@ -140,7 +140,7 @@ func CheckRange[T cmp.Ordered](param string, value, min, max T) error {
 
 // InvalidOperationError reports that a call is not valid for the object's
 // current state, such as starting something already running or reading
-// before initialization.
+// before initialization. It also wraps an optional inner error.
 type InvalidOperationError struct {
 	Inner   error
 	Message string

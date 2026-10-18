@@ -233,7 +233,7 @@ func makeTestScene(g *game.Game, w world.World) error {
 		return fmt.Errorf("get aseprite image handle: %w", err)
 	}
 
-	img, err := g.Cache.Images.Get(library.ImageHandle)
+	img, err := g.Cache.Images.GetFrame(library.ImageHandle, 0)
 	if err != nil {
 		return errs.NotFound("image", content.DEFAULT_IMAGE_10X10).Wrap(err)
 	}

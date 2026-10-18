@@ -34,10 +34,11 @@ func (ir *ImageRenderer) Render(target *ebiten.Image, rc *rendering.RenderCandid
 
 	if img, iOk := GetImage(rc.Entry); iOk {
 		ax, ay = img.Anchor()
+		frame := img.Frame()
 
 		ir.drawOptions.ColorScale.ScaleWithColor(img.color)
 
-		if cached, _ := ir.cache.Get(img.handle); cached != nil {
+		if cached, _ := ir.cache.GetFrame(img.handle, frame); cached != nil {
 			src = cached
 		}
 	}

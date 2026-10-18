@@ -162,8 +162,13 @@ func (a *ase) CreateLibrary(name string, mode LoadMode) (LibraryID, error) {
 	}
 	info.owned = owned
 
+	if err := a.ic.SliceRects(info.ImageHandle, info.Atlas.Frames.Rectangles()); err != nil {
+		return 0, fmt.Errorf("slice image %q: %w", library.Image.String(), err)
+	}
+
 	id := LibraryID(a.libraries.Insert(info).Pack())
 	a.libsByName[name] = id
+
 	return id, nil
 }
 
