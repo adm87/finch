@@ -19,27 +19,25 @@ type World interface {
 	RangeOver(region geom.Rect, fn func(*donburi.Entry) bool)
 }
 
-// RenderPipeline is responsible for managing render adapters and rendering entities within a specified viewport.
-//
-// Renderables must be partitioned within the World in order to be rendered, otherwise they will not appear in the render output.
+// RenderPipeline manages the rendering process by maintaining a list of renderers and a render queue.
 type RenderPipeline struct {
-	view     View
-	world    World
-	adapters *slotmap.SlotMap[RenderAdapter]
-	queue    *RenderQueue
+	view      View
+	world     World
+	renderers *slotmap.SlotMap[Renderer]
+	queue     *RenderQueue
 }
 
 func NewRenderPipeline(viewport View, world World) *RenderPipeline {
 	return &RenderPipeline{
-		view:     viewport,
-		world:    world,
-		adapters: slotmap.New[RenderAdapter](64),
-		queue:    NewRenderQueue(),
+		view:      viewport,
+		world:     world,
+		renderers: slotmap.New[Renderer](64),
+		queue:     NewRenderQueue(),
 	}
 }
 
-func (rp *RenderPipeline) RegisterRenderer(adapter RenderAdapter) (uint64, error) {
-	k := rp.adapters.Insert(adapter)
+func (rp *RenderPipeline) RegisterRenderer(renderer Renderer) (uint64, error) {
+	k := rp.renderers.Insert(renderer)
 	// TODO: Should probably add support for checking if an item exists in a slotmap.
 	return k.Pack(), nil
 }
@@ -66,7 +64,7 @@ func (rp *RenderPipeline) Draw(target *ebiten.Image) error {
 		}
 
 		key := slotmap.Unpack(rc.Renderer.ID())
-		adapter, err := rp.adapters.Get(key)
+		renderer, err := rp.renderers.Get(key)
 
 		if err != nil {
 			rc.Clear()
@@ -74,7 +72,7 @@ func (rp *RenderPipeline) Draw(target *ebiten.Image) error {
 			continue
 		}
 
-		adapter.Render(target, rc, rect, geoM)
+		renderer.Render(target, rc, rect, geoM)
 		rc.Clear()
 	}
 
@@ -117,6 +115,7 @@ func (rp *RenderPipeline) buildRenderQueue(region geom.Rect) {
 			Renderer:  r,
 			Transform: t,
 			Matrix:    m,
+			Bounds:    b,
 		})
 		return true
 	})

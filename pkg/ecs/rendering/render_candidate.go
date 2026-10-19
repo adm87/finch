@@ -9,16 +9,23 @@ type RenderCandidate struct {
 	Entry     *donburi.Entry
 	Renderer  *components.Renderer
 	Transform *components.Transform
+	Bounds    *components.Bounds
 	Matrix    *components.Matrix
 }
 
 func (rc *RenderCandidate) IsValid() bool {
-	return rc != nil && rc.Entry != nil && rc.Renderer != nil && rc.Transform != nil && rc.Matrix != nil
+	return rc != nil &&
+		rc.Entry != nil &&
+		rc.Renderer != nil &&
+		rc.Transform != nil &&
+		rc.Matrix != nil &&
+		rc.Bounds != nil
 }
 
 func (rc *RenderCandidate) Clear() {
 	rc.Entry = nil
 	rc.Renderer = nil
 	rc.Transform = nil
+	rc.Bounds = nil
 	rc.Matrix = nil
 }
