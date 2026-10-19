@@ -1,4 +1,4 @@
-package transform
+package components
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
@@ -19,21 +19,7 @@ func GetMatrix(entry *donburi.Entry) (*Matrix, bool) {
 	return MatrixComponent.Get(entry), true
 }
 
-func GetGeoM(entry *donburi.Entry) ebiten.GeoM {
-	m, mOk := GetMatrix(entry)
-	if !mOk {
-		return ebiten.GeoM{}
-	}
-
-	t, tOk := GetTransform(entry)
-	if !tOk {
-		return m.geoM
-	}
-
-	return GetGeoMOf(t, m)
-}
-
-func GetGeoMOf(t *Transform, m *Matrix) ebiten.GeoM {
+func (m *Matrix) GeoM(t *Transform) ebiten.GeoM {
 	if t.isDirty {
 		m.geoM.Reset()
 		m.geoM.Translate(-t.ox, -t.oy)
@@ -42,6 +28,5 @@ func GetGeoMOf(t *Transform, m *Matrix) ebiten.GeoM {
 		m.geoM.Translate(t.x, t.y)
 		t.isDirty = false
 	}
-
 	return m.geoM
 }

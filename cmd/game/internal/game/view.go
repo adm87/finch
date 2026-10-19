@@ -1,7 +1,7 @@
 package game
 
 import (
-	"github.com/adm87/finch/pkg/ecs/transform"
+	"github.com/adm87/finch/pkg/ecs/components"
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
@@ -26,8 +26,8 @@ func (v *View) SetCamera(camera *donburi.Entry) {
 	v.camera = camera
 
 	if v.camera != nil {
-		t, tOk := transform.GetTransform(v.camera)
-		m, mOk := transform.GetMatrix(v.camera)
+		t, tOk := components.GetTransform(v.camera)
+		m, mOk := components.GetMatrix(v.camera)
 
 		if tOk && mOk {
 			v.refresh(t, m)
@@ -40,19 +40,19 @@ func (v *View) Viewport() (geom.Rect, ebiten.GeoM) {
 		return geom.Rect{}, ebiten.GeoM{}
 	}
 
-	t, tOk := transform.GetTransform(v.camera)
+	t, tOk := components.GetTransform(v.camera)
 	if !tOk {
 		return geom.Rect{}, ebiten.GeoM{}
 	}
 
-	m, mOk := transform.GetMatrix(v.camera)
+	m, mOk := components.GetMatrix(v.camera)
 	if !mOk {
 		return geom.Rect{}, ebiten.GeoM{}
 	}
 
 	bounds := v.refresh(t, m)
 
-	geoM := transform.GetGeoMOf(t, m)
+	geoM := m.GeoM(t)
 	if !geoM.IsInvertible() {
 		return bounds, ebiten.GeoM{}
 	}
@@ -75,26 +75,29 @@ func (v *View) ScreenToWorld(screenX, screenY float64) (worldX, worldY float64) 
 		return screenX, screenY
 	}
 
-	t, tOk := transform.GetTransform(v.camera)
+	t, tOk := components.GetTransform(v.camera)
 	if !tOk {
 		return screenX, screenY
 	}
 
-	m, mOk := transform.GetMatrix(v.camera)
+	m, mOk := components.GetMatrix(v.camera)
 	if !mOk {
 		return screenX, screenY
 	}
 
-	geoM := transform.GetGeoMOf(t, m)
+	geoM := m.GeoM(t)
 	return geoM.Apply(v.screen.ScreenToSafeArea(screenX, screenY))
 }
 
-func (v *View) refresh(t *transform.Transform, m *transform.Matrix) geom.Rect {
+func (v *View) refresh(t *components.Transform, m *components.Matrix) geom.Rect {
 	safeArea := v.screen.SafeArea()
 	t.SetOrigin(safeArea.Center())
 
-	bounds := transform.TransformRect(t, m, safeArea)
-	transform.SetRect(v.camera, bounds)
+	b, bOk := components.GetBounds(v.camera)
+	if !bOk {
+		return geom.Rect{}
+	}
+	b.SetRect(safeArea)
 
-	return bounds
+	return b.WorldRect(t, m)
 }

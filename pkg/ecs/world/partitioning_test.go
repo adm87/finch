@@ -6,7 +6,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/adm87/finch/pkg/ecs/transform"
+	"github.com/adm87/finch/pkg/ecs/components"
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/types/hashgrid"
 	"github.com/yohamta/donburi"
@@ -18,17 +18,25 @@ var ptResolutions = []int{16, 32, 64}
 
 // ptNewEntry creates an entity with the base archetype (plus any extras), a unit
 // scale, and the given local rect. It is NOT indexed.
-func ptNewEntry(w donburi.World, rect geom.Rect, extra ...donburi.IComponentType) *donburi.Entry {
+func ptNewEntry(t *testing.T, w donburi.World, rect geom.Rect, extra ...donburi.IComponentType) *donburi.Entry {
+	t.Helper()
+
 	entry := w.Entry(w.Create(aggregateComponentTypes(extra...)...))
-	if t, ok := transform.GetTransform(entry); ok {
+	if t, ok := components.GetTransform(entry); ok {
 		t.SetScale(1, 1)
 	}
-	transform.SetRect(entry, rect)
+
+	b, bOk := components.GetBounds(entry)
+	if !bOk {
+		t.Fatalf("expected entry to have bounds component")
+	}
+
+	b.SetRect(rect)
 	return entry
 }
 
 func ptMove(entry *donburi.Entry, x, y float64) {
-	t, _ := transform.GetTransform(entry)
+	t, _ := components.GetTransform(entry)
 	t.SetPosition(x, y)
 }
 
@@ -197,7 +205,7 @@ func TestNearestFitNonFinite(t *testing.T) {
 
 func TestFreshEntryIsUnindexed(t *testing.T) {
 	w := donburi.NewWorld()
-	entry := ptNewEntry(w, geom.Rect{X: 0, Y: 0, Width: 12, Height: 10})
+	entry := ptNewEntry(t, w, geom.Rect{X: 0, Y: 0, Width: 12, Height: 10})
 
 	idx := ptIndex(t, entry)
 	if idx.partition != -1 || idx.key != 0 {
@@ -208,7 +216,7 @@ func TestFreshEntryIsUnindexed(t *testing.T) {
 func TestAddIndexesEntry(t *testing.T) {
 	w := donburi.NewWorld()
 	p := newPartitions(ptResolutions)
-	entry := ptNewEntry(w, geom.Rect{X: 0, Y: 0, Width: 12, Height: 10})
+	entry := ptNewEntry(t, w, geom.Rect{X: 0, Y: 0, Width: 12, Height: 10})
 
 	ptMustAdd(t, p, entry)
 
@@ -229,7 +237,7 @@ func TestAddIndexesEntry(t *testing.T) {
 func TestAddTwiceDoesNotDuplicate(t *testing.T) {
 	w := donburi.NewWorld()
 	p := newPartitions(ptResolutions)
-	entry := ptNewEntry(w, ptRect(0, 0, 12, 10))
+	entry := ptNewEntry(t, w, ptRect(0, 0, 12, 10))
 
 	ptMustAdd(t, p, entry)
 	ptMustAdd(t, p, entry)
@@ -245,7 +253,7 @@ func TestAddTwiceDoesNotDuplicate(t *testing.T) {
 func TestUpdateSamePartitionKeepsKey(t *testing.T) {
 	w := donburi.NewWorld()
 	p := newPartitions(ptResolutions)
-	entry := ptNewEntry(w, ptRect(0, 0, 12, 10))
+	entry := ptNewEntry(t, w, ptRect(0, 0, 12, 10))
 	ptMustAdd(t, p, entry)
 	before := *ptIndex(t, entry)
 
@@ -264,7 +272,7 @@ func TestUpdateSamePartitionKeepsKey(t *testing.T) {
 func TestMoveLeavesNoResidue(t *testing.T) {
 	w := donburi.NewWorld()
 	p := newPartitions(ptResolutions)
-	entry := ptNewEntry(w, ptRect(0, 0, 12, 10))
+	entry := ptNewEntry(t, w, ptRect(0, 0, 12, 10))
 	ptMustAdd(t, p, entry)
 
 	origin := ptRect(0, 0, 16, 16)
@@ -288,7 +296,7 @@ func TestMoveLeavesNoResidue(t *testing.T) {
 func TestResizeAcrossPartitions(t *testing.T) {
 	w := donburi.NewWorld()
 	p := newPartitions(ptResolutions)
-	entry := ptNewEntry(w, ptRect(0, 0, 12, 10))
+	entry := ptNewEntry(t, w, ptRect(0, 0, 12, 10))
 	ptMustAdd(t, p, entry)
 
 	steps := []struct {
@@ -303,7 +311,12 @@ func TestResizeAcrossPartitions(t *testing.T) {
 
 	region := ptRect(0, 0, 256, 256)
 	for _, s := range steps {
-		transform.SetRect(entry, s.rect)
+		b, bOk := components.GetBounds(entry)
+		if !bOk {
+			t.Fatalf("expected entry to have bounds component")
+		}
+
+		b.SetRect(s.rect)
 		ptMustUpdate(t, p, entry)
 
 		idx := ptIndex(t, entry)
@@ -332,7 +345,7 @@ func TestMultiCellItemIsReturnedOnce(t *testing.T) {
 	p := newPartitions(ptResolutions)
 
 	// 40x40 at (50,50) lands in the 64 grid and straddles the x=64 and y=64 cell edges.
-	entry := ptNewEntry(w, ptRect(50, 50, 40, 40))
+	entry := ptNewEntry(t, w, ptRect(50, 50, 40, 40))
 	ptMustAdd(t, p, entry)
 
 	if got := ptIndex(t, entry).partition; got != 2 {
@@ -359,7 +372,7 @@ func TestNegativeCoordinatesAndMultiCellBounds(t *testing.T) {
 	w := donburi.NewWorld()
 	p := newPartitions(ptResolutions)
 
-	entry := ptNewEntry(w, ptRect(-48, -48, 40, 40))
+	entry := ptNewEntry(t, w, ptRect(-48, -48, 40, 40))
 	ptMustAdd(t, p, entry)
 
 	if got := ptIndex(t, entry).partition; got != 2 {
@@ -380,9 +393,9 @@ func TestNegativeCoordinatesAndMultiCellBounds(t *testing.T) {
 func TestTransformMatrixAffectsIndexBounds(t *testing.T) {
 	w := donburi.NewWorld()
 	p := newPartitions(ptResolutions)
-	entry := ptNewEntry(w, ptRect(10, 10, 12, 8))
+	entry := ptNewEntry(t, w, ptRect(10, 10, 12, 8))
 
-	tr, ok := transform.GetTransform(entry)
+	tr, ok := components.GetTransform(entry)
 	if !ok {
 		t.Fatal("entry missing transform")
 	}
@@ -390,11 +403,17 @@ func TestTransformMatrixAffectsIndexBounds(t *testing.T) {
 	tr.SetScale(2, 2)
 	ptMustAdd(t, p, entry)
 
-	m, ok := transform.GetMatrix(entry)
+	m, ok := components.GetMatrix(entry)
 	if !ok {
 		t.Fatal("entry missing matrix")
 	}
-	want := transform.TransformRect(tr, m, ptRect(10, 10, 12, 8))
+
+	b, ok := components.GetBounds(entry)
+	if !ok {
+		t.Fatal("entry missing bounds")
+	}
+
+	want := b.WorldRect(tr, m)
 	if got := p.getBounds(entry); got != want {
 		t.Fatalf("expected transformed bounds to be used for partitioning, got %+v want %+v", got, want)
 	}
@@ -437,7 +456,7 @@ func TestExactPartitionBoundaryEdges(t *testing.T) {
 func TestRemove(t *testing.T) {
 	w := donburi.NewWorld()
 	p := newPartitions(ptResolutions)
-	entry := ptNewEntry(w, ptRect(0, 0, 12, 10))
+	entry := ptNewEntry(t, w, ptRect(0, 0, 12, 10))
 	ptMustAdd(t, p, entry)
 
 	if err := p.remove(entry); err != nil {
@@ -463,7 +482,7 @@ func TestRemove(t *testing.T) {
 func TestRemoveThenAddAgain(t *testing.T) {
 	w := donburi.NewWorld()
 	p := newPartitions(ptResolutions)
-	entry := ptNewEntry(w, ptRect(0, 0, 12, 10))
+	entry := ptNewEntry(t, w, ptRect(0, 0, 12, 10))
 
 	ptMustAdd(t, p, entry)
 	if err := p.remove(entry); err != nil {
@@ -483,7 +502,7 @@ func TestRemoveThenAddAgain(t *testing.T) {
 func TestStaleKeyRecovery(t *testing.T) {
 	w := donburi.NewWorld()
 	p := newPartitions(ptResolutions)
-	entry := ptNewEntry(w, ptRect(0, 0, 12, 10))
+	entry := ptNewEntry(t, w, ptRect(0, 0, 12, 10))
 	ptMustAdd(t, p, entry)
 
 	idx := ptIndex(t, entry)
@@ -509,7 +528,7 @@ func TestStaleKeyRecovery(t *testing.T) {
 func TestEntryWithoutIndexingComponentIsIgnored(t *testing.T) {
 	w := donburi.NewWorld()
 	p := newPartitions(ptResolutions)
-	entry := w.Entry(w.Create(transform.TransformComponent))
+	entry := w.Entry(w.Create(components.TransformComponent))
 
 	if err := p.add(entry); err != nil {
 		t.Fatalf("add should ignore it, got: %v", err)
@@ -528,7 +547,7 @@ func TestEntryWithoutIndexingComponentIsIgnored(t *testing.T) {
 func TestDontPartitionEntryIsNotIndexed(t *testing.T) {
 	w := donburi.NewWorld()
 	p := newPartitions(ptResolutions)
-	entry := ptNewEntry(w, ptRect(0, 0, 12, 10), DontPartition)
+	entry := ptNewEntry(t, w, ptRect(0, 0, 12, 10), DontPartition)
 
 	ptMustAdd(t, p, entry)
 	ptMustUpdate(t, p, entry)
@@ -557,7 +576,12 @@ func TestWorldQueryAndRangeOver(t *testing.T) {
 		{inB, ptRect(25, 10, 8, 12)},
 		{out, ptRect(200, 200, 10, 10)},
 	} {
-		transform.SetRect(tc.entry, tc.rect)
+		b, bOk := components.GetBounds(tc.entry)
+		if !bOk {
+			t.Fatalf("expected entry to have bounds component")
+		}
+
+		b.SetRect(tc.rect)
 		if err := w.Add(tc.entry); err != nil {
 			t.Fatalf("add failed for %+v: %v", tc.rect, err)
 		}
@@ -636,7 +660,7 @@ func TestPartitionsStayConsistentUnderChurn(t *testing.T) {
 	pos := make([][2]float64, entities)
 	indexed := make([]bool, entities)
 	for i := range entries {
-		entries[i] = ptNewEntry(w, ptRect(0, 0, 10, 10))
+		entries[i] = ptNewEntry(t, w, ptRect(0, 0, 10, 10))
 	}
 
 	verify := func(step int) {
@@ -722,7 +746,12 @@ func TestPartitionsStayConsistentUnderChurn(t *testing.T) {
 
 		default: // jump and resize, possibly across partitions
 			size := 4 + rng.Float64()*96
-			transform.SetRect(entry, ptRect(0, 0, size, size))
+			b, bOk := components.GetBounds(entry)
+			if !bOk {
+				t.Fatalf("expected entry to have bounds component")
+			}
+
+			b.SetRect(ptRect(0, 0, size, size))
 			pos[i] = [2]float64{rng.Float64() * extent, rng.Float64() * extent}
 			ptMove(entry, pos[i][0], pos[i][1])
 			ptMustUpdate(t, p, entry)

@@ -14,10 +14,9 @@ import (
 	"github.com/adm87/finch/cmd/game/internal/game"
 	"github.com/adm87/finch/content"
 	"github.com/adm87/finch/pkg/aseprite"
-	"github.com/adm87/finch/pkg/ecs/image"
-	"github.com/adm87/finch/pkg/ecs/renderer"
+	"github.com/adm87/finch/pkg/ecs/components"
+	"github.com/adm87/finch/pkg/ecs/renderers"
 	"github.com/adm87/finch/pkg/ecs/rendering"
-	"github.com/adm87/finch/pkg/ecs/transform"
 	"github.com/adm87/finch/pkg/ecs/world"
 	"github.com/adm87/finch/pkg/engine"
 	"github.com/adm87/finch/pkg/geom"
@@ -132,7 +131,7 @@ func loadGameConfig(g *game.Game) (err error) {
 }
 
 func initializeGameRenderers(g *game.Game, rp *rendering.RenderPipeline) error {
-	ir, err := rp.RegisterRenderer(image.NewImageRenderer(g.Cache.Images))
+	ir, err := rp.RegisterRenderer(renderers.NewImageRenderer(g.Cache.Images))
 	if err != nil {
 		return errs.InvalidOperation("register image renderer").Wrap(err)
 	}
@@ -249,21 +248,21 @@ func makeTestScene(g *game.Game, w world.World) error {
 	var errList []error
 	for n := range 1000 {
 		entry := w.Create(
-			renderer.RendererComponent,
-			image.ImageComponent,
+			components.RendererComponent,
+			components.ImageComponent,
 		)
 
-		r, ok := renderer.GetRenderer(entry)
+		r, ok := components.GetRenderer(entry)
 		if !ok {
 			errList = append(errList, missingComponent(n, "renderer"))
 			continue
 		}
-		t, ok := transform.GetTransform(entry)
+		t, ok := components.GetTransform(entry)
 		if !ok {
 			errList = append(errList, missingComponent(n, "transform"))
 			continue
 		}
-		i, ok := image.GetImage(entry)
+		i, ok := components.GetImage(entry)
 		if !ok {
 			errList = append(errList, missingComponent(n, "image"))
 			continue
@@ -285,7 +284,13 @@ func makeTestScene(g *game.Game, w world.World) error {
 			A: 255,
 		})
 
-		transform.SetRect(entry, geom.Rect{
+		b, bOk := components.GetBounds(entry)
+		if !bOk {
+			errList = append(errList, missingComponent(n, "bounds"))
+			continue
+		}
+
+		b.SetRect(geom.Rect{
 			X:      -width * ax,
 			Y:      -height * ay,
 			Width:  width,

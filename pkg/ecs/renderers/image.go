@@ -1,10 +1,10 @@
-package image
+package renderers
 
 import (
 	"image/color"
 
+	"github.com/adm87/finch/pkg/ecs/components"
 	"github.com/adm87/finch/pkg/ecs/rendering"
-	"github.com/adm87/finch/pkg/ecs/transform"
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/storage"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -32,23 +32,26 @@ func (ir *ImageRenderer) Render(target *ebiten.Image, rc *rendering.RenderCandid
 
 	ir.drawOptions.ColorScale.Reset()
 
-	if img, iOk := GetImage(rc.Entry); iOk {
+	if img, iOk := components.GetImage(rc.Entry); iOk {
 		ax, ay = img.Anchor()
 		frame := img.Frame()
 
-		ir.drawOptions.ColorScale.ScaleWithColor(img.color)
+		ir.drawOptions.ColorScale.ScaleWithColor(img.Color())
 
-		if cached, _ := ir.cache.GetFrame(img.handle, frame); cached != nil {
+		if cached, _ := ir.cache.GetFrame(img.Handle(), frame); cached != nil {
 			src = cached
 		}
 	}
+
+	t := rc.Transform
+	m := rc.Matrix
 
 	ir.drawOptions.GeoM.Reset()
 	ir.drawOptions.GeoM.Translate(
 		-float64(src.Bounds().Dx())*ax,
 		-float64(src.Bounds().Dy())*ay,
 	)
-	ir.drawOptions.GeoM.Concat(transform.GetGeoMOf(rc.Transform, rc.Matrix))
+	ir.drawOptions.GeoM.Concat(m.GeoM(t))
 	ir.drawOptions.GeoM.Concat(matrix)
 
 	target.DrawImage(src, ir.drawOptions)
