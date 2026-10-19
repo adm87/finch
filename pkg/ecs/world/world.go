@@ -4,15 +4,15 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/adm87/finch/pkg/ecs/transform"
+	"github.com/adm87/finch/pkg/ecs/components"
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/yohamta/donburi"
 )
 
 var baseArchetype = []donburi.IComponentType{
-	transform.TransformComponent,
-	transform.MatrixComponent,
-	transform.BoundsComponent,
+	components.TransformComponent,
+	components.MatrixComponent,
+	components.BoundsComponent,
 	indexingComponent,
 }
 

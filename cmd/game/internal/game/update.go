@@ -3,7 +3,7 @@ package game
 import (
 	"math"
 
-	"github.com/adm87/finch/pkg/ecs/transform"
+	"github.com/adm87/finch/pkg/ecs/components"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/yohamta/donburi"
@@ -24,7 +24,7 @@ func (gu *GameUpdate) Update() error {
 		return ebiten.Termination
 	}
 
-	t := transform.TransformComponent.Get(gu.camera)
+	t := components.TransformComponent.Get(gu.camera)
 
 	sx, sy := t.Scale()
 	if ebiten.IsKeyPressed(ebiten.KeyUp) {

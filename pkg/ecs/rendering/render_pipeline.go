@@ -4,8 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/adm87/finch/pkg/ecs/renderer"
-	"github.com/adm87/finch/pkg/ecs/transform"
+	"github.com/adm87/finch/pkg/ecs/components"
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/types/slotmap"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -88,28 +87,28 @@ func (rp *RenderPipeline) Draw(target *ebiten.Image) error {
 
 func (rp *RenderPipeline) buildRenderQueue(region geom.Rect) {
 	rp.world.RangeOver(region, func(entry *donburi.Entry) bool {
-		if !entry.HasComponent(renderer.RendererComponent) {
+		if !entry.HasComponent(components.RendererComponent) {
 			return true
 		}
 
-		r := renderer.RendererComponent.Get(entry)
+		r := components.RendererComponent.Get(entry)
 		if !r.Visible() {
 			return true
 		}
 
-		t, tOk := transform.GetTransform(entry)
-		m, mOk := transform.GetMatrix(entry)
+		t, tOk := components.GetTransform(entry)
+		m, mOk := components.GetMatrix(entry)
+		b, bOk := components.GetBounds(entry)
 
-		if !tOk || !mOk {
+		if !tOk || !mOk || !bOk {
 			return true
 		}
 
-		bounds := transform.GetRect(entry)
-		if bounds.Area() == 0 {
+		if b.Rect().Area() == 0 {
 			return true
 		}
 
-		if !transform.TransformRect(t, m, bounds).Intersects(region) {
+		if !b.WorldRect(t, m).Intersects(region) {
 			return true
 		}
 

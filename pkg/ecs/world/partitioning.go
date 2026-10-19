@@ -4,7 +4,7 @@ import (
 	"errors"
 	"slices"
 
-	"github.com/adm87/finch/pkg/ecs/transform"
+	"github.com/adm87/finch/pkg/ecs/components"
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/types/hashgrid"
 	"github.com/adm87/finch/pkg/types/slotmap"
@@ -138,19 +138,22 @@ func (p *partitions) insertInto(partition int, entry *donburi.Entry, idx *indexi
 }
 
 func (p *partitions) getBounds(entry *donburi.Entry) geom.Rect {
-	rect := transform.GetRect(entry)
+	b, bOk := components.GetBounds(entry)
+	if !bOk {
+		return geom.Rect{}
+	}
 
-	t, tOk := transform.GetTransform(entry)
+	t, tOk := components.GetTransform(entry)
 	if !tOk {
-		return rect
+		return b.Rect()
 	}
 
-	m, mOk := transform.GetMatrix(entry)
+	m, mOk := components.GetMatrix(entry)
 	if !mOk {
-		return rect
+		return b.Rect()
 	}
 
-	return transform.TransformRect(t, m, rect)
+	return b.WorldRect(t, m)
 }
 
 func (p *partitions) nearestFit(bounds geom.Rect) int {

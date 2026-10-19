@@ -1,4 +1,4 @@
-package image
+package components
 
 import (
 	"image/color"
