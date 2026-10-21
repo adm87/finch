@@ -18,21 +18,21 @@ func (f FileSystemID) String() string {
 type FileSystems map[FileSystemID]fs.FS
 
 const (
-	FS_EMBEDDED FileSystemID = "embedded"
-	FS_ASSETS   FileSystemID = "assets"
+	EmbeddedFS FileSystemID = "embedded"
+	AssetsFS   FileSystemID = "assets"
 )
 
 const (
-	ASEPRITE_CONFIG     = "embedded/configs/aseprite_config.yaml"
-	GAME_CONFIG         = "embedded/configs/game_config.yaml"
-	DEFAULT_IMAGE_10X10 = "embedded/images/default_10x10.png"
+	AsepriteConfig    = "embedded/configs/aseprite_config.yaml"
+	GameConfig        = "embedded/configs/game_config.yaml"
+	DefaultImage10x10 = "embedded/images/default_10x10.png"
 )
 
 //go:embed embedded
 var embeddedFiles embed.FS
 
 var fileSystems = FileSystems{
-	FS_EMBEDDED: embeddedFiles,
+	EmbeddedFS: embeddedFiles,
 }
 
 func InitializeFileSystems() error {
@@ -43,7 +43,7 @@ func InitializeFileSystems() error {
 
 	contentDir := filepath.Join(root, "content")
 
-	fileSystems[FS_ASSETS] = os.DirFS(filepath.Join(contentDir, string(FS_ASSETS)))
+	fileSystems[AssetsFS] = os.DirFS(filepath.Join(contentDir, string(AssetsFS)))
 	return nil
 }
 
