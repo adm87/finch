@@ -61,6 +61,9 @@ type World interface {
 	// RangeOver iterates over all entities within the specified region and calls the yield function for each entity.
 	// If the yield function returns false, the iteration stops immediately.
 	RangeOver(region geom.Rect, fn func(*donburi.Entry) bool)
+
+	// ECS returns the underlying donburi world.
+	ECS() donburi.World
 }
 
 type wrld struct {
@@ -78,6 +81,10 @@ func NewWorld(opts ...WorldOption) World {
 		ecs:        donburi.NewWorld(),
 		partitions: newPartitions(options.PartitionResolutions),
 	}
+}
+
+func (w *wrld) ECS() donburi.World {
+	return w.ecs
 }
 
 func (w *wrld) Create(comps ...donburi.IComponentType) *donburi.Entry {

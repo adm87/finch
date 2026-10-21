@@ -19,6 +19,7 @@ func (sc StaticContent) Load(res resources.Resources) error {
 type GameConfig struct {
 	StaticContent StaticContent   `yaml:"static_content"`
 	Window        WindowConfig    `yaml:"window"`
+	FPS           int             `yaml:"fps"`
 	Rendering     RenderingConfig `yaml:"rendering"`
 }
 

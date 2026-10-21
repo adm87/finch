@@ -10,6 +10,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"gopkg.in/yaml.v3"
 
+	"github.com/adm87/finch/cmd/game/internal/camera"
 	"github.com/adm87/finch/cmd/game/internal/config"
 	"github.com/adm87/finch/cmd/game/internal/game"
 	"github.com/adm87/finch/content"
@@ -130,19 +131,6 @@ func loadGameConfig(g *game.Game) (err error) {
 	return nil
 }
 
-func initializeGameRenderers(g *game.Game, rp *rendering.RenderPipeline) error {
-	ir, err := rp.RegisterRenderer(renderers.NewImageRenderer(g.Cache.Images))
-	if err != nil {
-		return errs.InvalidOperation("register image renderer").Wrap(err)
-	}
-
-	g.Renderers = &game.GameRenderers{
-		Image: ir,
-	}
-
-	return nil
-}
-
 func initializeAseprite(g *game.Game, logger logger.Logger) error {
 	handle, err := g.Resources.GetHandle(content.ASEPRITE_CONFIG)
 	if err != nil {
@@ -168,6 +156,19 @@ func initializeAseprite(g *game.Game, logger logger.Logger) error {
 	return nil
 }
 
+func initializeGameRenderers(g *game.Game, rp *rendering.RenderPipeline) error {
+	ir, err := rp.RegisterRenderer(renderers.NewImageRenderer(g.Cache.Images))
+	if err != nil {
+		return errs.InvalidOperation("register image renderer").Wrap(err)
+	}
+
+	g.Renderers = &game.GameRenderers{
+		Image: ir,
+	}
+
+	return nil
+}
+
 func validateGameConfig(cfg *config.GameConfig) error {
 	return errors.Join(
 		errs.CheckRange("window.width", cfg.Window.Width, 1, 16384),
@@ -177,36 +178,45 @@ func validateGameConfig(cfg *config.GameConfig) error {
 
 func run(g *game.Game, l logger.Logger) error {
 	w := world.NewWorld()
-	s := game.NewScreen(
+	c := w.Create(
+		camera.MainCamera,
+		world.DontPartition,
+	)
+
+	g.Screen = game.NewScreen(
 		g.Config.Window.Width,
 		g.Config.Window.Height,
 	)
-	v := game.NewViewport(s)
-	rp := rendering.NewRenderPipeline(v, w)
 
+	g.View = game.NewViewport(g.Screen)
+	g.View.SetCamera(c)
+
+	rp := rendering.NewRenderPipeline(g.View, w)
 	if err := initializeGameRenderers(g, rp); err != nil {
 		return err
 	}
 
-	c := w.Create(world.DontPartition)
-	v.SetCamera(c)
+	g.Time = game.NewTime(g.Config.FPS)
+
+	gu := game.NewGameUpdate(g.Time)
+	if err := initializeFrameSchedule(g, w, gu); err != nil {
+		return err
+	}
 
 	if err := makeTestScene(g, w); err != nil {
 		return fmt.Errorf("create test renderables: %w", err)
 	}
 
 	return engine.Run(
-		engine.WithUpdate(
-			game.NewGameUpdate(c),
-		),
+		engine.WithUpdate(gu),
 		engine.WithDraw(
-			game.NewGameDraw(rp, s, v,
+			game.NewGameDraw(rp, g.Screen, g.View,
 				game.WithClearColor(
 					g.Config.Rendering.ClearColor,
 				),
 			),
 		),
-		engine.WithLayout(s),
+		engine.WithLayout(g.Screen),
 		engine.WithWindowSize(
 			g.Config.Window.Width,
 			g.Config.Window.Height,
@@ -252,23 +262,30 @@ func makeTestScene(g *game.Game, w world.World) error {
 			components.ImageComponent,
 		)
 
-		r, ok := components.GetRenderer(entry)
-		if !ok {
+		r, rOk := components.GetRenderer(entry)
+		t, tOk := components.GetTransform(entry)
+		i, iOk := components.GetImage(entry)
+		b, bOk := components.GetBounds(entry)
+
+		if !rOk {
 			errList = append(errList, missingComponent(n, "renderer"))
 			continue
 		}
-		t, ok := components.GetTransform(entry)
-		if !ok {
+		if !tOk {
 			errList = append(errList, missingComponent(n, "transform"))
 			continue
 		}
-		i, ok := components.GetImage(entry)
-		if !ok {
+		if !iOk {
 			errList = append(errList, missingComponent(n, "image"))
+			continue
+		}
+		if !bOk {
+			errList = append(errList, missingComponent(n, "bounds"))
 			continue
 		}
 
 		r.SetID(g.Renderers.Image)
+		r.SetDepth(int16(n))
 
 		t.SetPosition(
 			-windowWidth*0.5+rand.Float64()*windowWidth,
@@ -283,12 +300,6 @@ func makeTestScene(g *game.Game, w world.World) error {
 			B: uint8(rand.UintN(256)),
 			A: 255,
 		})
-
-		b, bOk := components.GetBounds(entry)
-		if !bOk {
-			errList = append(errList, missingComponent(n, "bounds"))
-			continue
-		}
 
 		b.SetRect(geom.Rect{
 			X:      -width * ax,

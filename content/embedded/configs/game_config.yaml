@@ -1,3 +1,5 @@
+fps: 60
+
 window:
   width: 1280
   height: 720

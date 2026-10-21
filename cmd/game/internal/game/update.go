@@ -1,76 +1,61 @@
 package game
 
-import (
-	"math"
-
-	"github.com/adm87/finch/pkg/ecs/components"
-	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/yohamta/donburi"
-)
+type Update func(dt float64) error
 
 type GameUpdate struct {
-	camera *donburi.Entry
+	time    *Time
+	updates []Update
+	fixed   []Update
+	late    []Update
 }
 
-func NewGameUpdate(camera *donburi.Entry) *GameUpdate {
+func NewGameUpdate(gt *Time) *GameUpdate {
 	return &GameUpdate{
-		camera: camera,
+		time: gt,
 	}
+}
+
+func (gu *GameUpdate) AddUpdate(update Update) {
+	gu.updates = append(gu.updates, update)
+}
+
+func (gu *GameUpdate) AddFixed(update Update) {
+	gu.fixed = append(gu.fixed, update)
+}
+
+func (gu *GameUpdate) AddLate(update Update) {
+	gu.late = append(gu.late, update)
 }
 
 func (gu *GameUpdate) Update() error {
-	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		return ebiten.Termination
+	gu.time.Tick()
+
+	dt := gu.time.DeltaTime()
+	fdt := gu.time.FixedDeltaTime()
+	steps := gu.time.FixedSteps()
+
+	if err := gu.callUpdates(dt, gu.updates); err != nil {
+		return err
 	}
 
-	t := components.TransformComponent.Get(gu.camera)
-
-	sx, sy := t.Scale()
-	if ebiten.IsKeyPressed(ebiten.KeyUp) {
-		sx *= 0.95
-		sy *= 0.95
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyDown) {
-		sx *= 1.05
-		sy *= 1.05
-	}
-	t.SetScale(sx, sy)
-
-	rot := t.Rotation()
-	if ebiten.IsKeyPressed(ebiten.KeyQ) {
-		rot += 0.05
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyE) {
-		rot -= 0.05
-	}
-	t.SetRotation(rot)
-
-	x, y := t.Position()
-
-	var dx, dy float64
-	if ebiten.IsKeyPressed(ebiten.KeyA) {
-		dx -= 5
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyD) {
-		dx += 5
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyW) {
-		dy -= 5
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyS) {
-		dy += 5
+	for range steps {
+		if err := gu.callUpdates(fdt, gu.fixed); err != nil {
+			return err
+		}
 	}
 
-	if dx != 0 || dy != 0 {
-		cos, sin := math.Cos(rot), math.Sin(rot)
-		rdx := dx*cos - dy*sin
-		rdy := dx*sin + dy*cos
-
-		x += rdx * sx
-		y += rdy * sy
+	if err := gu.callUpdates(dt, gu.late); err != nil {
+		return err
 	}
 
-	t.SetPosition(x, y)
+	return nil
+}
+
+func (gu *GameUpdate) callUpdates(dt float64, updates []Update) error {
+	for _, update := range updates {
+		if err := update(dt); err != nil {
+			return err
+		}
+	}
 	return nil
 }

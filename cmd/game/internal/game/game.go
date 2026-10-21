@@ -13,6 +13,9 @@ type Game struct {
 	Config    *config.GameConfig
 	Cache     *GameCache
 	Renderers *GameRenderers
+	Screen    *Screen
+	Time      *Time
+	View      *View
 }
 
 type GameCache struct {
