@@ -1,10 +1,14 @@
 package components
 
-import "github.com/yohamta/donburi"
+import (
+	"github.com/yohamta/donburi"
+)
 
 type Aseprite struct {
-	animation string
-	library   uint64
+	animation         string
+	library           uint64
+	elapsed           float64
+	pingPongReversing bool
 }
 
 var AsepriteComponent = donburi.NewComponentType[Aseprite]()
@@ -31,4 +35,20 @@ func (a *Aseprite) Library() uint64 {
 
 func (a *Aseprite) SetLibrary(library uint64) {
 	a.library = library
+}
+
+func (a *Aseprite) Elapsed() float64 {
+	return a.elapsed
+}
+
+func (a *Aseprite) SetElapsed(elapsed float64) {
+	a.elapsed = elapsed
+}
+
+func (a *Aseprite) PingPongReversing() bool {
+	return a.pingPongReversing
+}
+
+func (a *Aseprite) SetPingPongReversing(pingPongReversing bool) {
+	a.pingPongReversing = pingPongReversing
 }

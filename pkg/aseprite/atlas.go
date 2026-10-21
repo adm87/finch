@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"image"
-	"time"
 
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/types"
@@ -54,12 +53,26 @@ func (a *Atlas) Validate() error {
 type Frames []Frame
 
 // Rectangles returns the bounding rectangles of all frames in the atlas.
-func (f *Frames) Rectangles() []image.Rectangle {
-	rects := make([]image.Rectangle, len(*f))
-	for i, frame := range *f {
+func (f Frames) Rectangles() []image.Rectangle {
+	rects := make([]image.Rectangle, len(f))
+	for i, frame := range f {
 		rects[i] = frame.FrameRect.ToImageRectangle()
 	}
 	return rects
+}
+
+func (f Frames) Slice(from, to int) Frames {
+	if from < 0 {
+		from = 0
+	}
+	if to > len(f) {
+		to = len(f)
+	}
+	return f[from:to]
+}
+
+func (f Frames) Len() int {
+	return len(f)
 }
 
 // UnmarshalJSON decodes both the Array and Hash export layouts.
@@ -118,42 +131,34 @@ func decodeFrameHash(data []byte) ([]Frame, error) {
 }
 
 type Frame struct {
-	FileName         string        `json:"filename"`
-	FrameRect        geom.Rect     `json:"frame"`
-	Rotated          bool          `json:"rotated"`
-	Trimmed          bool          `json:"trimmed"`
-	SpriteSourceSize geom.Rect     `json:"spriteSourceSize"`
-	SourceSize       geom.Rect     `json:"sourceSize"`
-	Duration         FrameDuration `json:"duration"`
-}
-
-// FrameDuration is stored in the file as milliseconds.
-type FrameDuration time.Duration
-
-func (fd *FrameDuration) UnmarshalJSON(data []byte) error {
-	var ms int64
-	if err := json.Unmarshal(data, &ms); err != nil {
-		return errs.Format(string(data), "frame duration must be an integer number of milliseconds").Wrap(err)
-	}
-	if ms < 0 {
-		return errs.Format(string(data), "frame duration cannot be negative")
-	}
-	*fd = FrameDuration(time.Duration(ms) * time.Millisecond)
-	return nil
-}
-
-func (fd *FrameDuration) Duration() time.Duration {
-	return time.Duration(*fd)
+	FileName         string    `json:"filename"`
+	FrameRect        geom.Rect `json:"frame"`
+	Rotated          bool      `json:"rotated"`
+	Trimmed          bool      `json:"trimmed"`
+	SpriteSourceSize geom.Rect `json:"spriteSourceSize"`
+	SourceSize       geom.Rect `json:"sourceSize"`
+	Duration         int       `json:"duration"`
 }
 
 type Meta struct {
-	App       string     `json:"app"`
-	Version   string     `json:"version"`
-	Image     string     `json:"image"`
-	Format    string     `json:"format"`
-	FrameTags []FrameTag `json:"frameTags"`
-	Size      geom.Rect  `json:"size"`
-	Scale     float64    `json:"scale,string"`
+	App       string    `json:"app"`
+	Version   string    `json:"version"`
+	Image     string    `json:"image"`
+	Format    string    `json:"format"`
+	FrameTags FrameTags `json:"frameTags"`
+	Size      geom.Rect `json:"size"`
+	Scale     float64   `json:"scale,string"`
+}
+
+type FrameTags []FrameTag
+
+func (ft FrameTags) ByName(name string) *FrameTag {
+	for i := range ft {
+		if ft[i].Name == name {
+			return &ft[i]
+		}
+	}
+	return nil
 }
 
 type FrameTag struct {
