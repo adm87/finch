@@ -55,10 +55,10 @@ func boot(l logger.Logger) error {
 func initializeGameResources(g *game.Game) error {
 	g.Resources = resources.NewResources()
 
-	if err := registerFileSystem(g.Resources, content.FS_EMBEDDED); err != nil {
+	if err := registerFileSystem(g.Resources, content.EmbeddedFS); err != nil {
 		return err
 	}
-	if err := registerFileSystem(g.Resources, content.FS_ASSETS); err != nil {
+	if err := registerFileSystem(g.Resources, content.AssetsFS); err != nil {
 		return err
 	}
 
@@ -92,33 +92,33 @@ func registerFileSystem(r resources.Resources, id content.FileSystemID) error {
 }
 
 func loadGameConfig(g *game.Game) (err error) {
-	fsys, err := content.GetFileSystem(content.FS_EMBEDDED)
+	fsys, err := content.GetFileSystem(content.EmbeddedFS)
 	if err != nil {
-		return errs.NotFound("file system", content.FS_EMBEDDED.String()).Wrap(err)
+		return errs.NotFound("file system", content.EmbeddedFS.String()).Wrap(err)
 	}
-	if err := g.Resources.Load(fsys, content.GAME_CONFIG); err != nil {
-		return fmt.Errorf("load %q: %w", content.GAME_CONFIG, err)
+	if err := g.Resources.Load(fsys, content.GameConfig); err != nil {
+		return fmt.Errorf("load %q: %w", content.GameConfig, err)
 	}
 
 	defer func() {
-		if uerr := g.Resources.Unload(content.GAME_CONFIG); uerr != nil {
-			err = errors.Join(err, fmt.Errorf("unload %q: %w", content.GAME_CONFIG, uerr))
+		if uerr := g.Resources.Unload(content.GameConfig); uerr != nil {
+			err = errors.Join(err, fmt.Errorf("unload %q: %w", content.GameConfig, uerr))
 		}
 	}()
 
-	handle, err := g.Resources.GetHandle(content.GAME_CONFIG)
+	handle, err := g.Resources.GetHandle(content.GameConfig)
 	if err != nil {
-		return errs.NotFound(resourceHandle, content.GAME_CONFIG).Wrap(err)
+		return errs.NotFound(resourceHandle, content.GameConfig).Wrap(err)
 	}
 
 	raw, err := g.Cache.Data.Get(handle)
 	if err != nil {
-		return errs.NotFound("cached data", content.GAME_CONFIG).Wrap(err)
+		return errs.NotFound("cached data", content.GameConfig).Wrap(err)
 	}
 
 	var cfg config.GameConfig
 	if err := yaml.Unmarshal(raw, &cfg); err != nil {
-		return errs.Format(content.GAME_CONFIG, "invalid yaml").Wrap(err)
+		return errs.Format(content.GameConfig, "invalid yaml").Wrap(err)
 	}
 	if err := validateGameConfig(&cfg); err != nil {
 		return err
@@ -133,19 +133,19 @@ func loadGameConfig(g *game.Game) (err error) {
 }
 
 func initializeAseprite(g *game.Game, logger logger.Logger) error {
-	handle, err := g.Resources.GetHandle(content.ASEPRITE_CONFIG)
+	handle, err := g.Resources.GetHandle(content.AsepriteConfig)
 	if err != nil {
-		return errs.NotFound(resourceHandle, content.ASEPRITE_CONFIG).Wrap(err)
+		return errs.NotFound(resourceHandle, content.AsepriteConfig).Wrap(err)
 	}
 
 	raw, err := g.Cache.Data.Get(handle)
 	if err != nil {
-		return errs.NotFound("cached data", content.ASEPRITE_CONFIG).Wrap(err)
+		return errs.NotFound("cached data", content.AsepriteConfig).Wrap(err)
 	}
 
 	var aseConfig aseprite.Config
 	if err := yaml.Unmarshal(raw, &aseConfig); err != nil {
-		return errs.Format(content.ASEPRITE_CONFIG, "invalid yaml").Wrap(err)
+		return errs.Format(content.AsepriteConfig, "invalid yaml").Wrap(err)
 	}
 
 	ase, err := aseprite.New(g.Resources, logger, g.Cache.Data, g.Cache.Images, &aseConfig)
@@ -245,7 +245,7 @@ func makeTestScene(g *game.Game, w world.World) error {
 
 	img, err := g.Cache.Images.GetFrame(library.ImageHandle, 0)
 	if err != nil {
-		return errs.NotFound("image", content.DEFAULT_IMAGE_10X10).Wrap(err)
+		return errs.NotFound("image", content.DefaultImage10x10).Wrap(err)
 	}
 
 	width := float64(img.Bounds().Dx())
@@ -257,7 +257,7 @@ func makeTestScene(g *game.Game, w world.World) error {
 	const ax, ay = 0.5, 1.0
 
 	var errList []error
-	for n := range 10000 {
+	for n := range 1000 {
 		entry := w.Create(
 			components.RendererComponent,
 			components.ImageComponent,
