@@ -45,6 +45,10 @@ func (rp *RenderPipeline) RegisterRenderer(renderer Renderer) (uint64, error) {
 func (rp *RenderPipeline) Draw(target *ebiten.Image) error {
 	rp.queue.Clear()
 
+	if rp.view == nil {
+		return nil
+	}
+
 	rect, geoM := rp.view.Viewport()
 	if rect.Area() == 0 {
 		return nil
