@@ -45,9 +45,6 @@ func boot(l logger.Logger) error {
 	if err := loadGameConfig(&g); err != nil {
 		return fmt.Errorf("load game config: %w", err)
 	}
-	if err := g.Config.StaticContent.Load(g.Resources); err != nil {
-		return fmt.Errorf("load static content: %w", err)
-	}
 	if err := initializeAseprite(&g, l); err != nil {
 		return fmt.Errorf("initialize aseprite: %w", err)
 	}
@@ -127,6 +124,10 @@ func loadGameConfig(g *game.Game) (err error) {
 		return err
 	}
 
+	if err := cfg.StaticContent.Load(g.Resources); err != nil {
+		return fmt.Errorf("load static content: %w", err)
+	}
+
 	g.Config = &cfg
 	return nil
 }
@@ -178,18 +179,12 @@ func validateGameConfig(cfg *config.GameConfig) error {
 
 func run(g *game.Game, l logger.Logger) error {
 	w := world.NewWorld()
-	c := w.Create(
-		camera.MainCamera,
-		world.DontPartition,
-	)
 
 	g.Screen = game.NewScreen(
 		g.Config.Window.Width,
 		g.Config.Window.Height,
 	)
-
 	g.View = game.NewViewport(g.Screen)
-	g.View.SetCamera(c)
 
 	rp := rendering.NewRenderPipeline(g.View, w)
 	if err := initializeGameRenderers(g, rp); err != nil {
@@ -232,6 +227,12 @@ func run(g *game.Game, l logger.Logger) error {
 }
 
 func makeTestScene(g *game.Game, w world.World) error {
+	c := w.Create(
+		camera.MainCamera,
+		world.DontPartition,
+	)
+	g.View.SetCamera(c)
+
 	libraryID, err := g.Aseprite.CreateLibrary("captain", aseprite.LoadModeDynamic)
 	if err != nil {
 		return fmt.Errorf("create aseprite library: %w", err)
@@ -253,19 +254,21 @@ func makeTestScene(g *game.Game, w world.World) error {
 	windowWidth := float64(g.Config.Window.Width)
 	windowHeight := float64(g.Config.Window.Height)
 
-	const ax, ay = 0.5, 0.5
+	const ax, ay = 0.5, 1.0
 
 	var errList []error
-	for n := range 1000 {
+	for n := range 10000 {
 		entry := w.Create(
 			components.RendererComponent,
 			components.ImageComponent,
+			components.AsepriteComponent,
 		)
 
 		r, rOk := components.GetRenderer(entry)
 		t, tOk := components.GetTransform(entry)
 		i, iOk := components.GetImage(entry)
 		b, bOk := components.GetBounds(entry)
+		a, aOk := components.GetAseprite(entry)
 
 		if !rOk {
 			errList = append(errList, missingComponent(n, "renderer"))
@@ -281,6 +284,10 @@ func makeTestScene(g *game.Game, w world.World) error {
 		}
 		if !bOk {
 			errList = append(errList, missingComponent(n, "bounds"))
+			continue
+		}
+		if !aOk {
+			errList = append(errList, missingComponent(n, "aseprite"))
 			continue
 		}
 
@@ -307,6 +314,9 @@ func makeTestScene(g *game.Game, w world.World) error {
 			Width:  width,
 			Height: height,
 		})
+
+		a.SetLibrary(uint64(libraryID))
+		a.SetAnimation("Idle")
 
 		if err := w.Add(entry); err != nil {
 			errList = append(errList, fmt.Errorf("entity %d: add to world: %w", n, err))
