@@ -31,8 +31,9 @@ func AdvanceAsepriteAnimations(dt float64, ase aseprite.Aseprite, entries []*don
 	}
 	return nil
 }
+
 func advanceAsepriteAnimation(dt float64, library aseprite.LibraryInfo, aComp *components.Aseprite, iComp *components.Image) error {
-	if dt <= 0 || math.IsNaN(dt) || math.IsInf(dt, 0) {
+	if dt <= 0 {
 		return nil
 	}
 
