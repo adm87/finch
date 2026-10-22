@@ -1,15 +1,15 @@
 package config
 
 import (
-	"github.com/adm87/finch/pkg/resources"
+	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/types"
 )
 
-type StaticContent []resources.ResourceBundle
+type StaticContent []assets.AssetBundle
 
-func (sc StaticContent) Load(res resources.Resources) error {
+func (sc StaticContent) Load(as *assets.Assets) error {
 	for _, r := range sc {
-		if err := r.Load(res); err != nil {
+		if err := r.Load(as); err != nil {
 			return err
 		}
 	}

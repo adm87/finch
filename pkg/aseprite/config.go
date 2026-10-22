@@ -3,7 +3,7 @@ package aseprite
 import (
 	"fmt"
 
-	"github.com/adm87/finch/pkg/resources"
+	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/types/errs"
 )
 
@@ -21,9 +21,9 @@ func (c Config) Validate() error {
 }
 
 type LibraryConfig struct {
-	Atlas      resources.Resource `yaml:"atlas"`
-	Image      resources.Resource `yaml:"image"`
-	FileSystem string             `yaml:"filesystem"`
+	Atlas      assets.Asset `yaml:"atlas"`
+	Image      assets.Asset `yaml:"image"`
+	FileSystem string       `yaml:"filesystem"`
 }
 
 func (lc LibraryConfig) Validate() error {
@@ -39,6 +39,6 @@ func (lc LibraryConfig) Validate() error {
 	return nil
 }
 
-func (lc LibraryConfig) Resources() []resources.Resource {
-	return []resources.Resource{lc.Atlas, lc.Image}
+func (lc LibraryConfig) Assets() []assets.Asset {
+	return []assets.Asset{lc.Atlas, lc.Image}
 }
