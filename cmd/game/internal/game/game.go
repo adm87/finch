@@ -3,13 +3,13 @@ package game
 import (
 	"github.com/adm87/finch/cmd/game/internal/config"
 	"github.com/adm87/finch/pkg/aseprite"
-	"github.com/adm87/finch/pkg/resources"
-	"github.com/adm87/finch/pkg/storage"
+	"github.com/adm87/finch/pkg/assets"
+	"github.com/adm87/finch/pkg/cache"
 )
 
 type Game struct {
 	Aseprite  aseprite.Aseprite
-	Resources resources.Resources
+	Assets    *assets.Assets
 	Config    *config.GameConfig
 	Cache     *GameCache
 	Renderers *GameRenderers
@@ -19,8 +19,8 @@ type Game struct {
 }
 
 type GameCache struct {
-	Data   *storage.DataCache
-	Images *storage.ImageCache
+	Data   *cache.DataCache
+	Images *cache.ImageCache
 }
 
 type GameRenderers struct {

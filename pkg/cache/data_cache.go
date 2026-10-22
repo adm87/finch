@@ -1,4 +1,4 @@
-package storage
+package cache
 
 import (
 	"github.com/adm87/finch/pkg/types/slotmap"

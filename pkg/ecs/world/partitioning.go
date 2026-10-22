@@ -4,11 +4,12 @@ import (
 	"errors"
 	"slices"
 
+	"github.com/yohamta/donburi"
+
 	"github.com/adm87/finch/pkg/ecs/components"
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/types/hashgrid"
 	"github.com/adm87/finch/pkg/types/slotmap"
-	"github.com/yohamta/donburi"
 )
 
 type indexing struct {

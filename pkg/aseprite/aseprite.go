@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/adm87/finch/pkg/assets"
+	"github.com/adm87/finch/pkg/cache"
 	"github.com/adm87/finch/pkg/logger"
-	"github.com/adm87/finch/pkg/resources"
-	"github.com/adm87/finch/pkg/storage"
 	"github.com/adm87/finch/pkg/types/errs"
 	"github.com/adm87/finch/pkg/types/slotmap"
 )
@@ -67,11 +67,11 @@ type LibraryInfo struct {
 }
 
 type ase struct {
-	res    resources.Resources
 	logger logger.Logger
 
-	dc        *storage.DataCache
-	ic        *storage.ImageCache
+	as        *assets.Assets
+	dc        *cache.DataCache
+	ic        *cache.ImageCache
 	libraries *slotmap.SlotMap[LibraryInfo]
 	config    *Config
 
@@ -80,11 +80,10 @@ type ase struct {
 	mu sync.Mutex
 }
 
-// New creates a new Aseprite instance with the given resources, logger, data cache, image cache, and configuration.
-func New(res resources.Resources, log logger.Logger, dc *storage.DataCache, ic *storage.ImageCache, config *Config) (Aseprite, error) {
+func New(as *assets.Assets, log logger.Logger, dc *cache.DataCache, ic *cache.ImageCache, config *Config) (Aseprite, error) {
 	var errList []error
-	if res == nil {
-		errList = append(errList, errs.ArgumentNil("res"))
+	if as == nil {
+		errList = append(errList, errs.ArgumentNil("as"))
 	}
 	if dc == nil {
 		errList = append(errList, errs.ArgumentNil("dc"))
@@ -104,8 +103,8 @@ func New(res resources.Resources, log logger.Logger, dc *storage.DataCache, ic *
 		log = logger.N
 	}
 	return &ase{
-		res:        res,
 		logger:     log.Named("aseprite"),
+		as:         as,
 		dc:         dc,
 		ic:         ic,
 		config:     config,
@@ -226,11 +225,11 @@ func (a *ase) getLibraryConfig(name string) (*LibraryConfig, error) {
 func (a *ase) decodeLibrary(library *LibraryConfig) (LibraryInfo, error) {
 	atlasPath := library.Atlas.String()
 
-	dataHandle, err := a.res.GetHandle(library.Atlas)
+	dataHandle, err := a.as.GetHandle(library.Atlas)
 	if err != nil {
 		return LibraryInfo{}, fmt.Errorf("atlas %q: %w", atlasPath, err)
 	}
-	imageHandle, err := a.res.GetHandle(library.Image)
+	imageHandle, err := a.as.GetHandle(library.Image)
 	if err != nil {
 		return LibraryInfo{}, fmt.Errorf("image %q: %w", library.Image.String(), err)
 	}
@@ -256,8 +255,8 @@ func (a *ase) decodeLibrary(library *LibraryConfig) (LibraryInfo, error) {
 }
 
 func (a *ase) isLibraryLoaded(cfg *LibraryConfig) (bool, error) {
-	for _, r := range cfg.Resources() {
-		_, err := a.res.GetHandle(r)
+	for _, r := range cfg.Assets() {
+		_, err := a.as.GetHandle(r)
 		if errs.IsNotFound(err) {
 			return false, nil
 		}
@@ -269,17 +268,17 @@ func (a *ase) isLibraryLoaded(cfg *LibraryConfig) (bool, error) {
 }
 
 func (a *ase) loadLibrary(cfg *LibraryConfig) error {
-	bundle := resources.ResourceBundle{
-		FileSystem: resources.FileSystem(cfg.FileSystem),
-		Resources:  cfg.Resources(),
+	bundle := assets.AssetBundle{
+		FileSystem: assets.FileSystem(cfg.FileSystem),
+		Assets:     cfg.Assets(),
 	}
-	return bundle.Load(a.res)
+	return bundle.Load(a.as)
 }
 
 func (a *ase) unloadLibrary(cfg *LibraryConfig) error {
-	bundle := resources.ResourceBundle{
-		FileSystem: resources.FileSystem(cfg.FileSystem),
-		Resources:  cfg.Resources(),
+	bundle := assets.AssetBundle{
+		FileSystem: assets.FileSystem(cfg.FileSystem),
+		Assets:     cfg.Assets(),
 	}
-	return bundle.Unload(a.res)
+	return bundle.Unload(a.as)
 }

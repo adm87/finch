@@ -3,10 +3,11 @@ package input
 import (
 	"math"
 
-	"github.com/adm87/finch/pkg/ecs/components"
-	"github.com/adm87/finch/pkg/ecs/world"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
+
+	"github.com/adm87/finch/pkg/ecs/components"
+	"github.com/adm87/finch/pkg/ecs/world"
 )
 
 const (
