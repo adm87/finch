@@ -3,8 +3,6 @@ package internal
 import (
 	"errors"
 	"fmt"
-	"image/color"
-	"math/rand/v2"
 	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -13,6 +11,7 @@ import (
 	"github.com/adm87/finch/cmd/game/internal/camera"
 	"github.com/adm87/finch/cmd/game/internal/config"
 	"github.com/adm87/finch/cmd/game/internal/game"
+	"github.com/adm87/finch/cmd/game/internal/player"
 	"github.com/adm87/finch/content"
 	"github.com/adm87/finch/pkg/aseprite"
 	"github.com/adm87/finch/pkg/ecs/components"
@@ -251,79 +250,53 @@ func makeTestScene(g *game.Game, w world.World) error {
 	width := float64(img.Bounds().Dx())
 	height := float64(img.Bounds().Dy())
 
-	windowWidth := float64(g.Config.Window.Width)
-	windowHeight := float64(g.Config.Window.Height)
-
 	const ax, ay = 0.5, 1.0
 
-	var errList []error
-	for n := range 1000 {
-		entry := w.Create(
-			components.RendererComponent,
-			components.ImageComponent,
-			components.AsepriteComponent,
-		)
+	entry := w.Create(
+		components.RendererComponent,
+		components.ImageComponent,
+		components.AsepriteComponent,
+		player.Player,
+	)
 
-		r, rOk := components.GetRenderer(entry)
-		t, tOk := components.GetTransform(entry)
-		i, iOk := components.GetImage(entry)
-		b, bOk := components.GetBounds(entry)
-		a, aOk := components.GetAseprite(entry)
+	r, rOk := components.GetRenderer(entry)
+	i, iOk := components.GetImage(entry)
+	b, bOk := components.GetBounds(entry)
+	a, aOk := components.GetAseprite(entry)
 
-		if !rOk {
-			errList = append(errList, missingComponent(n, "renderer"))
-			continue
-		}
-		if !tOk {
-			errList = append(errList, missingComponent(n, "transform"))
-			continue
-		}
-		if !iOk {
-			errList = append(errList, missingComponent(n, "image"))
-			continue
-		}
-		if !bOk {
-			errList = append(errList, missingComponent(n, "bounds"))
-			continue
-		}
-		if !aOk {
-			errList = append(errList, missingComponent(n, "aseprite"))
-			continue
-		}
-
-		r.SetID(g.Renderers.Image)
-		r.SetDepth(int16(n))
-
-		t.SetPosition(
-			-windowWidth*0.5+rand.Float64()*windowWidth,
-			-windowHeight*0.5+rand.Float64()*windowHeight,
-		)
-
-		i.SetHandle(library.ImageHandle)
-		i.SetAnchor(ax, ay)
-		i.SetColor(color.RGBA{
-			R: uint8(rand.UintN(256)),
-			G: uint8(rand.UintN(256)),
-			B: uint8(rand.UintN(256)),
-			A: 255,
-		})
-
-		b.SetRect(geom.Rect{
-			X:      -width * ax,
-			Y:      -height * ay,
-			Width:  width,
-			Height: height,
-		})
-
-		a.SetLibrary(uint64(libraryID))
-		a.SetAnimation("Idle")
-
-		if err := w.Add(entry); err != nil {
-			errList = append(errList, fmt.Errorf("entity %d: add to world: %w", n, err))
-		}
+	if !rOk {
+		return missingComponent(int(entry.Entity()), "renderer")
+	}
+	if !iOk {
+		return missingComponent(int(entry.Entity()), "image")
+	}
+	if !bOk {
+		return missingComponent(int(entry.Entity()), "bounds")
+	}
+	if !aOk {
+		return missingComponent(int(entry.Entity()), "aseprite")
 	}
 
-	return errors.Join(errList...)
+	r.SetID(g.Renderers.Image)
+
+	i.SetHandle(library.ImageHandle)
+	i.SetAnchor(ax, ay)
+
+	b.SetRect(geom.Rect{
+		X:      -width * ax,
+		Y:      -height * ay,
+		Width:  width,
+		Height: height,
+	})
+
+	a.SetLibrary(uint64(libraryID))
+	a.SetAnimation("Idle")
+
+	if err := w.Add(entry); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func missingComponent(entity int, component string) error {
