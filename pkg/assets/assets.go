@@ -8,8 +8,6 @@ import (
 	"slices"
 	"sync"
 
-	"golang.org/x/sync/errgroup"
-
 	"github.com/adm87/finch/pkg/types/errs"
 )
 
@@ -24,7 +22,6 @@ type Assets struct {
 	importers   map[string]Importer
 	filesystems map[FileSystem]fs.FS
 	handles     map[Asset]uint64
-	concurrency int
 	mu          sync.Mutex
 }
 
@@ -33,7 +30,6 @@ func NewAssets() *Assets {
 		importers:   make(map[string]Importer),
 		filesystems: make(map[FileSystem]fs.FS),
 		handles:     make(map[Asset]uint64),
-		concurrency: 100, // TODO: Make this configurable
 	}
 }
 
@@ -129,26 +125,13 @@ func (a *Assets) run(batch []Asset, operation func(Asset) error) error {
 	}
 
 	var errs []error
-	var mu sync.Mutex
-	var grp errgroup.Group
-
-	grp.SetLimit(a.concurrency)
 	for _, asset := range requests {
-		grp.Go(func() error {
-			if err := operation(asset); err != nil {
-				mu.Lock()
-				errs = append(errs, err)
-				mu.Unlock()
-			}
-			return nil
-		})
+		if err := operation(asset); err != nil {
+			errs = append(errs, err)
+		}
 	}
-	_ = grp.Wait()
 
-	if len(errs) > 0 {
-		return errors.Join(errs...)
-	}
-	return nil
+	return errors.Join(errs...)
 }
 
 func (a *Assets) load(fsys fs.FS, asset Asset) error {
