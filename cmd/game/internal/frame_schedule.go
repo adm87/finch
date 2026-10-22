@@ -4,6 +4,7 @@ import (
 	"github.com/adm87/finch/cmd/game/internal/camera"
 	"github.com/adm87/finch/cmd/game/internal/game"
 	"github.com/adm87/finch/cmd/game/internal/input"
+	"github.com/adm87/finch/cmd/game/internal/player"
 	"github.com/adm87/finch/pkg/ecs/systems"
 	"github.com/adm87/finch/pkg/ecs/world"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -22,6 +23,9 @@ func initializeFrameSchedule(g *game.Game, w world.World, gu *game.GameUpdate) e
 		if c, cOk := camera.MainCamera.First(w.ECS()); cOk {
 			input.UpdateCamera(dt, c)
 		}
+		if p, pOk := player.Player.First(w.ECS()); pOk {
+			input.UpdatePlayer(dt, p, w)
+		}
 		return nil
 	})
 
@@ -35,6 +39,16 @@ func initializeFrameSchedule(g *game.Game, w world.World, gu *game.GameUpdate) e
 	// Animations
 	gu.AddLate(func(dt float64) error {
 		return systems.AdvanceAsepriteAnimations(dt, g.Aseprite, entries)
+	})
+
+	// Camera follow target
+	gu.AddLate(func(dt float64) error {
+		if c, cOk := camera.MainCamera.First(w.ECS()); cOk {
+			if p, pOk := player.Player.First(w.ECS()); pOk {
+				camera.FollowTarget(dt, c, p)
+			}
+		}
+		return nil
 	})
 
 	return nil
