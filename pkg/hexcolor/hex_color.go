@@ -1,4 +1,4 @@
-package types
+package hexcolor
 
 import (
 	"encoding/hex"
@@ -10,9 +10,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type HexColor color.RGBA
+type Color color.RGBA
 
-func (c *HexColor) ToColorRGBA() color.RGBA {
+func (c *Color) ToRGBA() color.RGBA {
 	return color.RGBA{
 		R: c.R,
 		G: c.G,
@@ -21,7 +21,7 @@ func (c *HexColor) ToColorRGBA() color.RGBA {
 	}
 }
 
-func (c *HexColor) ParseHexColor(s string) error {
+func (c *Color) ParseHexColor(s string) error {
 	s = strings.TrimPrefix(s, "#")
 	b, err := hex.DecodeString(s)
 	if err != nil {
@@ -30,11 +30,11 @@ func (c *HexColor) ParseHexColor(s string) error {
 	if len(b) != 4 {
 		return fmt.Errorf("invalid hex color %q: expected 4 bytes (RGBA), got %d", s, len(b))
 	}
-	*c = HexColor{R: b[0], G: b[1], B: b[2], A: b[3]}
+	*c = Color{R: b[0], G: b[1], B: b[2], A: b[3]}
 	return nil
 }
 
-func (c *HexColor) UnmarshalJSON(data []byte) error {
+func (c *Color) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
 		return err
@@ -42,7 +42,7 @@ func (c *HexColor) UnmarshalJSON(data []byte) error {
 	return c.ParseHexColor(s)
 }
 
-func (c *HexColor) UnmarshalYAML(value *yaml.Node) error {
+func (c *Color) UnmarshalYAML(value *yaml.Node) error {
 	var s string
 	if err := value.Decode(&s); err != nil {
 		return err

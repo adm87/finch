@@ -8,8 +8,8 @@ import (
 
 	"github.com/adm87/finch/pkg/ecs/components"
 	"github.com/adm87/finch/pkg/geom"
-	"github.com/adm87/finch/pkg/types/hashgrid"
-	"github.com/adm87/finch/pkg/types/slotmap"
+	"github.com/adm87/finch/pkg/hashgrid"
+	"github.com/adm87/finch/pkg/slotmap"
 )
 
 type indexing struct {

@@ -1,22 +1,22 @@
 package game
 
 import (
-	"github.com/adm87/finch/pkg/types"
+	"github.com/adm87/finch/pkg/hexcolor"
 )
 
 type DrawOptions struct {
-	ClearColor types.HexColor
+	ClearColor hexcolor.Color
 }
 
 type DrawOption func(*DrawOptions)
 
 func DefaultDrawOptions() *DrawOptions {
 	return &DrawOptions{
-		ClearColor: types.HexColor{A: 255},
+		ClearColor: hexcolor.Color{A: 255},
 	}
 }
 
-func WithClearColor(c types.HexColor) DrawOption {
+func WithClearColor(c hexcolor.Color) DrawOption {
 	return func(opts *DrawOptions) {
 		opts.ClearColor = c
 	}

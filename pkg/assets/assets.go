@@ -8,7 +8,7 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/adm87/finch/pkg/types/errs"
+	"github.com/adm87/finch/pkg/errs"
 )
 
 type FileSystem string

@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"image"
 
+	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/geom"
-	"github.com/adm87/finch/pkg/types"
-	"github.com/adm87/finch/pkg/types/errs"
+	"github.com/adm87/finch/pkg/hexcolor"
 )
 
 // Atlas is an Aseprite sprite sheet export.
@@ -166,7 +166,7 @@ type FrameTag struct {
 	Direction Direction      `json:"direction"`
 	From      int            `json:"from"`
 	To        int            `json:"to"`
-	Color     types.HexColor `json:"color"`
+	Color     hexcolor.Color `json:"color"`
 }
 
 // Direction is the playback order of a frame tag.

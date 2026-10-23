@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/adm87/finch/pkg/assets"
-	"github.com/adm87/finch/pkg/types/errs"
+	"github.com/adm87/finch/pkg/errs"
 )
 
 type Config struct {

@@ -21,10 +21,10 @@ import (
 	"github.com/adm87/finch/pkg/ecs/rendering"
 	"github.com/adm87/finch/pkg/ecs/world"
 	"github.com/adm87/finch/pkg/engine"
+	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/importers"
 	"github.com/adm87/finch/pkg/logger"
-	"github.com/adm87/finch/pkg/types/errs"
 )
 
 const resourceHandle = "resource handle"

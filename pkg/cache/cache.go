@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/adm87/finch/pkg/types/errs"
-	"github.com/adm87/finch/pkg/types/slotmap"
+	"github.com/adm87/finch/pkg/errs"
+	"github.com/adm87/finch/pkg/slotmap"
 )
 
 func cacheError(op, store string, handle uint64, err error) error {

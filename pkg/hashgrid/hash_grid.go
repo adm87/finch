@@ -7,7 +7,7 @@ import (
 	"math"
 	"slices"
 
-	"github.com/adm87/finch/pkg/types/slotmap"
+	"github.com/adm87/finch/pkg/slotmap"
 )
 
 var (

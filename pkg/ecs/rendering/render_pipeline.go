@@ -4,11 +4,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/adm87/finch/pkg/ecs/components"
-	"github.com/adm87/finch/pkg/geom"
-	"github.com/adm87/finch/pkg/types/slotmap"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
+
+	"github.com/adm87/finch/pkg/ecs/components"
+	"github.com/adm87/finch/pkg/geom"
+	"github.com/adm87/finch/pkg/slotmap"
 )
 
 type View interface {

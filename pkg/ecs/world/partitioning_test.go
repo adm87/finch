@@ -6,10 +6,11 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/yohamta/donburi"
+
 	"github.com/adm87/finch/pkg/ecs/components"
 	"github.com/adm87/finch/pkg/geom"
-	"github.com/adm87/finch/pkg/types/hashgrid"
-	"github.com/yohamta/donburi"
+	"github.com/adm87/finch/pkg/hashgrid"
 )
 
 // Helpers are prefixed with "pt" so they can't collide with other test files.
