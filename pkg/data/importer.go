@@ -11,18 +11,13 @@ func Types() []string {
 	return slices.Clone(dataTypes)
 }
 
-type Storage interface {
-	Put(raw []byte) uint64
-	Delete(handle uint64) ([]byte, error)
-}
-
 type Importer struct {
-	store Storage
+	cache *Cache
 }
 
-func NewImporter(store Storage) *Importer {
+func NewImporter(cache *Cache) *Importer {
 	return &Importer{
-		store: store,
+		cache: cache,
 	}
 }
 
@@ -31,10 +26,10 @@ func (dl *Importer) Import(reader io.Reader) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return dl.store.Put(raw), nil
+	return dl.cache.Put(raw), nil
 }
 
 func (dl *Importer) Delete(handle uint64) error {
-	_, err := dl.store.Delete(handle)
+	_, err := dl.cache.Delete(handle)
 	return err
 }

@@ -155,7 +155,7 @@ func (a *Assets) load(fsys fs.FS, asset Asset) error {
 		}
 		return fmt.Errorf("open %q: %w", name, err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	handle, err := importer.Import(file)
 	if err != nil {

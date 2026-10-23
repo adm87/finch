@@ -16,6 +16,7 @@ import (
 	"github.com/adm87/finch/pkg/aseprite"
 	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/data"
+	"github.com/adm87/finch/pkg/display"
 	"github.com/adm87/finch/pkg/engine"
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/geom"
@@ -179,11 +180,11 @@ func validateGameConfig(cfg *config.GameConfig) error {
 func run(g *game.Game, l logger.Logger) error {
 	w := world.NewWorld()
 
-	g.Screen = game.NewScreen(
+	g.Screen = display.NewScreen(
 		g.Config.Window.Width,
 		g.Config.Window.Height,
 	)
-	g.View = game.NewViewport(g.Screen)
+	g.View = display.NewViewport(g.Screen)
 
 	rp := rendering.NewPipeline(g.View, w)
 	if err := initializeGameRenderers(g, rp); err != nil {
@@ -250,7 +251,10 @@ func makeTestScene(g *game.Game, w world.World) error {
 	width := float64(frame.Size.X)
 	height := float64(frame.Size.Y)
 
-	const ax, ay = 0.5, 1.0
+	// Anchor at the feet: the bottom center of the first frame's visible pixels.
+	visible := frame.Image.Bounds().Size()
+	ax := (float64(frame.Offset.X) + float64(visible.X)/2) / width
+	ay := float64(frame.Offset.Y+visible.Y) / height
 
 	entry := w.Create(
 		rendering.RendererComponent,

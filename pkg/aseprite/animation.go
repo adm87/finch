@@ -7,7 +7,7 @@ import (
 )
 
 // AdvanceAnimations steps every entry that has an Animator and an Image.
-func AdvanceAnimations(dt float64, libs Libraries, entries []*donburi.Entry) error {
+func AdvanceAnimations(dt float64, libs *Libraries, entries []*donburi.Entry) error {
 	for _, entry := range entries {
 		anim, ok := GetAnimator(entry)
 		if !ok || anim.Library() == 0 || anim.Animation() == "" {

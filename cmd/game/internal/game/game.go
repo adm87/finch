@@ -5,18 +5,19 @@ import (
 	"github.com/adm87/finch/pkg/aseprite"
 	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/data"
+	"github.com/adm87/finch/pkg/display"
 	"github.com/adm87/finch/pkg/images"
 )
 
 type Game struct {
-	Aseprite  aseprite.Libraries
+	Aseprite  *aseprite.Libraries
 	Assets    *assets.Assets
 	Config    *config.GameConfig
 	Cache     *GameCache
 	Renderers *GameRenderers
-	Screen    *Screen
+	Screen    *display.Screen
+	View      *display.View
 	Time      *Time
-	View      *View
 }
 
 type GameCache struct {

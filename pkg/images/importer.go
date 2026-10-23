@@ -4,7 +4,6 @@ import (
 	"io"
 	"slices"
 
-	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 
 	"github.com/adm87/finch/pkg/errs"
@@ -16,18 +15,13 @@ func Types() []string {
 	return slices.Clone(imageTypes)
 }
 
-type Storage interface {
-	Put(img *ebiten.Image) uint64
-	Delete(handle uint64) (*ebiten.Image, error)
-}
-
 type Importer struct {
-	store Storage
+	cache *Cache
 }
 
-func NewImporter(store Storage) *Importer {
+func NewImporter(cache *Cache) *Importer {
 	return &Importer{
-		store: store,
+		cache: cache,
 	}
 }
 
@@ -36,11 +30,11 @@ func (l *Importer) Import(reader io.Reader) (uint64, error) {
 	if err != nil {
 		return 0, errs.Format("image", "decode").Wrap(err)
 	}
-	return l.store.Put(img), nil
+	return l.cache.Put(img), nil
 }
 
 func (l *Importer) Delete(handle uint64) error {
-	img, err := l.store.Delete(handle)
+	img, err := l.cache.Delete(handle)
 	if err != nil {
 		return err
 	}
