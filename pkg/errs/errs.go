@@ -39,9 +39,8 @@ func keyed(kind, key, suffix string) string {
 	}
 }
 
-// ArgumentError reports that a caller passed an invalid value for a parameter.
-// It is the base of the argument family: errors.As with *ArgumentError also
-// matches ArgumentNilError and ArgumentOutOfRangeError.
+// ArgumentError reports an invalid argument. errors.As with *ArgumentError
+// also matches ArgumentNilError and ArgumentOutOfRangeError.
 type ArgumentError struct {
 	Inner   error
 	Param   string
@@ -96,9 +95,7 @@ func (e *ArgumentNilError) As(target any) bool {
 	return false
 }
 
-// ArgumentOutOfRangeError reports that a parameter fell outside its allowed
-// range, such as a negative index or a size beyond a limit. Value holds the
-// offending value.
+// ArgumentOutOfRangeError reports an argument outside its allowed range. Value holds the argument.
 type ArgumentOutOfRangeError struct {
 	Value   any
 	Param   string
@@ -129,8 +126,7 @@ func (e *ArgumentOutOfRangeError) As(target any) bool {
 	return false
 }
 
-// CheckRange checks if a value is within the specified range [min, max].
-// It returns an ArgumentOutOfRangeError if the value is out of range.
+// CheckRange returns an ArgumentOutOfRangeError if value is outside [min, max].
 func CheckRange[T cmp.Ordered](param string, value, min, max T) error {
 	if value < min || value > max {
 		return ArgumentOutOfRange(param, value, fmt.Sprintf("must be between %v and %v", min, max))
@@ -138,9 +134,7 @@ func CheckRange[T cmp.Ordered](param string, value, min, max T) error {
 	return nil
 }
 
-// InvalidOperationError reports that a call is not valid for the object's
-// current state, such as starting something already running or reading
-// before initialization. It also wraps an optional inner error.
+// InvalidOperationError reports a call that isn't valid in the object's current state.
 type InvalidOperationError struct {
 	Inner   error
 	Message string
@@ -192,8 +186,7 @@ func (e *DisposedError) As(target any) bool {
 	return false
 }
 
-// NotSupportedError reports an operation this implementation will never
-// support, such as writing to a read-only file system.
+// NotSupportedError reports an operation that will never be supported.
 type NotSupportedError struct {
 	Message string
 }
@@ -211,8 +204,7 @@ func (e *NotSupportedError) Error() string {
 
 func (e *NotSupportedError) Is(target error) bool { return target == ErrNotSupported }
 
-// NotImplementedError reports an operation that is planned but not written
-// yet. Use it as a placeholder during development.
+// NotImplementedError reports an operation that isn't written yet.
 type NotImplementedError struct {
 	Message string
 }
@@ -230,8 +222,7 @@ func (e *NotImplementedError) Error() string {
 
 func (e *NotImplementedError) Is(target error) bool { return target == ErrNotImplemented }
 
-// NotFoundError reports that a lookup by key found nothing. Kind names what
-// was looked up ("resource", "image", "file system") and Key is the identifier.
+// NotFoundError reports a failed lookup. Kind names what was looked up, such as "image".
 type NotFoundError struct {
 	Inner error
 	Kind  string
@@ -258,9 +249,7 @@ func (e *NotFoundError) Error() string {
 func (e *NotFoundError) Unwrap() error        { return e.Inner }
 func (e *NotFoundError) Is(target error) bool { return target == ErrNotFound }
 
-// AlreadyExistsError reports that an add or register call used a key that is
-// already taken. Kind names what was being added ("file system", "importer",
-// "renderer") and Key is the conflicting identifier.
+// AlreadyExistsError reports a key that is already taken.
 type AlreadyExistsError struct {
 	Inner error
 	Kind  string
@@ -287,8 +276,7 @@ func (e *AlreadyExistsError) Error() string {
 func (e *AlreadyExistsError) Unwrap() error        { return e.Inner }
 func (e *AlreadyExistsError) Is(target error) bool { return target == ErrAlreadyExists }
 
-// FormatError reports input that could not be parsed or decoded. Input names
-// what was being parsed, such as a file name or the raw text itself.
+// FormatError reports input that couldn't be parsed. Input names the file or text.
 type FormatError struct {
 	Inner   error
 	Input   string

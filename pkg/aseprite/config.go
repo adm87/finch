@@ -12,7 +12,6 @@ type Config struct {
 	Libraries map[string]LibraryConfig `yaml:"libraries"`
 }
 
-// Validate checks every library config and reports all problems found.
 func (c Config) Validate() error {
 	var errList []error
 	for name, lib := range c.Libraries {

@@ -41,25 +41,19 @@ const (
 type LibraryID uint64
 
 // Libraries manages Aseprite libraries and their atlases.
-//
-// Ownership is all-or-nothing: if a library's content was partially preloaded,
-// ClearLibrary with UnloadModeIfOwned may unload the preloaded parts too.
-// Preload a library's content entirely or not at all.
+// Preload a library's content entirely or not at all: UnloadModeIfOwned
+// can also unload the parts that were preloaded.
 type Libraries interface {
-	// CreateLibrary returns the ID of the named library, loading and decoding it on first use.
-	// If the library's content isn't loaded, it is loaded only when mode is LoadModeDynamic.
+	// CreateLibrary decodes the named library on first use and returns its ID.
 	CreateLibrary(name string, mode LoadMode) (LibraryID, error)
 
-	// ClearLibrary removes the named library.
-	// With UnloadModeIfOwned, its content is unloaded if CreateLibrary loaded it.
 	ClearLibrary(name string, mode UnloadMode) error
 
-	// GetLibrary returns the library with the given ID.
-	// The Atlas is shared and must not be modified.
+	// GetLibrary returns a shared Atlas that must not be modified.
 	GetLibrary(id LibraryID) (LibraryInfo, error)
 }
 
-// LibraryInfo contains information about an Aseprite library, including its atlas, image handle, and data handle.
+// LibraryInfo is a decoded library and the handles of its content.
 type LibraryInfo struct {
 	Atlas       *Atlas
 	ImageHandle uint64
@@ -152,7 +146,7 @@ func (a *ase) CreateLibrary(name string, mode LoadMode) (LibraryID, error) {
 	}
 	info.owned = owned
 
-	if err := a.ic.SliceRects(info.ImageHandle, info.Atlas.Frames.Rectangles()); err != nil {
+	if err := a.ic.SliceFrames(info.ImageHandle, info.Atlas.Frames.FrameRects()); err != nil {
 		return 0, fmt.Errorf("slice image %q: %w", library.Image.String(), err)
 	}
 

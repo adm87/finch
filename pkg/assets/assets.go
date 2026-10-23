@@ -33,7 +33,7 @@ func NewAssets() *Assets {
 	}
 }
 
-// GetHandle retrieves the handle for the given asset, returning an error if it is not loaded.
+// GetHandle returns a NotFoundError if the asset isn't loaded.
 func (a *Assets) GetHandle(asset Asset) (uint64, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()

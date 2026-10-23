@@ -21,7 +21,7 @@ type World interface {
 	RangeOver(region geom.Rect, fn func(*donburi.Entry) bool)
 }
 
-// Pipeline manages the rendering process by maintaining a list of renderers and a render queue.
+// Pipeline draws the visible entities through their adapters, sorted by layer and depth.
 type Pipeline struct {
 	view      View
 	world     World

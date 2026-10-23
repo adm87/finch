@@ -242,13 +242,13 @@ func makeTestScene(g *game.Game, w world.World) error {
 		return fmt.Errorf("get aseprite image handle: %w", err)
 	}
 
-	img, err := g.Cache.Images.GetFrame(library.ImageHandle, 0)
+	frame, err := g.Cache.Images.GetFrame(library.ImageHandle, 0)
 	if err != nil {
 		return errs.NotFound("image", content.DefaultImage10x10).Wrap(err)
 	}
 
-	width := float64(img.Bounds().Dx())
-	height := float64(img.Bounds().Dy())
+	width := float64(frame.Size.X)
+	height := float64(frame.Size.Y)
 
 	const ax, ay = 0.5, 1.0
 

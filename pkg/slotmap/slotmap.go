@@ -7,9 +7,8 @@ var (
 	ErrNotFound   = errors.New("not found")
 )
 
-// K is a versioned key used to uniquely identify a slot in the SlotMap.
-// It combines a 32-bit index and a 32-bit version into a single 64-bit value.
-// The version is incremented each time a slot is reused, preventing ABA problems.
+// K is a versioned slot key. The version changes each time a slot is reused,
+// so a stale key can't reach a newer value.
 type K struct {
 	index   uint32
 	version uint32
@@ -23,12 +22,10 @@ func (k K) Version() uint32 {
 	return k.version
 }
 
-// Pack combines the index and version into a single 64-bit value.
 func (k K) Pack() uint64 {
 	return uint64(k.version)<<32 | uint64(k.index)
 }
 
-// Unpack extracts the index and version from a packed 64-bit value.
 func Unpack(packed uint64) K {
 	return K{
 		index:   uint32(packed & 0xFFFFFFFF),
@@ -36,8 +33,7 @@ func Unpack(packed uint64) K {
 	}
 }
 
-// checkCapacity validates that the requested capacity is within acceptable bounds.
-// It panics if capacity is negative, exceeds uint32 address space, or is too large for the system.
+// checkCapacity panics if capacity is negative or doesn't fit a uint32 index.
 func checkCapacity(newLen int) {
 	if newLen < 0 {
 		panic("slotmap: capacity is negative")
@@ -51,36 +47,29 @@ func checkCapacity(newLen int) {
 	}
 }
 
-// slotData stores the actual value and a link to the next free slot.
 type slotData[T any] struct {
 	value T
 	next  uint32
 }
 
-// slot represents a single storage location in the SlotMap.
 type slot[T any] struct {
 	data    slotData[T]
 	version uint32
 }
 
-// IsOccupied returns true if this slot currently contains a valid value.
-// The occupation state is encoded in the least significant bit of the version.
+// IsOccupied reads the low bit of the version, which is set while the slot holds a value.
 func (s slot[T]) IsOccupied() bool {
 	return s.version&1 == 1
 }
 
-// SlotMap is a dense, cache-friendly data structure that stores values with versioned keys.
-// It maintains a free-list for O(1) insertions and deletions, and supports efficient iteration
-// over occupied slots. The type parameter T specifies the value type to store.
+// SlotMap stores values under versioned keys, with O(1) insert and delete.
 type SlotMap[T any] struct {
 	slots []slot[T]
 	head  uint32
 	len   int
 }
 
-// New creates a new SlotMap with an initial capacity.
-// The capacity is the maximum number of values the SlotMap can hold without calling Grow.
-// Panics if cap is negative or excessively large.
+// New creates a SlotMap that holds capacity values before it grows.
 func New[T any](capacity int) *SlotMap[T] {
 	capacity = max(capacity, 0)
 	checkCapacity(capacity + 1)
@@ -103,8 +92,7 @@ func New[T any](capacity int) *SlotMap[T] {
 	return slotMap
 }
 
-// Insert adds a new value to the SlotMap and returns its versioned key.
-// If the SlotMap is at capacity, it automatically grows.
+// Insert adds value and returns its key, growing the map if it is full.
 func (s *SlotMap[T]) Insert(value T) K {
 	if s.head == 0 {
 		s.Grow(max(1, len(s.slots)))
@@ -125,9 +113,7 @@ func (s *SlotMap[T]) Insert(value T) K {
 	}
 }
 
-// Get retrieves the value associated with key k.
-// It returns the value and true if the key is valid and refers to an occupied slot,
-// or a zero value and false if the key is invalid or the slot has been deleted.
+// Get returns ErrInvalidKey for a malformed key and ErrNotFound for a deleted one.
 func (s *SlotMap[T]) Get(k K) (T, error) {
 	var zero T
 
@@ -144,7 +130,7 @@ func (s *SlotMap[T]) Get(k K) (T, error) {
 	return slot.data.value, nil
 }
 
-// GetPtr is similar to Get, but returns a pointer to the value instead of a copy.
+// GetPtr is like Get but returns a pointer to the stored value.
 func (s *SlotMap[T]) GetPtr(k K) (*T, error) {
 	index, version := k.index, k.version
 	if index == 0 || index >= uint32(len(s.slots)) {
@@ -159,9 +145,6 @@ func (s *SlotMap[T]) GetPtr(k K) (*T, error) {
 	return &slot.data.value, nil
 }
 
-// Set updates the value at key k.
-// It returns the previous value and true if the update succeeded,
-// or a zero value and false if the key is invalid or the slot has been deleted.
 func (s *SlotMap[T]) Set(k K, value T) error {
 	index, version := k.index, k.version
 	if index == 0 || index >= uint32(len(s.slots)) {
@@ -177,10 +160,7 @@ func (s *SlotMap[T]) Set(k K, value T) error {
 	return nil
 }
 
-// Delete removes the value at key k and returns it.
-// It returns the deleted value and true if the deletion succeeded,
-// or a zero value and false if the key is invalid or already deleted.
-// After deletion, the key becomes permanently invalid due to version increment.
+// Delete removes and returns the value at k. The key stays invalid afterward.
 func (s *SlotMap[T]) Delete(k K) (T, error) {
 	var zero T
 
@@ -205,9 +185,7 @@ func (s *SlotMap[T]) Delete(k K) (T, error) {
 	return oldValue, nil
 }
 
-// Range iterates over all occupied slots in the SlotMap, calling fn for each key-value pair.
-// If fn returns false, iteration stops early.
-// The order of iteration is not guaranteed to be stable across insertions and deletions.
+// Range calls fn for each value until fn returns false. The order is not stable.
 func (s *SlotMap[T]) Range(fn func(k K, value T) bool) {
 	for i := 1; i < len(s.slots); i++ {
 		slot := &s.slots[i]
@@ -224,9 +202,7 @@ func (s *SlotMap[T]) Range(fn func(k K, value T) bool) {
 
 }
 
-// Grow increases the SlotMap's capacity by n additional slots.
-// If n is zero or negative, Grow does nothing.
-// Panics if the resulting capacity would exceed limits.
+// Grow adds room for n more values.
 func (s *SlotMap[T]) Grow(n int) {
 	if n <= 0 {
 		return
@@ -248,12 +224,11 @@ func (s *SlotMap[T]) Grow(n int) {
 	s.head = oldLen
 }
 
-// Len returns the number of currently occupied slots in the SlotMap.
 func (s *SlotMap[T]) Len() int {
 	return s.len
 }
 
-// Cap returns the maximum number of values the SlotMap can hold without growing.
+// Cap returns how many values fit before the map grows.
 func (s *SlotMap[T]) Cap() int {
 	return len(s.slots) - 1 // subtract 1 for the sentinel slot at index 0
 }

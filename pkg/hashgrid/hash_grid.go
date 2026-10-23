@@ -150,9 +150,7 @@ func (hg *HashGrid[T]) Delete(key Key) error {
 	return nil
 }
 
-// Update modifies the cell range of an existing entry identified by key. If the new region
-// results in the same cell range as the current one, no changes are made. Otherwise,
-// the entry is removed from the old cells and added to the new cells.
+// Update moves key to region. It does nothing if the covered cells don't change.
 func (hg *HashGrid[T]) Update(key Key, region Region) error {
 	hg.rl.Check()
 
@@ -248,7 +246,7 @@ func (hg *HashGrid[T]) Snap(minX, minY, maxX, maxY float64) (int32, int32, int32
 	x2 := int32(math.Ceil(maxCellX / cellSize))
 	y2 := int32(math.Ceil(maxCellY / cellSize))
 
-	// Ensure that the cell range has at least one cell in each dimension.
+	// A zero-size region still covers one cell.
 	if x1 == x2 {
 		x2++
 	}
@@ -287,8 +285,7 @@ func (hg *HashGrid[T]) removeKey(cell Cell, key Key) {
 	}
 
 	if len(keys) == 0 {
-		// Delete empty cells to keep GridLen aligned with occupied cells.
-		// Note: this can increase slice churn for frequently reactivated cells.
+		// Deleting empty cells keeps GridLen accurate but churns cells that refill often.
 		delete(hg.grid, cell)
 		return
 	}
