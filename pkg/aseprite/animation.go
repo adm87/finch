@@ -1,38 +1,39 @@
-package systems
+package aseprite
 
 import (
 	"math"
 
-	"github.com/adm87/finch/pkg/aseprite"
-	"github.com/adm87/finch/pkg/ecs/components"
 	"github.com/yohamta/donburi"
+
+	"github.com/adm87/finch/pkg/images"
 )
 
-func AdvanceAsepriteAnimations(dt float64, ase aseprite.Aseprite, entries []*donburi.Entry) error {
+// AdvanceAnimations steps the animation of every entry that has both an Animator and an Image.
+func AdvanceAnimations(dt float64, libs Libraries, entries []*donburi.Entry) error {
 	for _, entry := range entries {
-		aComp, aOk := components.GetAseprite(entry)
+		aComp, aOk := GetAnimator(entry)
 		if !aOk || aComp.Library() == 0 || aComp.Animation() == "" {
 			continue
 		}
 
-		iComp, iOk := components.GetImage(entry)
+		iComp, iOk := images.GetImage(entry)
 		if !iOk {
 			continue
 		}
 
-		lib, err := ase.GetLibrary(aseprite.LibraryID(aComp.Library()))
+		lib, err := libs.GetLibrary(aComp.Library())
 		if err != nil {
 			return err
 		}
 
-		if err := advanceAsepriteAnimation(dt, lib, aComp, iComp); err != nil {
+		if err := advanceAnimation(dt, lib, aComp, iComp); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func advanceAsepriteAnimation(dt float64, library aseprite.LibraryInfo, aComp *components.Aseprite, iComp *components.Image) error {
+func advanceAnimation(dt float64, library LibraryInfo, aComp *Animator, iComp *images.Image) error {
 	if dt <= 0 {
 		return nil
 	}
@@ -58,7 +59,7 @@ func advanceAsepriteAnimation(dt float64, library aseprite.LibraryInfo, aComp *c
 			idx = n - 1
 		}
 		iComp.SetFrame(idx)
-		aComp.SetPingPongReversing(tag.Direction == aseprite.DirectionPingPongReverse)
+		aComp.SetPingPongReversing(tag.Direction == DirectionPingPongReverse)
 	}
 
 	elapsed := aComp.Elapsed() + dt*1000
@@ -91,12 +92,12 @@ func advanceAsepriteAnimation(dt float64, library aseprite.LibraryInfo, aComp *c
 	return nil
 }
 
-func isAnimationReverse(tag *aseprite.FrameTag) bool {
-	return tag.Direction == aseprite.DirectionReverse || tag.Direction == aseprite.DirectionPingPongReverse
+func isAnimationReverse(tag *FrameTag) bool {
+	return tag.Direction == DirectionReverse || tag.Direction == DirectionPingPongReverse
 }
 
-func isAnimationPingPong(tag *aseprite.FrameTag) bool {
-	return tag.Direction == aseprite.DirectionPingPong || tag.Direction == aseprite.DirectionPingPongReverse
+func isAnimationPingPong(tag *FrameTag) bool {
+	return tag.Direction == DirectionPingPong || tag.Direction == DirectionPingPongReverse
 }
 
 func nextFrame(idx, n int, reverse, pingPong, reversing bool) (int, bool) {

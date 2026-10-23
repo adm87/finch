@@ -4,8 +4,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 
-	"github.com/adm87/finch/pkg/ecs/components"
 	"github.com/adm87/finch/pkg/geom"
+	"github.com/adm87/finch/pkg/transform"
 )
 
 type View struct {
@@ -27,7 +27,7 @@ func (v *View) SetCamera(camera *donburi.Entry) {
 	v.camera = camera
 
 	if v.camera != nil {
-		if t, tOk := components.GetTransform(v.camera); tOk {
+		if t, tOk := transform.GetTransform(v.camera); tOk {
 			v.refresh(t)
 		}
 	}
@@ -38,7 +38,7 @@ func (v *View) Viewport() (geom.Rect, ebiten.GeoM) {
 		return geom.Rect{}, ebiten.GeoM{}
 	}
 
-	t, tOk := components.GetTransform(v.camera)
+	t, tOk := transform.GetTransform(v.camera)
 	if !tOk {
 		return geom.Rect{}, ebiten.GeoM{}
 	}
@@ -68,7 +68,7 @@ func (v *View) ScreenToWorld(screenX, screenY float64) (worldX, worldY float64) 
 		return screenX, screenY
 	}
 
-	t, tOk := components.GetTransform(v.camera)
+	t, tOk := transform.GetTransform(v.camera)
 	if !tOk {
 		return screenX, screenY
 	}
@@ -77,11 +77,11 @@ func (v *View) ScreenToWorld(screenX, screenY float64) (worldX, worldY float64) 
 	return geoM.Apply(v.screen.ScreenToSafeArea(screenX, screenY))
 }
 
-func (v *View) refresh(t *components.Transform) geom.Rect {
+func (v *View) refresh(t *transform.Transform) geom.Rect {
 	safeArea := v.screen.SafeArea()
 	t.SetOrigin(safeArea.Center())
 
-	b, bOk := components.GetBounds(v.camera)
+	b, bOk := transform.GetBounds(v.camera)
 	if !bOk {
 		return geom.Rect{}
 	}

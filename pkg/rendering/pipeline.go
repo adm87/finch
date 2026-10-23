@@ -7,9 +7,10 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 
-	"github.com/adm87/finch/pkg/ecs/components"
+	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/slotmap"
+	"github.com/adm87/finch/pkg/transform"
 )
 
 type View interface {
@@ -20,30 +21,33 @@ type World interface {
 	RangeOver(region geom.Rect, fn func(*donburi.Entry) bool)
 }
 
-// RenderPipeline manages the rendering process by maintaining a list of renderers and a render queue.
-type RenderPipeline struct {
+// Pipeline manages the rendering process by maintaining a list of renderers and a render queue.
+type Pipeline struct {
 	view      View
 	world     World
-	renderers *slotmap.SlotMap[Renderer]
-	queue     *RenderQueue
+	renderers *slotmap.SlotMap[Adapter]
+	queue     *Queue
 }
 
-func NewRenderPipeline(viewport View, world World) *RenderPipeline {
-	return &RenderPipeline{
+func NewPipeline(viewport View, world World) *Pipeline {
+	return &Pipeline{
 		view:      viewport,
 		world:     world,
-		renderers: slotmap.New[Renderer](64),
-		queue:     NewRenderQueue(),
+		renderers: slotmap.New[Adapter](64),
+		queue:     NewQueue(),
 	}
 }
 
-func (rp *RenderPipeline) RegisterRenderer(renderer Renderer) (uint64, error) {
-	k := rp.renderers.Insert(renderer)
+func (rp *Pipeline) RegisterRenderer(adapter Adapter) (uint64, error) {
+	if adapter == nil {
+		return 0, errs.ArgumentNil("adapter")
+	}
+	k := rp.renderers.Insert(adapter)
 	// TODO: Should probably add support for checking if an item exists in a slotmap.
 	return k.Pack(), nil
 }
 
-func (rp *RenderPipeline) Draw(target *ebiten.Image) error {
+func (rp *Pipeline) Draw(target *ebiten.Image) error {
 	rp.queue.Clear()
 
 	if rp.view == nil {
@@ -57,7 +61,7 @@ func (rp *RenderPipeline) Draw(target *ebiten.Image) error {
 
 	rp.buildRenderQueue(rect)
 
-	var errs []error
+	var errList []error
 
 	keys := rp.queue.SortedKeys()
 	for i := range keys {
@@ -69,38 +73,38 @@ func (rp *RenderPipeline) Draw(target *ebiten.Image) error {
 		}
 
 		key := slotmap.Unpack(rc.Renderer.ID())
-		renderer, err := rp.renderers.Get(key)
+		adapter, err := rp.renderers.Get(key)
 
 		if err != nil {
 			rc.Clear()
-			errs = append(errs, err)
+			errList = append(errList, err)
 			continue
 		}
 
-		renderer.Render(target, rc, rect, geoM)
+		adapter.Render(target, rc, rect, geoM)
 		rc.Clear()
 	}
 
-	if len(errs) > 0 {
-		return fmt.Errorf("render pipeline errors: %w", errors.Join(errs...))
+	if len(errList) > 0 {
+		return fmt.Errorf("render pipeline errors: %w", errors.Join(errList...))
 	}
 
 	return nil
 }
 
-func (rp *RenderPipeline) buildRenderQueue(region geom.Rect) {
+func (rp *Pipeline) buildRenderQueue(region geom.Rect) {
 	rp.world.RangeOver(region, func(entry *donburi.Entry) bool {
-		if !entry.HasComponent(components.RendererComponent) {
+		if !entry.HasComponent(RendererComponent) {
 			return true
 		}
 
-		r := components.RendererComponent.Get(entry)
+		r := RendererComponent.Get(entry)
 		if !r.Visible() {
 			return true
 		}
 
-		t, tOk := components.GetTransform(entry)
-		b, bOk := components.GetBounds(entry)
+		t, tOk := transform.GetTransform(entry)
+		b, bOk := transform.GetBounds(entry)
 
 		if !tOk || !bOk {
 			return true
@@ -114,7 +118,7 @@ func (rp *RenderPipeline) buildRenderQueue(region geom.Rect) {
 			return true
 		}
 
-		rp.queue.Enqueue(RenderCandidate{
+		rp.queue.Enqueue(Candidate{
 			Entry:     entry,
 			Renderer:  r,
 			Transform: t,

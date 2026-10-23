@@ -8,9 +8,9 @@ import (
 
 	"github.com/yohamta/donburi"
 
-	"github.com/adm87/finch/pkg/ecs/components"
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/hashgrid"
+	"github.com/adm87/finch/pkg/transform"
 )
 
 // Helpers are prefixed with "pt" so they can't collide with other test files.
@@ -23,11 +23,11 @@ func ptNewEntry(t *testing.T, w donburi.World, rect geom.Rect, extra ...donburi.
 	t.Helper()
 
 	entry := w.Entry(w.Create(aggregateComponentTypes(extra...)...))
-	if t, ok := components.GetTransform(entry); ok {
+	if t, ok := transform.GetTransform(entry); ok {
 		t.SetScale(1, 1)
 	}
 
-	b, bOk := components.GetBounds(entry)
+	b, bOk := transform.GetBounds(entry)
 	if !bOk {
 		t.Fatalf("expected entry to have bounds component")
 	}
@@ -37,7 +37,7 @@ func ptNewEntry(t *testing.T, w donburi.World, rect geom.Rect, extra ...donburi.
 }
 
 func ptMove(entry *donburi.Entry, x, y float64) {
-	t, _ := components.GetTransform(entry)
+	t, _ := transform.GetTransform(entry)
 	t.SetPosition(x, y)
 }
 
@@ -312,7 +312,7 @@ func TestResizeAcrossPartitions(t *testing.T) {
 
 	region := ptRect(0, 0, 256, 256)
 	for _, s := range steps {
-		b, bOk := components.GetBounds(entry)
+		b, bOk := transform.GetBounds(entry)
 		if !bOk {
 			t.Fatalf("expected entry to have bounds component")
 		}
@@ -396,7 +396,7 @@ func TestTransformMatrixAffectsIndexBounds(t *testing.T) {
 	p := newPartitions(ptResolutions)
 	entry := ptNewEntry(t, w, ptRect(10, 10, 12, 8))
 
-	tr, ok := components.GetTransform(entry)
+	tr, ok := transform.GetTransform(entry)
 	if !ok {
 		t.Fatal("entry missing transform")
 	}
@@ -404,7 +404,7 @@ func TestTransformMatrixAffectsIndexBounds(t *testing.T) {
 	tr.SetScale(2, 2)
 	ptMustAdd(t, p, entry)
 
-	b, ok := components.GetBounds(entry)
+	b, ok := transform.GetBounds(entry)
 	if !ok {
 		t.Fatal("entry missing bounds")
 	}
@@ -524,7 +524,7 @@ func TestStaleKeyRecovery(t *testing.T) {
 func TestEntryWithoutIndexingComponentIsIgnored(t *testing.T) {
 	w := donburi.NewWorld()
 	p := newPartitions(ptResolutions)
-	entry := w.Entry(w.Create(components.TransformComponent))
+	entry := w.Entry(w.Create(transform.TransformComponent))
 
 	if err := p.add(entry); err != nil {
 		t.Fatalf("add should ignore it, got: %v", err)
@@ -572,7 +572,7 @@ func TestWorldQueryAndRangeOver(t *testing.T) {
 		{inB, ptRect(25, 10, 8, 12)},
 		{out, ptRect(200, 200, 10, 10)},
 	} {
-		b, bOk := components.GetBounds(tc.entry)
+		b, bOk := transform.GetBounds(tc.entry)
 		if !bOk {
 			t.Fatalf("expected entry to have bounds component")
 		}
@@ -742,7 +742,7 @@ func TestPartitionsStayConsistentUnderChurn(t *testing.T) {
 
 		default: // jump and resize, possibly across partitions
 			size := 4 + rng.Float64()*96
-			b, bOk := components.GetBounds(entry)
+			b, bOk := transform.GetBounds(entry)
 			if !bOk {
 				t.Fatalf("expected entry to have bounds component")
 			}

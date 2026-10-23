@@ -124,27 +124,26 @@ func (a *Assets) run(batch []Asset, operation func(Asset) error) error {
 		return nil
 	}
 
-	var errs []error
+	var errList []error
 	for _, asset := range requests {
 		if err := operation(asset); err != nil {
-			errs = append(errs, err)
+			errList = append(errList, err)
 		}
 	}
 
-	return errors.Join(errs...)
+	return errors.Join(errList...)
 }
 
 func (a *Assets) load(fsys fs.FS, asset Asset) error {
 	name := asset.String()
 
 	a.mu.Lock()
-	_, loaded := a.handles[asset]
-	importer, ok := a.importers[asset.Type()]
-	a.mu.Unlock()
+	defer a.mu.Unlock()
 
-	if loaded {
+	if _, loaded := a.handles[asset]; loaded {
 		return errs.AlreadyExists("asset", name)
 	}
+	importer, ok := a.importers[asset.Type()]
 	if !ok {
 		return errs.NotFound("importer", asset.Type())
 	}
@@ -162,25 +161,8 @@ func (a *Assets) load(fsys fs.FS, asset Asset) error {
 	if err != nil {
 		return fmt.Errorf("import %q: %w", name, err)
 	}
-
-	a.mu.Lock()
-	_, loaded = a.handles[asset]
-	if !loaded {
-		a.handles[asset] = handle
-	}
-	a.mu.Unlock()
-
-	if !loaded {
-		return nil
-	}
-
-	dup := errs.AlreadyExists("asset", name)
-	if err := importer.Delete(handle); err != nil {
-		// The asset was loaded concurrently by another goroutine.
-		// Discard the handle we just imported.
-		return errors.Join(dup, fmt.Errorf("discard duplicate %q: %w", name, err))
-	}
-	return dup
+	a.handles[asset] = handle
+	return nil
 }
 
 func (a *Assets) unload(asset Asset) error {

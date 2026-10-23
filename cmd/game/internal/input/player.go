@@ -6,8 +6,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 
-	"github.com/adm87/finch/pkg/ecs/components"
-	"github.com/adm87/finch/pkg/ecs/world"
+	"github.com/adm87/finch/pkg/transform"
+	"github.com/adm87/finch/pkg/world"
 )
 
 const (
@@ -15,7 +15,7 @@ const (
 )
 
 func UpdatePlayer(dt float64, entry *donburi.Entry, w world.World) error {
-	t := components.TransformComponent.Get(entry)
+	t := transform.TransformComponent.Get(entry)
 
 	// Movement
 	var dx, dy float64

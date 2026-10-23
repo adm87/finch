@@ -1,4 +1,4 @@
-package importers
+package images
 
 import (
 	"io"
@@ -12,26 +12,26 @@ import (
 
 var imageTypes = []string{"png", "jpg", "jpeg"}
 
-func ImageTypes() []string {
+func Types() []string {
 	return slices.Clone(imageTypes)
 }
 
-type ImageStorage interface {
+type Storage interface {
 	Put(img *ebiten.Image) uint64
 	Delete(handle uint64) (*ebiten.Image, error)
 }
 
-type ImageImporter struct {
-	store ImageStorage
+type Importer struct {
+	store Storage
 }
 
-func NewImageLoader(store ImageStorage) *ImageImporter {
-	return &ImageImporter{
+func NewImporter(store Storage) *Importer {
+	return &Importer{
 		store: store,
 	}
 }
 
-func (l *ImageImporter) Import(reader io.Reader) (uint64, error) {
+func (l *Importer) Import(reader io.Reader) (uint64, error) {
 	img, _, err := ebitenutil.NewImageFromReader(reader)
 	if err != nil {
 		return 0, errs.Format("image", "decode").Wrap(err)
@@ -39,7 +39,7 @@ func (l *ImageImporter) Import(reader io.Reader) (uint64, error) {
 	return l.store.Put(img), nil
 }
 
-func (l *ImageImporter) Delete(handle uint64) error {
+func (l *Importer) Delete(handle uint64) error {
 	img, err := l.store.Delete(handle)
 	if err != nil {
 		return err

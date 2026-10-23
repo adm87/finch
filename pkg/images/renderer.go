@@ -1,39 +1,37 @@
-package renderers
+package images
 
 import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
-	"github.com/adm87/finch/pkg/cache"
-	"github.com/adm87/finch/pkg/ecs/components"
-	"github.com/adm87/finch/pkg/ecs/rendering"
 	"github.com/adm87/finch/pkg/geom"
+	"github.com/adm87/finch/pkg/rendering"
 )
 
-type ImageRenderer struct {
+type Renderer struct {
 	missing     *ebiten.Image
 	drawOptions *ebiten.DrawImageOptions
-	cache       *cache.ImageCache
+	cache       *Cache
 }
 
-func NewImageRenderer(cache *cache.ImageCache) *ImageRenderer {
+func NewRenderer(cache *Cache) *Renderer {
 	missing := ebiten.NewImage(10, 10)
 	missing.Fill(color.RGBA{R: 255, B: 255, A: 255})
-	return &ImageRenderer{
+	return &Renderer{
 		missing:     missing,
 		drawOptions: &ebiten.DrawImageOptions{},
 		cache:       cache,
 	}
 }
 
-func (ir *ImageRenderer) Render(target *ebiten.Image, rc *rendering.RenderCandidate, viewport geom.Rect, matrix ebiten.GeoM) {
+func (ir *Renderer) Render(target *ebiten.Image, rc *rendering.Candidate, viewport geom.Rect, matrix ebiten.GeoM) {
 	src := ir.missing
 	ax, ay := 0.0, 0.0
 
 	ir.drawOptions.ColorScale.Reset()
 
-	if img, iOk := components.GetImage(rc.Entry); iOk {
+	if img, iOk := GetImage(rc.Entry); iOk {
 		ax, ay = img.Anchor()
 		frame := img.Frame()
 

@@ -15,16 +15,15 @@ import (
 	"github.com/adm87/finch/content"
 	"github.com/adm87/finch/pkg/aseprite"
 	"github.com/adm87/finch/pkg/assets"
-	"github.com/adm87/finch/pkg/cache"
-	"github.com/adm87/finch/pkg/ecs/components"
-	"github.com/adm87/finch/pkg/ecs/renderers"
-	"github.com/adm87/finch/pkg/ecs/rendering"
-	"github.com/adm87/finch/pkg/ecs/world"
+	"github.com/adm87/finch/pkg/data"
 	"github.com/adm87/finch/pkg/engine"
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/geom"
-	"github.com/adm87/finch/pkg/importers"
+	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/logger"
+	"github.com/adm87/finch/pkg/rendering"
+	"github.com/adm87/finch/pkg/transform"
+	"github.com/adm87/finch/pkg/world"
 )
 
 const resourceHandle = "resource handle"
@@ -62,13 +61,13 @@ func initializeGameAssets(g *game.Game) error {
 		return err
 	}
 
-	dc := cache.NewDataCache()
-	if err := g.Assets.RegisterImporter(importers.NewDataLoader(dc), importers.DataTypes()); err != nil {
+	dc := data.NewCache()
+	if err := g.Assets.RegisterImporter(data.NewImporter(dc), data.Types()); err != nil {
 		return &errs.InvalidOperationError{Message: "register data importer", Inner: err}
 	}
 
-	ic := cache.NewImageCache()
-	if err := g.Assets.RegisterImporter(importers.NewImageLoader(ic), importers.ImageTypes()); err != nil {
+	ic := images.NewCache()
+	if err := g.Assets.RegisterImporter(images.NewImporter(ic), images.Types()); err != nil {
 		return &errs.InvalidOperationError{Message: "register image importer", Inner: err}
 	}
 
@@ -157,8 +156,8 @@ func initializeAseprite(g *game.Game, logger logger.Logger) error {
 	return nil
 }
 
-func initializeGameRenderers(g *game.Game, rp *rendering.RenderPipeline) error {
-	ir, err := rp.RegisterRenderer(renderers.NewImageRenderer(g.Cache.Images))
+func initializeGameRenderers(g *game.Game, rp *rendering.Pipeline) error {
+	ir, err := rp.RegisterRenderer(images.NewRenderer(g.Cache.Images))
 	if err != nil {
 		return errs.InvalidOperation("register image renderer").Wrap(err)
 	}
@@ -186,7 +185,7 @@ func run(g *game.Game, l logger.Logger) error {
 	)
 	g.View = game.NewViewport(g.Screen)
 
-	rp := rendering.NewRenderPipeline(g.View, w)
+	rp := rendering.NewPipeline(g.View, w)
 	if err := initializeGameRenderers(g, rp); err != nil {
 		return err
 	}
@@ -254,16 +253,16 @@ func makeTestScene(g *game.Game, w world.World) error {
 	const ax, ay = 0.5, 1.0
 
 	entry := w.Create(
-		components.RendererComponent,
-		components.ImageComponent,
-		components.AsepriteComponent,
+		rendering.RendererComponent,
+		images.ImageComponent,
+		aseprite.AnimatorComponent,
 		player.Player,
 	)
 
-	r, rOk := components.GetRenderer(entry)
-	i, iOk := components.GetImage(entry)
-	b, bOk := components.GetBounds(entry)
-	a, aOk := components.GetAseprite(entry)
+	r, rOk := rendering.GetRenderer(entry)
+	i, iOk := images.GetImage(entry)
+	b, bOk := transform.GetBounds(entry)
+	a, aOk := aseprite.GetAnimator(entry)
 
 	if !rOk {
 		return missingComponent(int(entry.Entity()), "renderer")
@@ -275,7 +274,7 @@ func makeTestScene(g *game.Game, w world.World) error {
 		return missingComponent(int(entry.Entity()), "bounds")
 	}
 	if !aOk {
-		return missingComponent(int(entry.Entity()), "aseprite")
+		return missingComponent(int(entry.Entity()), "aseprite animator")
 	}
 
 	r.SetID(g.Renderers.Image)
@@ -290,7 +289,7 @@ func makeTestScene(g *game.Game, w world.World) error {
 		Height: height,
 	})
 
-	a.SetLibrary(uint64(libraryID))
+	a.SetLibrary(libraryID)
 	a.SetAnimation("Idle")
 
 	if err := w.Add(entry); err != nil {

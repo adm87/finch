@@ -1,4 +1,4 @@
-package components
+package transform
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
