@@ -4,8 +4,9 @@ import (
 	"math"
 	"testing"
 
-	"github.com/adm87/finch/pkg/types/slotmap"
 	"github.com/go-openapi/testify/require"
+
+	"github.com/adm87/finch/pkg/slotmap"
 )
 
 func TestSlotMap(t *testing.T) {

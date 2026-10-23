@@ -404,17 +404,12 @@ func TestTransformMatrixAffectsIndexBounds(t *testing.T) {
 	tr.SetScale(2, 2)
 	ptMustAdd(t, p, entry)
 
-	m, ok := components.GetMatrix(entry)
-	if !ok {
-		t.Fatal("entry missing matrix")
-	}
-
 	b, ok := components.GetBounds(entry)
 	if !ok {
 		t.Fatal("entry missing bounds")
 	}
 
-	want := b.WorldRect(tr, m)
+	want := b.WorldRect(tr)
 	if got := p.getBounds(entry); got != want {
 		t.Fatalf("expected transformed bounds to be used for partitioning, got %+v want %+v", got, want)
 	}

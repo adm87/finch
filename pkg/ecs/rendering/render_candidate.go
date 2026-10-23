@@ -10,7 +10,6 @@ type RenderCandidate struct {
 	Renderer  *components.Renderer
 	Transform *components.Transform
 	Bounds    *components.Bounds
-	Matrix    *components.Matrix
 }
 
 func (rc *RenderCandidate) IsValid() bool {
@@ -18,7 +17,6 @@ func (rc *RenderCandidate) IsValid() bool {
 		rc.Entry != nil &&
 		rc.Renderer != nil &&
 		rc.Transform != nil &&
-		rc.Matrix != nil &&
 		rc.Bounds != nil
 }
 
@@ -27,5 +25,4 @@ func (rc *RenderCandidate) Clear() {
 	rc.Renderer = nil
 	rc.Transform = nil
 	rc.Bounds = nil
-	rc.Matrix = nil
 }

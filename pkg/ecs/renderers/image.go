@@ -44,15 +44,12 @@ func (ir *ImageRenderer) Render(target *ebiten.Image, rc *rendering.RenderCandid
 		}
 	}
 
-	t := rc.Transform
-	m := rc.Matrix
-
 	ir.drawOptions.GeoM.Reset()
 	ir.drawOptions.GeoM.Translate(
 		-float64(src.Bounds().Dx())*ax,
 		-float64(src.Bounds().Dy())*ay,
 	)
-	ir.drawOptions.GeoM.Concat(m.GeoM(t))
+	ir.drawOptions.GeoM.Concat(rc.Transform.GeoM())
 	ir.drawOptions.GeoM.Concat(matrix)
 
 	target.DrawImage(src, ir.drawOptions)

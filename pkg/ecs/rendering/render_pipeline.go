@@ -100,10 +100,9 @@ func (rp *RenderPipeline) buildRenderQueue(region geom.Rect) {
 		}
 
 		t, tOk := components.GetTransform(entry)
-		m, mOk := components.GetMatrix(entry)
 		b, bOk := components.GetBounds(entry)
 
-		if !tOk || !mOk || !bOk {
+		if !tOk || !bOk {
 			return true
 		}
 
@@ -111,7 +110,7 @@ func (rp *RenderPipeline) buildRenderQueue(region geom.Rect) {
 			return true
 		}
 
-		if !b.WorldRect(t, m).Intersects(region) {
+		if !b.WorldRect(t).Intersects(region) {
 			return true
 		}
 
@@ -119,7 +118,6 @@ func (rp *RenderPipeline) buildRenderQueue(region geom.Rect) {
 			Entry:     entry,
 			Renderer:  r,
 			Transform: t,
-			Matrix:    m,
 			Bounds:    b,
 		})
 		return true

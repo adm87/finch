@@ -27,13 +27,13 @@ func (b *Bounds) SetRect(rect geom.Rect) {
 	b.rect = rect
 }
 
-func (b *Bounds) WorldRect(t *Transform, m *Matrix) geom.Rect {
+func (b *Bounds) WorldRect(t *Transform) geom.Rect {
 	rect := b.Rect()
 
 	x1, y1 := rect.Min()
 	x2, y2 := rect.Max()
 
-	geoM := m.GeoM(t)
+	geoM := t.GeoM()
 
 	ax, ay := geoM.Apply(x1, y1)
 	bx, by := geoM.Apply(x2, y1)
