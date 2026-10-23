@@ -3,8 +3,9 @@ package hashgrid_test
 import (
 	"testing"
 
-	"github.com/adm87/finch/pkg/types/hashgrid"
 	"github.com/go-openapi/testify/require"
+
+	"github.com/adm87/finch/pkg/hashgrid"
 )
 
 type bounds[T ~int32 | ~float64] struct{ minX, minY, maxX, maxY T }

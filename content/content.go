@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/adm87/finch/pkg/types/errs"
+	"github.com/adm87/finch/pkg/errs"
 )
 
 type FileSystemID string

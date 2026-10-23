@@ -9,9 +9,9 @@ import (
 
 	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/cache"
+	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/logger"
-	"github.com/adm87/finch/pkg/types/errs"
-	"github.com/adm87/finch/pkg/types/slotmap"
+	"github.com/adm87/finch/pkg/slotmap"
 )
 
 const aseprite_library = "aseprite library"

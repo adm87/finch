@@ -8,8 +8,8 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
-	"github.com/adm87/finch/pkg/types/errs"
-	"github.com/adm87/finch/pkg/types/slotmap"
+	"github.com/adm87/finch/pkg/errs"
+	"github.com/adm87/finch/pkg/slotmap"
 )
 
 // ImageCache is a cache for storing and slicing images into frames.

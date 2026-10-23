@@ -5,8 +5,9 @@ import (
 	"math/rand/v2"
 	"testing"
 
-	"github.com/adm87/finch/pkg/types/hashgrid"
 	"github.com/go-openapi/testify/require"
+
+	"github.com/adm87/finch/pkg/hashgrid"
 )
 
 func newRange(b cells) hashgrid.CellRange {

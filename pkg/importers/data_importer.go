@@ -13,17 +13,17 @@ type DataStorage interface {
 	Delete(handle uint64) ([]byte, error)
 }
 
-type DataLoader struct {
+type DataImporter struct {
 	store DataStorage
 }
 
-func NewDataLoader(store DataStorage) *DataLoader {
-	return &DataLoader{
+func NewDataLoader(store DataStorage) *DataImporter {
+	return &DataImporter{
 		store: store,
 	}
 }
 
-func (dl *DataLoader) Import(reader io.Reader) (uint64, error) {
+func (dl *DataImporter) Import(reader io.Reader) (uint64, error) {
 	raw, err := io.ReadAll(reader)
 	if err != nil {
 		return 0, err
@@ -31,7 +31,7 @@ func (dl *DataLoader) Import(reader io.Reader) (uint64, error) {
 	return dl.store.Put(raw), nil
 }
 
-func (dl *DataLoader) Delete(handle uint64) error {
+func (dl *DataImporter) Delete(handle uint64) error {
 	_, err := dl.store.Delete(handle)
 	return err
 }
