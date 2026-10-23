@@ -10,16 +10,14 @@ const LoopForever = -1
 // Animator plays an animation from an Aseprite library on an entity's image.
 type Animator struct {
 	animation string
+	playing   string
 	library   LibraryID
 	loops     int
-
-	playing           string
-	frame             int
-	elapsed           float64
-	pingPongReversing bool
-	step              int
-	cycles            int
-	finished          bool
+	position  int
+	frame     int
+	elapsed   float64
+	cycles    int
+	finished  bool
 }
 
 var AnimatorComponent = donburi.NewComponentType[Animator](Animator{
@@ -60,11 +58,6 @@ func (a *Animator) Loops() int {
 // LoopForever never stops and 0 plays once. Ping-pong cycles go out and back.
 func (a *Animator) SetLoops(loops int) {
 	a.loops = max(loops, LoopForever)
-	a.finished = a.finished && !a.hasCyclesLeft()
-}
-
-func (a *Animator) hasCyclesLeft() bool {
-	return a.loops == LoopForever || a.cycles <= a.loops
 }
 
 // Restart plays the animation again from the start.
@@ -84,21 +77,4 @@ func (a *Animator) Frame() int {
 // Elapsed returns milliseconds spent on the current frame.
 func (a *Animator) Elapsed() float64 {
 	return a.elapsed
-}
-
-func (a *Animator) PingPongReversing() bool {
-	return a.pingPongReversing
-}
-
-func (a *Animator) restart(tag *FrameTag, n int) {
-	a.playing = a.animation
-	a.frame = 0
-	if isAnimationReverse(tag) {
-		a.frame = n - 1
-	}
-	a.elapsed = 0
-	a.pingPongReversing = tag.Direction == DirectionPingPongReverse
-	a.step = 0
-	a.cycles = 0
-	a.finished = false
 }

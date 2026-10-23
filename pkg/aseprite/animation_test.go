@@ -9,27 +9,28 @@ import (
 	"github.com/adm87/finch/pkg/images"
 )
 
-func TestNextFrame(t *testing.T) {
+func TestCycleFrame(t *testing.T) {
 	cases := []struct {
-		name     string
-		start    int
-		reverse  bool
-		pingPong bool
-		want     []int
+		name      string
+		direction Direction
+		n         int
+		want      []int
 	}{
-		{"forward wraps", 0, false, false, []int{1, 2, 0, 1}},
-		{"reverse wraps", 2, true, false, []int{1, 0, 2, 1}},
-		{"ping pong bounces", 0, false, true, []int{1, 2, 1, 0, 1}},
-		{"ping pong reverse bounces", 2, true, true, []int{1, 0, 1, 2, 1}},
+		{"forward holds the last frame", DirectionForward, 3, []int{0, 1, 2, 2}},
+		{"reverse holds the first frame", DirectionReverse, 3, []int{2, 1, 0, 0}},
+		{"ping pong ends where it started", DirectionPingPong, 3, []int{0, 1, 2, 1, 0}},
+		{"ping pong reverse ends where it started", DirectionPingPongReverse, 3, []int{2, 1, 0, 1, 2}},
+		{"single frame", DirectionPingPong, 1, []int{0, 0}},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			idx, reversing := tc.start, tc.reverse
+			length := cycleLength(tc.n, tc.direction)
+			require.Len(t, tc.want, length+1)
+
 			var got []int
-			for range tc.want {
-				idx, reversing = nextFrame(idx, 3, tc.reverse, tc.pingPong, reversing)
-				got = append(got, idx)
+			for p := range length + 1 {
+				got = append(got, cycleFrame(p, tc.n, tc.direction))
 			}
 			require.Equal(t, tc.want, got)
 		})
@@ -81,7 +82,7 @@ func TestAdvanceAnimation(t *testing.T) {
 			anim := &Animator{animation: "Run", loops: LoopForever}
 			img := &images.Image{}
 
-			require.NoError(t, advanceAnimation(tc.dt, lib, anim, img))
+			advanceAnimation(tc.dt, lib, anim, img)
 			require.Equal(t, tc.wantFrame, anim.Frame())
 			require.Equal(t, from+tc.wantFrame, img.Frame())
 			require.InDelta(t, tc.wantElapsed, anim.Elapsed(), 1e-6)
@@ -97,22 +98,22 @@ func TestAdvanceAnimationRestarts(t *testing.T) {
 	anim.SetAnimation("Run")
 	img := &images.Image{}
 
-	require.NoError(t, advanceAnimation(0.15, lib, anim, img))
+	advanceAnimation(0.15, lib, anim, img)
 	require.Equal(t, 1, anim.Frame())
 
 	anim.SetAnimation("Run")
-	require.NoError(t, advanceAnimation(0, lib, anim, img))
+	advanceAnimation(0, lib, anim, img)
 	require.Equal(t, 1, anim.Frame())
 	require.InDelta(t, 50, anim.Elapsed(), 1e-6)
 
 	anim.SetAnimation("Back")
-	require.NoError(t, advanceAnimation(0, lib, anim, img))
+	advanceAnimation(0, lib, anim, img)
 	require.Equal(t, 2, anim.Frame())
 	require.Zero(t, anim.Elapsed())
 
-	require.NoError(t, advanceAnimation(0.05, lib, anim, img))
+	advanceAnimation(0.05, lib, anim, img)
 	anim.SetLibrary(anim.Library())
-	require.NoError(t, advanceAnimation(0, lib, anim, img))
+	advanceAnimation(0, lib, anim, img)
 	require.Equal(t, 2, anim.Frame())
 	require.Zero(t, anim.Elapsed())
 }
@@ -122,7 +123,7 @@ func TestAdvanceAnimationUnknownTag(t *testing.T) {
 	anim := &Animator{animation: "Missing", loops: LoopForever}
 	img := &images.Image{}
 
-	require.NoError(t, advanceAnimation(1, lib, anim, img))
+	advanceAnimation(1, lib, anim, img)
 	require.Equal(t, 0, img.Frame())
 	require.Zero(t, anim.Elapsed())
 }
@@ -161,7 +162,7 @@ func TestAdvanceAnimationLoops(t *testing.T) {
 			anim.SetLoops(tc.loops)
 			img := &images.Image{}
 
-			require.NoError(t, advanceAnimation(tc.dt, lib, anim, img))
+			advanceAnimation(tc.dt, lib, anim, img)
 			require.Equal(t, tc.wantFrame, anim.Frame())
 			require.Equal(t, tc.wantFinished, anim.Finished())
 		})
@@ -174,14 +175,14 @@ func TestAnimatorLoopChanges(t *testing.T) {
 
 	t.Run("more loops resume a finished animation", func(t *testing.T) {
 		anim := &Animator{animation: "Run"}
-		require.NoError(t, advanceAnimation(0.3, lib, anim, img))
+		advanceAnimation(0.3, lib, anim, img)
 		require.True(t, anim.Finished())
 
 		anim.SetLoops(1)
+		advanceAnimation(0.05, lib, anim, img)
 		require.False(t, anim.Finished())
-		require.NoError(t, advanceAnimation(0.05, lib, anim, img))
 		require.Equal(t, 0, anim.Frame())
-		require.NoError(t, advanceAnimation(0.25, lib, anim, img))
+		advanceAnimation(0.25, lib, anim, img)
 		require.True(t, anim.Finished())
 		require.Equal(t, 2, anim.Frame())
 	})
@@ -189,25 +190,25 @@ func TestAnimatorLoopChanges(t *testing.T) {
 	t.Run("fewer loops finish at the end of the current cycle", func(t *testing.T) {
 		anim := &Animator{animation: "Run"}
 		anim.SetLoops(3)
-		require.NoError(t, advanceAnimation(0.45, lib, anim, img))
+		advanceAnimation(0.45, lib, anim, img)
 		require.Equal(t, 1, anim.Frame())
 
 		anim.SetLoops(0)
 		require.False(t, anim.Finished())
-		require.NoError(t, advanceAnimation(0.1, lib, anim, img))
+		advanceAnimation(0.1, lib, anim, img)
 		require.False(t, anim.Finished())
-		require.NoError(t, advanceAnimation(0.1, lib, anim, img))
+		advanceAnimation(0.1, lib, anim, img)
 		require.True(t, anim.Finished())
 		require.Equal(t, 2, anim.Frame())
 	})
 
 	t.Run("restart plays a finished animation again", func(t *testing.T) {
 		anim := &Animator{animation: "Run"}
-		require.NoError(t, advanceAnimation(1, lib, anim, img))
+		advanceAnimation(1, lib, anim, img)
 		require.True(t, anim.Finished())
 
 		anim.Restart()
-		require.NoError(t, advanceAnimation(0, lib, anim, img))
+		advanceAnimation(0, lib, anim, img)
 		require.False(t, anim.Finished())
 		require.Equal(t, 0, anim.Frame())
 	})
