@@ -41,7 +41,7 @@ func UpdatePlayer(dt float64, entry *donburi.Entry, w world.World) error {
 		y += dy * playerMoveSpeed * dt
 		t.SetPosition(x, y)
 
-		w.Update(entry)
+		return w.Update(entry)
 	}
 
 	return nil

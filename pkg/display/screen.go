@@ -1,20 +1,18 @@
-package game
+package display
 
 import (
 	"math"
 
-	"github.com/adm87/finch/pkg/geom"
 	"github.com/hajimehoshi/ebiten/v2"
+
+	"github.com/adm87/finch/pkg/geom"
 )
 
 type Screen struct {
-	buffer  *ebiten.Image
-	options *ebiten.DrawImageOptions
-
-	safeArea geom.Rect
-
-	isDirty bool
-
+	buffer    *ebiten.Image
+	options   *ebiten.DrawImageOptions
+	safeArea  geom.Rect
+	isDirty   bool
 	oldWidth  int
 	oldHeight int
 }
@@ -31,6 +29,14 @@ func NewScreen(width, height int) *Screen {
 		},
 		isDirty: true,
 	}
+}
+
+func (s *Screen) Buffer() *ebiten.Image {
+	return s.buffer
+}
+
+func (s *Screen) Options() *ebiten.DrawImageOptions {
+	return s.options
 }
 
 func (s *Screen) SafeArea() geom.Rect {

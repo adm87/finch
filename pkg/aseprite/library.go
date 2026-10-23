@@ -40,19 +40,6 @@ const (
 // LibraryID uniquely identifies an Aseprite library.
 type LibraryID uint64
 
-// Libraries manages Aseprite libraries and their atlases.
-// Preload a library's content entirely or not at all: UnloadModeIfOwned
-// can also unload the parts that were preloaded.
-type Libraries interface {
-	// CreateLibrary decodes the named library on first use and returns its ID.
-	CreateLibrary(name string, mode LoadMode) (LibraryID, error)
-
-	ClearLibrary(name string, mode UnloadMode) error
-
-	// GetLibrary returns a shared Atlas that must not be modified.
-	GetLibrary(id LibraryID) (LibraryInfo, error)
-}
-
 // LibraryInfo is a decoded library and the handles of its content.
 type LibraryInfo struct {
 	Atlas       *Atlas
@@ -61,21 +48,18 @@ type LibraryInfo struct {
 	owned       bool
 }
 
-type ase struct {
-	logger logger.Logger
-
-	as        *assets.Assets
-	dc        *data.Cache
-	ic        *images.Cache
-	libraries *slotmap.SlotMap[LibraryInfo]
-	config    *Config
-
+type Libraries struct {
+	logger     logger.Logger
+	as         *assets.Assets
+	dc         *data.Cache
+	ic         *images.Cache
+	libraries  *slotmap.SlotMap[LibraryInfo]
+	config     *Config
 	libsByName map[string]LibraryID
-
-	mu sync.Mutex
+	mu         sync.Mutex
 }
 
-func New(as *assets.Assets, log logger.Logger, dc *data.Cache, ic *images.Cache, config *Config) (Libraries, error) {
+func New(as *assets.Assets, log logger.Logger, dc *data.Cache, ic *images.Cache, config *Config) (*Libraries, error) {
 	var errList []error
 	if as == nil {
 		errList = append(errList, errs.ArgumentNil("as"))
@@ -97,7 +81,7 @@ func New(as *assets.Assets, log logger.Logger, dc *data.Cache, ic *images.Cache,
 	if log == nil {
 		log = logger.N
 	}
-	return &ase{
+	return &Libraries{
 		logger:     log.Named("aseprite"),
 		as:         as,
 		dc:         dc,
@@ -108,20 +92,20 @@ func New(as *assets.Assets, log logger.Logger, dc *data.Cache, ic *images.Cache,
 	}, nil
 }
 
-func (a *ase) CreateLibrary(name string, mode LoadMode) (LibraryID, error) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
+func (l *Libraries) CreateLibrary(name string, mode LoadMode) (LibraryID, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 
-	if id, exists := a.libsByName[name]; exists {
+	if id, exists := l.libsByName[name]; exists {
 		return id, nil
 	}
 
-	library, err := a.getLibraryConfig(name)
+	library, err := l.getLibraryConfig(name)
 	if err != nil {
 		return 0, err
 	}
 
-	loaded, err := a.isLibraryLoaded(library)
+	loaded, err := l.isLibraryLoaded(library)
 	if err != nil {
 		return 0, fmt.Errorf("check library %q: %w", name, err)
 	}
@@ -131,42 +115,42 @@ func (a *ase) CreateLibrary(name string, mode LoadMode) (LibraryID, error) {
 		if mode == LoadModeRequired {
 			return 0, errs.InvalidOperation(fmt.Sprintf("library %q is not loaded and mode is LoadModeRequired", name))
 		}
-		if err := a.loadLibrary(library); err != nil && !errs.IsAlreadyExists(err) {
+		if err := l.loadLibrary(library); err != nil && !errs.IsAlreadyExists(err) {
 			return 0, fmt.Errorf("load library %q: %w", name, err)
 		}
 		owned = true
 	}
 
-	info, err := a.decodeLibrary(library)
+	info, err := l.decodeLibrary(library)
 	if err != nil {
 		if owned {
-			err = errors.Join(err, a.unloadLibrary(library))
+			err = errors.Join(err, l.unloadLibrary(library))
 		}
 		return 0, fmt.Errorf("library %q: %w", name, err)
 	}
 	info.owned = owned
 
-	if err := a.ic.SliceFrames(info.ImageHandle, info.Atlas.Frames.FrameRects()); err != nil {
+	if err := l.ic.SliceFrames(info.ImageHandle, info.Atlas.Frames.FrameRects()); err != nil {
 		return 0, fmt.Errorf("slice image %q: %w", library.Image.String(), err)
 	}
 
-	id := LibraryID(a.libraries.Insert(info).Pack())
-	a.libsByName[name] = id
+	id := LibraryID(l.libraries.Insert(info).Pack())
+	l.libsByName[name] = id
 
 	return id, nil
 }
 
-func (a *ase) ClearLibrary(name string, mode UnloadMode) error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
+func (l *Libraries) ClearLibrary(name string, mode UnloadMode) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 
-	id, exists := a.libsByName[name]
+	id, exists := l.libsByName[name]
 	if !exists {
 		return errs.NotFound(libraryKind, name)
 	}
 
-	info, err := a.libraries.Delete(slotmap.Unpack(uint64(id)))
-	delete(a.libsByName, name)
+	info, err := l.libraries.Delete(slotmap.Unpack(uint64(id)))
+	delete(l.libsByName, name)
 	if err != nil {
 		return fmt.Errorf("clear library %q: %w", name, err)
 	}
@@ -175,50 +159,50 @@ func (a *ase) ClearLibrary(name string, mode UnloadMode) error {
 		return nil
 	}
 
-	cfg, err := a.getLibraryConfig(name)
+	cfg, err := l.getLibraryConfig(name)
 	if err != nil {
 		return err
 	}
-	if err := a.unloadLibrary(cfg); err != nil {
+	if err := l.unloadLibrary(cfg); err != nil {
 		return fmt.Errorf("unload library %q: %w", name, err)
 	}
 	return nil
 }
 
-func (a *ase) GetLibrary(id LibraryID) (LibraryInfo, error) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
+func (l *Libraries) GetLibrary(id LibraryID) (LibraryInfo, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 
-	info, err := a.libraries.Get(slotmap.Unpack(uint64(id)))
+	info, err := l.libraries.Get(slotmap.Unpack(uint64(id)))
 	if err != nil {
 		return LibraryInfo{}, errs.NotFound(libraryKind, strconv.FormatUint(uint64(id), 10)).Wrap(err)
 	}
 	return info, nil
 }
 
-func (a *ase) getLibraryConfig(name string) (*LibraryConfig, error) {
+func (l *Libraries) getLibraryConfig(name string) (*LibraryConfig, error) {
 	if name == "" {
 		return nil, errs.Argument("name", "library name cannot be empty")
 	}
-	library, exists := a.config.Libraries[name]
+	library, exists := l.config.Libraries[name]
 	if !exists {
 		return nil, errs.NotFound(libraryKind, name)
 	}
 	return &library, nil
 }
 
-func (a *ase) decodeLibrary(library *LibraryConfig) (LibraryInfo, error) {
+func (l *Libraries) decodeLibrary(library *LibraryConfig) (LibraryInfo, error) {
 	atlasPath := library.Atlas.String()
 
-	dataHandle, err := a.as.GetHandle(library.Atlas)
+	dataHandle, err := l.as.GetHandle(library.Atlas)
 	if err != nil {
 		return LibraryInfo{}, fmt.Errorf("atlas %q: %w", atlasPath, err)
 	}
-	imageHandle, err := a.as.GetHandle(library.Image)
+	imageHandle, err := l.as.GetHandle(library.Image)
 	if err != nil {
 		return LibraryInfo{}, fmt.Errorf("image %q: %w", library.Image.String(), err)
 	}
-	raw, err := a.dc.Get(dataHandle)
+	raw, err := l.dc.Get(dataHandle)
 	if err != nil {
 		return LibraryInfo{}, fmt.Errorf("atlas %q: %w", atlasPath, err)
 	}
@@ -231,7 +215,7 @@ func (a *ase) decodeLibrary(library *LibraryConfig) (LibraryInfo, error) {
 		return LibraryInfo{}, errs.Format(atlasPath, "atlas is empty")
 	}
 	if dropped := info.Atlas.DropMissingTags(); len(dropped) > 0 {
-		a.logger.Warn("dropping missing tags", logger.String("atlas", atlasPath), logger.Strings("tags", dropped))
+		l.logger.Warn("dropping missing tags", logger.String("atlas", atlasPath), logger.Strings("tags", dropped))
 	}
 	if err := info.Atlas.Validate(); err != nil {
 		return LibraryInfo{}, fmt.Errorf("atlas %q: %w", atlasPath, err)
@@ -239,9 +223,9 @@ func (a *ase) decodeLibrary(library *LibraryConfig) (LibraryInfo, error) {
 	return info, nil
 }
 
-func (a *ase) isLibraryLoaded(cfg *LibraryConfig) (bool, error) {
+func (l *Libraries) isLibraryLoaded(cfg *LibraryConfig) (bool, error) {
 	for _, r := range cfg.Assets() {
-		_, err := a.as.GetHandle(r)
+		_, err := l.as.GetHandle(r)
 		if errs.IsNotFound(err) {
 			return false, nil
 		}
@@ -252,18 +236,18 @@ func (a *ase) isLibraryLoaded(cfg *LibraryConfig) (bool, error) {
 	return true, nil
 }
 
-func (a *ase) loadLibrary(cfg *LibraryConfig) error {
+func (l *Libraries) loadLibrary(cfg *LibraryConfig) error {
 	bundle := assets.AssetBundle{
 		FileSystem: assets.FileSystem(cfg.FileSystem),
 		Assets:     cfg.Assets(),
 	}
-	return bundle.Load(a.as)
+	return bundle.Load(l.as)
 }
 
-func (a *ase) unloadLibrary(cfg *LibraryConfig) error {
+func (l *Libraries) unloadLibrary(cfg *LibraryConfig) error {
 	bundle := assets.AssetBundle{
 		FileSystem: assets.FileSystem(cfg.FileSystem),
 		Assets:     cfg.Assets(),
 	}
-	return bundle.Unload(a.as)
+	return bundle.Unload(l.as)
 }

@@ -1,15 +1,16 @@
 package internal
 
 import (
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/yohamta/donburi"
+
 	"github.com/adm87/finch/cmd/game/internal/camera"
 	"github.com/adm87/finch/cmd/game/internal/game"
 	"github.com/adm87/finch/cmd/game/internal/input"
 	"github.com/adm87/finch/cmd/game/internal/player"
 	"github.com/adm87/finch/pkg/aseprite"
 	"github.com/adm87/finch/pkg/world"
-	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/yohamta/donburi"
 )
 
 func initializeFrameSchedule(g *game.Game, w world.World, gu *game.GameUpdate) error {
@@ -24,7 +25,7 @@ func initializeFrameSchedule(g *game.Game, w world.World, gu *game.GameUpdate) e
 			input.UpdateCamera(dt, c)
 		}
 		if p, pOk := player.Player.First(w.ECS()); pOk {
-			input.UpdatePlayer(dt, p, w)
+			return input.UpdatePlayer(dt, p, w)
 		}
 		return nil
 	})

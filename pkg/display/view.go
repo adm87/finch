@@ -1,4 +1,4 @@
-package game
+package display
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
@@ -60,7 +60,7 @@ func (v *View) WorldToScreen(worldX, worldY float64) (screenX, screenY float64) 
 	}
 
 	_, geoM := v.Viewport()
-	return geoM.Apply(worldX, worldY)
+	return v.screen.SafeAreaToScreen(geoM.Apply(worldX, worldY))
 }
 
 func (v *View) ScreenToWorld(screenX, screenY float64) (worldX, worldY float64) {
@@ -73,6 +73,7 @@ func (v *View) ScreenToWorld(screenX, screenY float64) (worldX, worldY float64) 
 		return screenX, screenY
 	}
 
+	v.refresh(t)
 	geoM := t.GeoM()
 	return geoM.Apply(v.screen.ScreenToSafeArea(screenX, screenY))
 }
