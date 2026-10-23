@@ -1,4 +1,4 @@
-package cache
+package images
 
 import (
 	"errors"
@@ -12,31 +12,31 @@ import (
 	"github.com/adm87/finch/pkg/slotmap"
 )
 
-// ImageCache is a cache for storing and slicing images into frames.
-type ImageCache struct {
+// Cache is a cache for storing and slicing images into frames.
+type Cache struct {
 	store  *slotmap.SlotMap[*ebiten.Image]
 	frames map[uint64][]*ebiten.Image
 }
 
-// NewImageCache creates and returns a new ImageCache instance.
-func NewImageCache() *ImageCache {
-	return &ImageCache{
+// NewCache creates and returns a new Cache instance.
+func NewCache() *Cache {
+	return &Cache{
 		store:  slotmap.New[*ebiten.Image](256),
 		frames: make(map[uint64][]*ebiten.Image),
 	}
 }
 
 // Get retrieves the image associated with the given handle from the cache.
-func (ic *ImageCache) Get(handle uint64) (*ebiten.Image, error) {
+func (ic *Cache) Get(handle uint64) (*ebiten.Image, error) {
 	img, err := ic.store.Get(slotmap.Unpack(handle))
 	if err != nil {
-		return nil, cacheError("get", "image", handle, err)
+		return nil, slotmap.HandleError("get", "image", handle, err)
 	}
 	return img, nil
 }
 
 // Put inserts the given image into the cache and returns its handle.
-func (ic *ImageCache) Put(img *ebiten.Image) uint64 {
+func (ic *Cache) Put(img *ebiten.Image) uint64 {
 	key := ic.store.Insert(img)
 	return key.Pack()
 }
@@ -45,9 +45,9 @@ func (ic *ImageCache) Put(img *ebiten.Image) uint64 {
 // The previous image does not get deallocated, and should be managed by the caller.
 //
 // Frames associated associated with the previous image will be cleared.
-func (ic *ImageCache) Set(handle uint64, img *ebiten.Image) error {
+func (ic *Cache) Set(handle uint64, img *ebiten.Image) error {
 	if err := ic.store.Set(slotmap.Unpack(handle), img); err != nil {
-		return cacheError("set", "image", handle, err)
+		return slotmap.HandleError("set", "image", handle, err)
 	}
 	delete(ic.frames, handle)
 	return nil
@@ -56,10 +56,10 @@ func (ic *ImageCache) Set(handle uint64, img *ebiten.Image) error {
 // Delete removes the image associated with the given handle from the cache.
 //
 // The image does not get deallocated, and should be managed by the caller.
-func (ic *ImageCache) Delete(handle uint64) (*ebiten.Image, error) {
+func (ic *Cache) Delete(handle uint64) (*ebiten.Image, error) {
 	img, err := ic.store.Delete(slotmap.Unpack(handle))
 	if err != nil {
-		return nil, cacheError("delete", "image", handle, err)
+		return nil, slotmap.HandleError("delete", "image", handle, err)
 	}
 	delete(ic.frames, handle)
 	return img, nil
@@ -67,7 +67,7 @@ func (ic *ImageCache) Delete(handle uint64) (*ebiten.Image, error) {
 
 // GetFrame returns frame index of the image. An image that was never sliced
 // is treated as a single frame and returned for any index.
-func (ic *ImageCache) GetFrame(handle uint64, index int) (*ebiten.Image, error) {
+func (ic *Cache) GetFrame(handle uint64, index int) (*ebiten.Image, error) {
 	if frames, ok := ic.frames[handle]; ok {
 		if index >= 0 && index < len(frames) {
 			return frames[index], nil
@@ -78,7 +78,7 @@ func (ic *ImageCache) GetFrame(handle uint64, index int) (*ebiten.Image, error) 
 }
 
 // GetFrames returns the frames produced by the last SliceUniform or SliceRects call.
-func (ic *ImageCache) GetFrames(handle uint64) ([]*ebiten.Image, error) {
+func (ic *Cache) GetFrames(handle uint64) ([]*ebiten.Image, error) {
 	frames, ok := ic.frames[handle]
 	if !ok {
 		return nil, errs.NotFound("image frames", strconv.FormatUint(handle, 10))
@@ -88,7 +88,7 @@ func (ic *ImageCache) GetFrames(handle uint64) ([]*ebiten.Image, error) {
 
 // SliceUniform cuts the image into a grid of width×height frames, row by row.
 // The image size must be an exact multiple of the frame size.
-func (ic *ImageCache) SliceUniform(handle uint64, width, height int) error {
+func (ic *Cache) SliceUniform(handle uint64, width, height int) error {
 	img, err := ic.Get(handle)
 	if err != nil {
 		return err
@@ -117,7 +117,7 @@ func (ic *ImageCache) SliceUniform(handle uint64, width, height int) error {
 }
 
 // SliceRects cuts the image into the given frames. Every rect must lie inside the image.
-func (ic *ImageCache) SliceRects(handle uint64, rects []image.Rectangle) error {
+func (ic *Cache) SliceRects(handle uint64, rects []image.Rectangle) error {
 	img, err := ic.Get(handle)
 	if err != nil {
 		return err
@@ -125,7 +125,7 @@ func (ic *ImageCache) SliceRects(handle uint64, rects []image.Rectangle) error {
 	return ic.sliceRects(img, handle, rects)
 }
 
-func (ic *ImageCache) sliceRects(img *ebiten.Image, handle uint64, rects []image.Rectangle) error {
+func (ic *Cache) sliceRects(img *ebiten.Image, handle uint64, rects []image.Rectangle) error {
 	b := img.Bounds()
 	for i, r := range rects {
 		if r.Empty() || !r.In(b) {

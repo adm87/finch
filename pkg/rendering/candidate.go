@@ -1,18 +1,19 @@
 package rendering
 
 import (
-	"github.com/adm87/finch/pkg/ecs/components"
 	"github.com/yohamta/donburi"
+
+	"github.com/adm87/finch/pkg/transform"
 )
 
-type RenderCandidate struct {
+type Candidate struct {
 	Entry     *donburi.Entry
-	Renderer  *components.Renderer
-	Transform *components.Transform
-	Bounds    *components.Bounds
+	Renderer  *Renderer
+	Transform *transform.Transform
+	Bounds    *transform.Bounds
 }
 
-func (rc *RenderCandidate) IsValid() bool {
+func (rc *Candidate) IsValid() bool {
 	return rc != nil &&
 		rc.Entry != nil &&
 		rc.Renderer != nil &&
@@ -20,7 +21,7 @@ func (rc *RenderCandidate) IsValid() bool {
 		rc.Bounds != nil
 }
 
-func (rc *RenderCandidate) Clear() {
+func (rc *Candidate) Clear() {
 	rc.Entry = nil
 	rc.Renderer = nil
 	rc.Transform = nil

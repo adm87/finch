@@ -8,13 +8,14 @@ import (
 	"sync"
 
 	"github.com/adm87/finch/pkg/assets"
-	"github.com/adm87/finch/pkg/cache"
+	"github.com/adm87/finch/pkg/data"
 	"github.com/adm87/finch/pkg/errs"
+	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/logger"
 	"github.com/adm87/finch/pkg/slotmap"
 )
 
-const aseprite_library = "aseprite library"
+const libraryKind = "aseprite library"
 
 // LoadMode controls whether CreateLibrary may load missing content.
 type LoadMode int
@@ -39,18 +40,18 @@ const (
 // LibraryID uniquely identifies an Aseprite library.
 type LibraryID uint64
 
-// Aseprite manages Aseprite libraries and their atlases.
+// Libraries manages Aseprite libraries and their atlases.
 //
 // Ownership is all-or-nothing: if a library's content was partially preloaded,
 // ClearLibrary with UnloadModeIfOwned may unload the preloaded parts too.
 // Preload a library's content entirely or not at all.
-type Aseprite interface {
+type Libraries interface {
 	// CreateLibrary returns the ID of the named library, loading and decoding it on first use.
-	// If the library's content isn't loaded, it is loaded only when dynamicLoad is true.
+	// If the library's content isn't loaded, it is loaded only when mode is LoadModeDynamic.
 	CreateLibrary(name string, mode LoadMode) (LibraryID, error)
 
 	// ClearLibrary removes the named library.
-	// If dynamicUnload is true, its content is unloaded when nothing else needs it.
+	// With UnloadModeIfOwned, its content is unloaded if CreateLibrary loaded it.
 	ClearLibrary(name string, mode UnloadMode) error
 
 	// GetLibrary returns the library with the given ID.
@@ -70,8 +71,8 @@ type ase struct {
 	logger logger.Logger
 
 	as        *assets.Assets
-	dc        *cache.DataCache
-	ic        *cache.ImageCache
+	dc        *data.Cache
+	ic        *images.Cache
 	libraries *slotmap.SlotMap[LibraryInfo]
 	config    *Config
 
@@ -80,7 +81,7 @@ type ase struct {
 	mu sync.Mutex
 }
 
-func New(as *assets.Assets, log logger.Logger, dc *cache.DataCache, ic *cache.ImageCache, config *Config) (Aseprite, error) {
+func New(as *assets.Assets, log logger.Logger, dc *data.Cache, ic *images.Cache, config *Config) (Libraries, error) {
 	var errList []error
 	if as == nil {
 		errList = append(errList, errs.ArgumentNil("as"))
@@ -94,7 +95,7 @@ func New(as *assets.Assets, log logger.Logger, dc *cache.DataCache, ic *cache.Im
 	if config == nil {
 		errList = append(errList, errs.ArgumentNil("config"))
 	} else {
-		errList = append(errList, validateConfig(config))
+		errList = append(errList, config.Validate())
 	}
 	if err := errors.Join(errList...); err != nil {
 		return nil, err
@@ -111,16 +112,6 @@ func New(as *assets.Assets, log logger.Logger, dc *cache.DataCache, ic *cache.Im
 		libraries:  slotmap.New[LibraryInfo](128),
 		libsByName: make(map[string]LibraryID),
 	}, nil
-}
-
-func validateConfig(cfg *Config) error {
-	var errList []error
-	for name, lib := range cfg.Libraries {
-		if err := lib.Validate(); err != nil {
-			errList = append(errList, errs.Argument("config", fmt.Sprintf("library %q", name)).Wrap(err))
-		}
-	}
-	return errors.Join(errList...)
 }
 
 func (a *ase) CreateLibrary(name string, mode LoadMode) (LibraryID, error) {
@@ -177,7 +168,7 @@ func (a *ase) ClearLibrary(name string, mode UnloadMode) error {
 
 	id, exists := a.libsByName[name]
 	if !exists {
-		return errs.NotFound("aseprite library", name)
+		return errs.NotFound(libraryKind, name)
 	}
 
 	info, err := a.libraries.Delete(slotmap.Unpack(uint64(id)))
@@ -206,7 +197,7 @@ func (a *ase) GetLibrary(id LibraryID) (LibraryInfo, error) {
 
 	info, err := a.libraries.Get(slotmap.Unpack(uint64(id)))
 	if err != nil {
-		return LibraryInfo{}, errs.NotFound(aseprite_library, strconv.FormatUint(uint64(id), 10)).Wrap(err)
+		return LibraryInfo{}, errs.NotFound(libraryKind, strconv.FormatUint(uint64(id), 10)).Wrap(err)
 	}
 	return info, nil
 }
@@ -217,7 +208,7 @@ func (a *ase) getLibraryConfig(name string) (*LibraryConfig, error) {
 	}
 	library, exists := a.config.Libraries[name]
 	if !exists {
-		return nil, errs.NotFound(aseprite_library, name)
+		return nil, errs.NotFound(libraryKind, name)
 	}
 	return &library, nil
 }

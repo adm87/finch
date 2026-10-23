@@ -6,13 +6,13 @@ import (
 
 	"github.com/yohamta/donburi"
 
-	"github.com/adm87/finch/pkg/ecs/components"
 	"github.com/adm87/finch/pkg/geom"
+	"github.com/adm87/finch/pkg/transform"
 )
 
 var baseArchetype = []donburi.IComponentType{
-	components.TransformComponent,
-	components.BoundsComponent,
+	transform.TransformComponent,
+	transform.BoundsComponent,
 	indexingComponent,
 }
 

@@ -1,6 +1,7 @@
 package aseprite
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/adm87/finch/pkg/assets"
@@ -11,13 +12,15 @@ type Config struct {
 	Libraries map[string]LibraryConfig `yaml:"libraries"`
 }
 
+// Validate checks every library config and reports all problems found.
 func (c Config) Validate() error {
+	var errList []error
 	for name, lib := range c.Libraries {
 		if err := lib.Validate(); err != nil {
-			return errs.Argument("libraries", fmt.Sprintf("library %q: %v", name, err))
+			errList = append(errList, errs.Argument("config", fmt.Sprintf("library %q", name)).Wrap(err))
 		}
 	}
-	return nil
+	return errors.Join(errList...)
 }
 
 type LibraryConfig struct {

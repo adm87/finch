@@ -1,13 +1,14 @@
 package camera
 
 import (
-	"github.com/adm87/finch/pkg/ecs/components"
 	"github.com/yohamta/donburi"
+
+	"github.com/adm87/finch/pkg/transform"
 )
 
 func FollowTarget(dt float64, c *donburi.Entry, target *donburi.Entry) {
-	t := components.TransformComponent.Get(c)
-	tx, ty := components.TransformComponent.Get(target).Position()
+	t := transform.TransformComponent.Get(c)
+	tx, ty := transform.TransformComponent.Get(target).Position()
 	x, y := t.Position()
 	x += (tx - x) * dt
 	y += (ty - y) * dt

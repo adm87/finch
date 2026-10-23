@@ -1,4 +1,4 @@
-package components
+package rendering
 
 import "github.com/yohamta/donburi"
 

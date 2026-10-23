@@ -32,19 +32,19 @@ func (sk SortKey) Layer() int16 {
 	return int16(uint16(sk>>48) ^ int16SignMask)
 }
 
-type RenderQueue struct {
-	candidates []RenderCandidate
+type Queue struct {
+	candidates []Candidate
 	sortedKeys []SortKey
 }
 
-func NewRenderQueue() *RenderQueue {
-	return &RenderQueue{
-		candidates: make([]RenderCandidate, 0, queueCap),
+func NewQueue() *Queue {
+	return &Queue{
+		candidates: make([]Candidate, 0, queueCap),
 		sortedKeys: make([]SortKey, 0, queueCap),
 	}
 }
 
-func (rq *RenderQueue) Enqueue(rc RenderCandidate) {
+func (rq *Queue) Enqueue(rc Candidate) {
 	rq.candidates = append(rq.candidates, rc)
 	rq.sortedKeys = append(rq.sortedKeys, MakeSortKey(
 		rc.Renderer.Layer(),
@@ -53,19 +53,19 @@ func (rq *RenderQueue) Enqueue(rc RenderCandidate) {
 	))
 }
 
-func (rq *RenderQueue) CandidateAt(i int) *RenderCandidate {
+func (rq *Queue) CandidateAt(i int) *Candidate {
 	if i < 0 || i >= len(rq.candidates) {
 		return nil
 	}
 	return &rq.candidates[i]
 }
 
-func (rq *RenderQueue) SortedKeys() []SortKey {
+func (rq *Queue) SortedKeys() []SortKey {
 	slices.Sort(rq.sortedKeys)
 	return rq.sortedKeys
 }
 
-func (rq *RenderQueue) Clear() {
+func (rq *Queue) Clear() {
 	rq.candidates = rq.candidates[:0]
 	rq.sortedKeys = rq.sortedKeys[:0]
 }

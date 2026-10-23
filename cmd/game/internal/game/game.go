@@ -4,11 +4,12 @@ import (
 	"github.com/adm87/finch/cmd/game/internal/config"
 	"github.com/adm87/finch/pkg/aseprite"
 	"github.com/adm87/finch/pkg/assets"
-	"github.com/adm87/finch/pkg/cache"
+	"github.com/adm87/finch/pkg/data"
+	"github.com/adm87/finch/pkg/images"
 )
 
 type Game struct {
-	Aseprite  aseprite.Aseprite
+	Aseprite  aseprite.Libraries
 	Assets    *assets.Assets
 	Config    *config.GameConfig
 	Cache     *GameCache
@@ -19,8 +20,8 @@ type Game struct {
 }
 
 type GameCache struct {
-	Data   *cache.DataCache
-	Images *cache.ImageCache
+	Data   *data.Cache
+	Images *images.Cache
 }
 
 type GameRenderers struct {

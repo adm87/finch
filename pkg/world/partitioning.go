@@ -6,10 +6,10 @@ import (
 
 	"github.com/yohamta/donburi"
 
-	"github.com/adm87/finch/pkg/ecs/components"
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/hashgrid"
 	"github.com/adm87/finch/pkg/slotmap"
+	"github.com/adm87/finch/pkg/transform"
 )
 
 type indexing struct {
@@ -139,12 +139,12 @@ func (p *partitions) insertInto(partition int, entry *donburi.Entry, idx *indexi
 }
 
 func (p *partitions) getBounds(entry *donburi.Entry) geom.Rect {
-	b, bOk := components.GetBounds(entry)
+	b, bOk := transform.GetBounds(entry)
 	if !bOk {
 		return geom.Rect{}
 	}
 
-	t, tOk := components.GetTransform(entry)
+	t, tOk := transform.GetTransform(entry)
 	if !tOk {
 		return b.Rect()
 	}

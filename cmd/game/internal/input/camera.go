@@ -3,9 +3,10 @@ package input
 import (
 	"math"
 
-	"github.com/adm87/finch/pkg/ecs/components"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
+
+	"github.com/adm87/finch/pkg/transform"
 )
 
 const (
@@ -15,7 +16,7 @@ const (
 )
 
 func UpdateCamera(dt float64, c *donburi.Entry) {
-	t := components.TransformComponent.Get(c)
+	t := transform.TransformComponent.Get(c)
 
 	// Zoom
 	sx, sy := t.Scale()
