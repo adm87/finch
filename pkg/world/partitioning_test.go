@@ -17,8 +17,7 @@ import (
 
 var ptResolutions = []int{16, 32, 64}
 
-// ptNewEntry creates an entity with the base archetype (plus any extras), a unit
-// scale, and the given local rect. It is NOT indexed.
+// ptNewEntry creates an unindexed entity with the given local rect.
 func ptNewEntry(t *testing.T, w donburi.World, rect geom.Rect, extra ...donburi.IComponentType) *donburi.Entry {
 	t.Helper()
 
@@ -98,9 +97,8 @@ func ptMustUpdate(t *testing.T, p *partitions, entry *donburi.Entry) {
 	}
 }
 
-// ptCellKeyTotal counts every key stored in every cell of g within [lo, hi) on both axes.
-// Comparing it with the number of cells the live items should occupy detects residue
-// (keys left behind in old cells) and missing cells exactly.
+// ptCellKeyTotal counts the keys stored in g's cells within [lo, hi) on both axes.
+// It catches keys left behind in old cells.
 func ptCellKeyTotal(g *hashgrid.HashGrid[donburi.Entity], lo, hi float64) int {
 	cs := float64(g.CellSize())
 	from, to := int32(math.Floor(lo/cs)), int32(math.Ceil(hi/cs))

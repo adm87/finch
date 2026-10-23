@@ -28,41 +28,32 @@ func aggregateComponentTypes(comps ...donburi.IComponentType) []donburi.ICompone
 	return out
 }
 
-// World represents an ECS world that manages entities and their components.
+// World is an ECS world that indexes entities by their bounds for spatial queries.
 type World interface {
-	// Create creates a new entity with the specified component types.
 	Create(comps ...donburi.IComponentType) *donburi.Entry
 
-	// CreateMany creates multiple new entities with the specified component types.
 	CreateMany(count int, comps ...donburi.IComponentType) []*donburi.Entry
 
-	// Destroy removes the specified entity from the world.
 	Destroy(entry *donburi.Entry) error
 
-	// DestroyMany removes multiple entities from the world.
 	DestroyMany(entries []*donburi.Entry) error
 
-	// Add adds the specified entity to the world.
+	// Add indexes entry so queries can find it.
 	Add(entry *donburi.Entry) error
 
-	// AddMany adds multiple entities to the world.
 	AddMany(entries []*donburi.Entry) error
 
-	// Update updates a single entity in the world.
+	// Update re-indexes entry after its transform or bounds change.
 	Update(entry *donburi.Entry) error
 
-	// UpdateMany updates multiple entities in the world.
 	UpdateMany(entries []*donburi.Entry) error
 
-	// Query retrieves all entities within the specified region and appends them to the dst slice.
-	// The dst slice is used to collect the results and can be reused to avoid allocations.
+	// Query appends the entities in region to dst. Pass dst[:0] to reuse a buffer.
 	Query(region geom.Rect, dst []*donburi.Entry) []*donburi.Entry
 
-	// RangeOver iterates over all entities within the specified region and calls the yield function for each entity.
-	// If the yield function returns false, the iteration stops immediately.
+	// RangeOver calls fn for each entity in region until fn returns false.
 	RangeOver(region geom.Rect, fn func(*donburi.Entry) bool)
 
-	// ECS returns the underlying donburi world.
 	ECS() donburi.World
 }
 

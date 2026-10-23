@@ -10,6 +10,7 @@ import (
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/hexcolor"
+	"github.com/adm87/finch/pkg/images"
 )
 
 // Atlas is an Aseprite sprite sheet export.
@@ -52,11 +53,15 @@ func (a *Atlas) Validate() error {
 // Frames holds an atlas's frames in file order.
 type Frames []Frame
 
-// Rectangles returns the bounding rectangles of all frames in the atlas.
-func (f Frames) Rectangles() []image.Rectangle {
-	rects := make([]image.Rectangle, len(f))
+// FrameRects returns each frame's rect in the sheet and its place on the untrimmed canvas.
+func (f Frames) FrameRects() []images.FrameRect {
+	rects := make([]images.FrameRect, len(f))
 	for i, frame := range f {
-		rects[i] = frame.FrameRect.ToImageRectangle()
+		rects[i] = images.FrameRect{
+			Rect:   frame.FrameRect.ToImageRectangle(),
+			Offset: image.Pt(int(frame.SpriteSourceSize.X), int(frame.SpriteSourceSize.Y)),
+			Size:   image.Pt(int(frame.SourceSize.Width), int(frame.SourceSize.Height)),
+		}
 	}
 	return rects
 }

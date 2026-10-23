@@ -2,12 +2,14 @@ package aseprite_test
 
 import (
 	"encoding/json"
+	"image"
 	"testing"
 
 	"github.com/go-openapi/testify/require"
 
 	"github.com/adm87/finch/pkg/aseprite"
 	"github.com/adm87/finch/pkg/errs"
+	"github.com/adm87/finch/pkg/images"
 )
 
 func TestFramesUnmarshalArray(t *testing.T) {
@@ -67,4 +69,22 @@ func TestAtlasDropMissingTagsAndValidate(t *testing.T) {
 	atlas.Meta.FrameTags[0].Direction = "sideways"
 	atlas.Meta.FrameTags[0].To = 3
 	require.Error(t, atlas.Validate())
+}
+
+func TestFramesFrameRectsKeepTrim(t *testing.T) {
+	raw := `[
+		{"frame": {"x": 0, "y": 27, "w": 24, "h": 28}, "trimmed": true,
+		 "spriteSourceSize": {"x": 26, "y": 36, "w": 24, "h": 28}, "sourceSize": {"w": 96, "h": 96}},
+		{"frame": {"x": 24, "y": 0, "w": 16, "h": 16}, "trimmed": false,
+		 "spriteSourceSize": {"x": 0, "y": 0, "w": 16, "h": 16}, "sourceSize": {"w": 16, "h": 16}}
+	]`
+
+	var frames aseprite.Frames
+	require.NoError(t, json.Unmarshal([]byte(raw), &frames))
+
+	rects := frames.FrameRects()
+	require.Equal(t, []images.FrameRect{
+		{Rect: image.Rect(0, 27, 24, 55), Offset: image.Pt(26, 36), Size: image.Pt(96, 96)},
+		{Rect: image.Rect(24, 0, 40, 16), Offset: image.Pt(0, 0), Size: image.Pt(16, 16)},
+	}, rects)
 }

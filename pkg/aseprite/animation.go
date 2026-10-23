@@ -8,7 +8,7 @@ import (
 	"github.com/adm87/finch/pkg/images"
 )
 
-// AdvanceAnimations steps the animation of every entry that has both an Animator and an Image.
+// AdvanceAnimations steps every entry that has an Animator and an Image.
 func AdvanceAnimations(dt float64, libs Libraries, entries []*donburi.Entry) error {
 	for _, entry := range entries {
 		aComp, aOk := GetAnimator(entry)
@@ -34,10 +34,6 @@ func AdvanceAnimations(dt float64, libs Libraries, entries []*donburi.Entry) err
 }
 
 func advanceAnimation(dt float64, library LibraryInfo, aComp *Animator, iComp *images.Image) error {
-	if dt <= 0 {
-		return nil
-	}
-
 	tag := library.Atlas.Meta.FrameTags.ByName(aComp.Animation())
 	if tag == nil {
 		return nil
@@ -49,47 +45,101 @@ func advanceAnimation(dt float64, library LibraryInfo, aComp *Animator, iComp *i
 		return nil
 	}
 
+	if aComp.playing != aComp.animation || aComp.frame < 0 || aComp.frame >= n {
+		aComp.restart(tag, n)
+	}
+	if dt > 0 {
+		stepFrames(dt*1000, frames, tag, aComp)
+	}
+
+	iComp.SetFrame(tag.From + aComp.frame)
+	return nil
+}
+
+// stepFrames advances the animator by ms. A frame with no duration holds playback.
+func stepFrames(ms float64, frames Frames, tag *FrameTag, aComp *Animator) {
+	if aComp.finished {
+		return
+	}
+
+	n := len(frames)
 	reverse := isAnimationReverse(tag)
-	pingPong := isAnimationPingPong(tag)
-
-	idx := iComp.Frame()
-	if idx < 0 || idx >= n {
-		idx = 0
-		if reverse {
-			idx = n - 1
-		}
-		iComp.SetFrame(idx)
-		aComp.SetPingPongReversing(tag.Direction == DirectionPingPongReverse)
-	}
-
-	elapsed := aComp.Elapsed() + dt*1000
-	duration := float64(frames[idx].Duration)
-
-	if duration <= 0 || elapsed < duration {
-		aComp.SetElapsed(elapsed)
-		return nil
-	}
-
-	aComp.SetElapsed(math.Mod(elapsed, duration))
-
-	if n == 1 {
-		return nil
-	}
+	pingPong := isAnimationPingPong(tag) && n > 1
 
 	cycle := n
 	if pingPong {
 		cycle = 2 * (n - 1)
 	}
-	steps := int(math.Mod(elapsed/duration, float64(cycle)))
 
-	reversing := aComp.PingPongReversing()
-	for range steps {
-		idx, reversing = nextFrame(idx, n, reverse, pingPong, reversing)
+	aComp.elapsed += ms
+
+	// Skip whole cycles so a long update doesn't step through every frame.
+	if aComp.step < cycle {
+		if period := cycleDuration(frames, cycle, aComp.frame, reverse, pingPong, aComp.pingPongReversing); period > 0 {
+			if aComp.loops == LoopForever {
+				aComp.elapsed = math.Mod(aComp.elapsed, period)
+			} else if skip := min(math.Floor(aComp.elapsed/period), float64(aComp.loops-aComp.cycles)); skip > 0 {
+				aComp.elapsed -= skip * period
+				aComp.cycles += int(skip)
+			}
+		}
 	}
 
-	iComp.SetFrame(idx)
-	aComp.SetPingPongReversing(reversing)
-	return nil
+	for {
+		// A held cycle that was given more loops wraps before playing on.
+		if aComp.step == cycle {
+			aComp.frame, aComp.pingPongReversing = nextFrame(aComp.frame, n, reverse, pingPong, aComp.pingPongReversing)
+			aComp.step = 0
+		}
+
+		d := float64(frames[aComp.frame].Duration)
+		if d <= 0 || aComp.elapsed < d {
+			return
+		}
+		aComp.elapsed -= d
+
+		if !pingPong && aComp.step == cycle-1 {
+			aComp.step = cycle
+			if aComp.completeCycle() {
+				return
+			}
+			continue
+		}
+
+		aComp.frame, aComp.pingPongReversing = nextFrame(aComp.frame, n, reverse, pingPong, aComp.pingPongReversing)
+		aComp.step++
+		if aComp.step == cycle {
+			aComp.step = 0
+			if aComp.completeCycle() {
+				return
+			}
+		}
+	}
+}
+
+// completeCycle reports whether the last cycle just ended.
+func (a *Animator) completeCycle() bool {
+	a.cycles++
+	if a.hasCyclesLeft() {
+		return false
+	}
+	a.finished = true
+	a.elapsed = 0
+	return true
+}
+
+// cycleDuration returns 0 if a frame in the cycle has no duration.
+func cycleDuration(frames Frames, cycle, idx int, reverse, pingPong, reversing bool) float64 {
+	total := 0.0
+	for range cycle {
+		d := float64(frames[idx].Duration)
+		if d <= 0 {
+			return 0
+		}
+		total += d
+		idx, reversing = nextFrame(idx, len(frames), reverse, pingPong, reversing)
+	}
+	return total
 }
 
 func isAnimationReverse(tag *FrameTag) bool {

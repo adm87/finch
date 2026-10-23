@@ -20,7 +20,7 @@ type indexing struct {
 var (
 	indexingComponent = donburi.NewComponentType[indexing]()
 
-	// DontPartition is a tag used to indicate that an entity should not be partitioned.
+	// DontPartition keeps an entity out of the spatial partitions.
 	DontPartition = donburi.NewTag("don't partition")
 )
 
