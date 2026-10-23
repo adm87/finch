@@ -149,12 +149,7 @@ func (p *partitions) getBounds(entry *donburi.Entry) geom.Rect {
 		return b.Rect()
 	}
 
-	m, mOk := components.GetMatrix(entry)
-	if !mOk {
-		return b.Rect()
-	}
-
-	return b.WorldRect(t, m)
+	return b.WorldRect(t)
 }
 
 func (p *partitions) nearestFit(bounds geom.Rect) int {

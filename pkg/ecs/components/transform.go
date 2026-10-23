@@ -1,6 +1,7 @@
 package components
 
 import (
+	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
 
@@ -9,6 +10,7 @@ type Transform struct {
 	ox, oy   float64
 	sx, sy   float64
 	rotation float64
+	geoM     ebiten.GeoM
 	isDirty  bool
 }
 
@@ -75,4 +77,16 @@ func (t *Transform) SetRotation(rotation float64) {
 	}
 	t.rotation = rotation
 	t.isDirty = true
+}
+
+func (t *Transform) GeoM() ebiten.GeoM {
+	if t.isDirty {
+		t.geoM.Reset()
+		t.geoM.Translate(-t.ox, -t.oy)
+		t.geoM.Scale(t.sx, t.sy)
+		t.geoM.Rotate(t.rotation)
+		t.geoM.Translate(t.x, t.y)
+		t.isDirty = false
+	}
+	return t.geoM
 }
