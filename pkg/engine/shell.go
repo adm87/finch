@@ -11,24 +11,24 @@ import (
 )
 
 type shell struct {
-	app        *application.Application
-	options    *RunOptions
-	clock      *clock
-	drawer     Drawer
-	clearColor color.Color
+	app          *application.Application
+	options      *RunOptions
+	clock        *clock
+	worldDrawers Drawers
+	clearColor   color.Color
 }
 
 func newShell(app *application.Application, options *RunOptions, clock *clock) *shell {
-	drawer := options.Drawer
-	if drawer == nil {
-		drawer = DrawerFunc(drawPipeline)
+	worldDrawers := options.WorldDrawers
+	if len(worldDrawers) == 0 {
+		worldDrawers = Drawers{DrawerFunc(drawPipeline)}
 	}
 	return &shell{
-		app:        app,
-		options:    options,
-		clock:      clock,
-		drawer:     drawer,
-		clearColor: hexcolor.ToRGBA(app.Config().Screen.ClearColor),
+		app:          app,
+		options:      options,
+		clock:        clock,
+		worldDrawers: worldDrawers,
+		clearColor:   hexcolor.ToRGBA(app.Config().Screen.ClearColor),
 	}
 }
 
@@ -69,13 +69,13 @@ func (sh *shell) Draw(target *ebiten.Image) {
 	buf := screen.Buffer()
 	buf.Fill(sh.clearColor)
 
-	if err := sh.drawer.Draw(buf, sh.app); err != nil {
+	if err := sh.worldDrawers.Draw(buf, sh.app); err != nil {
 		sh.options.Logger.Error("draw error", logger.ErrorField("error", err))
 	}
 
 	target.DrawImage(buf, screen.Options())
 
-	if err := sh.options.Overlay.Draw(target, sh.app); err != nil {
+	if err := sh.options.OverlayDrawers.Draw(target, sh.app); err != nil {
 		sh.options.Logger.Error("overlay error", logger.ErrorField("error", err))
 	}
 }

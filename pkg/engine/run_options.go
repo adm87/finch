@@ -7,20 +7,19 @@ import (
 )
 
 type RunOptions struct {
-	Drawer      Drawer // Drawer draws into the screen buffer. Nil draws the app's render pipeline.
-	Overlay     Drawer // Overlay draws over the window after the screen buffer, in window coordinates.
-	Logger      logger.Logger
-	Update      []System
-	FixedUpdate []System
-	LateUpdate  []System
-	ResizeMode  ebiten.WindowResizingModeType
+	WorldDrawers   Drawers
+	OverlayDrawers Drawers
+	Logger         logger.Logger
+	Update         []System
+	FixedUpdate    []System
+	LateUpdate     []System
+	ResizeMode     ebiten.WindowResizingModeType
 }
 
 type RunOption func(*RunOptions)
 
 func DefaultRunOptions() *RunOptions {
 	return &RunOptions{
-		Overlay:    DrawerFunc(noopDraw),
 		Logger:     logger.N,
 		ResizeMode: ebiten.WindowResizingModeDisabled,
 	}
@@ -47,15 +46,17 @@ func WithLateUpdate(systems ...System) RunOption {
 	}
 }
 
-func WithDrawer(drawer Drawer) RunOption {
+// WithWorldDrawers adds drawers for the screen buffer. Setting any replaces the
+// default, which draws the app's render pipeline.
+func WithWorldDrawers(drawers ...Drawer) RunOption {
 	return func(ro *RunOptions) {
-		ro.Drawer = drawer
+		ro.WorldDrawers = append(ro.WorldDrawers, drawers...)
 	}
 }
 
-func WithOverlay(overlay Drawer) RunOption {
+func WithOverlayDrawers(drawers ...Drawer) RunOption {
 	return func(ro *RunOptions) {
-		ro.Overlay = overlay
+		ro.OverlayDrawers = append(ro.OverlayDrawers, drawers...)
 	}
 }
 
