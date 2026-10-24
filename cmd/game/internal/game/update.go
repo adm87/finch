@@ -1,57 +1,57 @@
 package game
 
-type Update func(dt float64) error
+type UpdateFunc func(dt float64) error
 
-type GameUpdate struct {
+type Updater struct {
 	time    *Time
-	updates []Update
-	fixed   []Update
-	late    []Update
+	updates []UpdateFunc
+	fixed   []UpdateFunc
+	late    []UpdateFunc
 }
 
-func NewGameUpdate(gt *Time) *GameUpdate {
-	return &GameUpdate{
+func NewUpdater(gt *Time) *Updater {
+	return &Updater{
 		time: gt,
 	}
 }
 
-func (gu *GameUpdate) AddUpdate(update Update) {
-	gu.updates = append(gu.updates, update)
+func (u *Updater) AddUpdate(update UpdateFunc) {
+	u.updates = append(u.updates, update)
 }
 
-func (gu *GameUpdate) AddFixed(update Update) {
-	gu.fixed = append(gu.fixed, update)
+func (u *Updater) AddFixed(update UpdateFunc) {
+	u.fixed = append(u.fixed, update)
 }
 
-func (gu *GameUpdate) AddLate(update Update) {
-	gu.late = append(gu.late, update)
+func (u *Updater) AddLate(update UpdateFunc) {
+	u.late = append(u.late, update)
 }
 
-func (gu *GameUpdate) Update() error {
-	gu.time.Tick()
+func (u *Updater) Update() error {
+	u.time.Tick()
 
-	dt := gu.time.DeltaTime()
-	fdt := gu.time.FixedDeltaTime()
-	steps := gu.time.FixedSteps()
+	dt := u.time.DeltaTime()
+	fdt := u.time.FixedDeltaTime()
+	steps := u.time.FixedSteps()
 
-	if err := gu.callUpdates(dt, gu.updates); err != nil {
+	if err := u.callUpdates(dt, u.updates); err != nil {
 		return err
 	}
 
 	for range steps {
-		if err := gu.callUpdates(fdt, gu.fixed); err != nil {
+		if err := u.callUpdates(fdt, u.fixed); err != nil {
 			return err
 		}
 	}
 
-	if err := gu.callUpdates(dt, gu.late); err != nil {
+	if err := u.callUpdates(dt, u.late); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (gu *GameUpdate) callUpdates(dt float64, updates []Update) error {
+func (u *Updater) callUpdates(dt float64, updates []UpdateFunc) error {
 	for _, update := range updates {
 		if err := update(dt); err != nil {
 			return err

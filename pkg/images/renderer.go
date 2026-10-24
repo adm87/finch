@@ -25,7 +25,7 @@ func NewRenderer(cache *Cache) *Renderer {
 	}
 }
 
-func (ir *Renderer) Render(target *ebiten.Image, rc *rendering.Candidate, viewport geom.Rect, matrix ebiten.GeoM) {
+func (ir *Renderer) Render(target *ebiten.Image, rc *rendering.Candidate, _ geom.Rect, matrix ebiten.GeoM) {
 	frame := untrimmed(ir.missing)
 	ax, ay := 0.0, 0.0
 

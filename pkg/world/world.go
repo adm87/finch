@@ -62,8 +62,8 @@ type wrld struct {
 	partitions *partitions
 }
 
-func NewWorld(opts ...WorldOption) World {
-	options := DefaultWorldOptions()
+func NewWorld(opts ...Option) World {
+	options := DefaultOptions()
 	for _, opt := range opts {
 		opt(options)
 	}

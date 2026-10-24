@@ -13,7 +13,7 @@ import (
 	"github.com/adm87/finch/pkg/world"
 )
 
-func initializeFrameSchedule(g *game.Game, w world.World, gu *game.GameUpdate) error {
+func initializeFrameSchedule(g *game.Game, w world.World, gu *game.Updater) error {
 	var entries []*donburi.Entry
 
 	// Input
@@ -31,7 +31,7 @@ func initializeFrameSchedule(g *game.Game, w world.World, gu *game.GameUpdate) e
 	})
 
 	// Collect entries for processing
-	gu.AddLate(func(dt float64) error {
+	gu.AddLate(func(float64) error {
 		rect, _ := g.View.Viewport()
 		entries = w.Query(rect, entries[:0])
 		return nil

@@ -607,7 +607,7 @@ func TestWorldQueryAndRangeOver(t *testing.T) {
 	}
 
 	count := 0
-	w.RangeOver(region, func(e *donburi.Entry) bool {
+	w.RangeOver(region, func(*donburi.Entry) bool {
 		count++
 		return false // stop after the first
 	})
@@ -616,7 +616,7 @@ func TestWorldQueryAndRangeOver(t *testing.T) {
 	}
 
 	count = 0
-	w.RangeOver(region, func(e *donburi.Entry) bool {
+	w.RangeOver(region, func(*donburi.Entry) bool {
 		count++
 		return true
 	})

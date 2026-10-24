@@ -11,20 +11,20 @@ import (
 	"github.com/adm87/finch/pkg/hexcolor"
 )
 
-type GameDraw struct {
+type Drawer struct {
 	drawer     engine.GameDraw
 	screen     *display.Screen
 	view       *display.View
 	clearColor hexcolor.Color
 }
 
-func NewGameDraw(drawer engine.GameDraw, screen *display.Screen, view *display.View, options ...DrawOption) *GameDraw {
+func NewDrawer(drawer engine.GameDraw, screen *display.Screen, view *display.View, options ...DrawOption) *Drawer {
 	opts := DefaultDrawOptions()
 	for _, o := range options {
 		o(opts)
 	}
 
-	return &GameDraw{
+	return &Drawer{
 		drawer:     drawer,
 		screen:     screen,
 		view:       view,
@@ -32,17 +32,17 @@ func NewGameDraw(drawer engine.GameDraw, screen *display.Screen, view *display.V
 	}
 }
 
-func (gd *GameDraw) Draw(target *ebiten.Image) error {
-	buf := gd.screen.Buffer()
-	buf.Fill(gd.clearColor.ToRGBA())
+func (d *Drawer) Draw(target *ebiten.Image) error {
+	buf := d.screen.Buffer()
+	buf.Fill(d.clearColor.ToRGBA())
 
-	if err := gd.drawer.Draw(buf); err != nil {
+	if err := d.drawer.Draw(buf); err != nil {
 		return err
 	}
 
-	target.DrawImage(buf, gd.screen.Options())
+	target.DrawImage(buf, d.screen.Options())
 
-	x, y := gd.view.WorldToScreen(0, 0)
+	x, y := d.view.WorldToScreen(0, 0)
 	ebitenutil.DebugPrintAt(target, "0, 0", int(x), int(y))
 
 	fps := fmt.Sprintf("FPS: %.2f", ebiten.ActualFPS())

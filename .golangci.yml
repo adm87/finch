@@ -1,0 +1,26 @@
+version: "2"
+
+linters:
+  enable:
+    - errorlint
+    - exhaustive
+    - gocritic
+    - gosec
+    - misspell
+    - nilerr
+    - revive
+    - unparam
+  settings:
+    exhaustive:
+      default-signifies-exhaustive: true
+  exclusions:
+    presets:
+      - comments
+    rules:
+      # Sort keys, cells and slot keys pack integers into bits on purpose.
+      - path: pkg/(rendering/queue|hashgrid/cell|slotmap/slotmap)\.go
+        linters: [gosec]
+        text: G115
+      - path: _test\.go
+        linters: [gosec]
+        text: G115|G404
