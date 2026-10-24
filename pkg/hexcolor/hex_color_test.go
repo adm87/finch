@@ -39,7 +39,7 @@ func TestParseHexColorRejects(t *testing.T) {
 
 func TestToRGBA(t *testing.T) {
 	c := hexcolor.Color{R: 1, G: 2, B: 3, A: 4}
-	require.Equal(t, color.RGBA{R: 1, G: 2, B: 3, A: 4}, c.ToRGBA())
+	require.Equal(t, color.RGBA{R: 1, G: 2, B: 3, A: 4}, hexcolor.ToRGBA(c))
 }
 
 func TestUnmarshal(t *testing.T) {

@@ -1,32 +1,26 @@
 package engine
 
 import (
-	"image/color"
-
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/adm87/finch/pkg/logger"
 )
 
 type RunOptions struct {
+	Drawer      Drawer // Drawer draws into the screen buffer. Nil draws the app's render pipeline.
+	Overlay     Drawer // Overlay draws over the window after the screen buffer, in window coordinates.
+	Logger      logger.Logger
 	Update      []System
 	FixedUpdate []System
 	LateUpdate  []System
-	Drawer      Drawer
-	// Overlay draws over the window after the screen buffer, in window coordinates.
-	Overlay    Drawer
-	ClearColor color.Color
-	Logger     logger.Logger
-	ResizeMode ebiten.WindowResizingModeType
+	ResizeMode  ebiten.WindowResizingModeType
 }
 
 type RunOption func(*RunOptions)
 
 func DefaultRunOptions() *RunOptions {
 	return &RunOptions{
-		Drawer:     DrawerFunc(noopDraw),
 		Overlay:    DrawerFunc(noopDraw),
-		ClearColor: color.Black,
 		Logger:     logger.N,
 		ResizeMode: ebiten.WindowResizingModeDisabled,
 	}
@@ -62,12 +56,6 @@ func WithDrawer(drawer Drawer) RunOption {
 func WithOverlay(overlay Drawer) RunOption {
 	return func(ro *RunOptions) {
 		ro.Overlay = overlay
-	}
-}
-
-func WithClearColor(c color.Color) RunOption {
-	return func(ro *RunOptions) {
-		ro.ClearColor = c
 	}
 }
 

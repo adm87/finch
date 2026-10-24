@@ -9,12 +9,12 @@ import (
 )
 
 type Screen struct {
-	buffer    *ebiten.Image
-	options   *ebiten.DrawImageOptions
-	safeArea  geom.Rect
-	isDirty   bool
-	oldWidth  int
-	oldHeight int
+	buffer        *ebiten.Image
+	options       *ebiten.DrawImageOptions
+	safeArea      geom.Rect
+	isDirty       bool
+	outsideWidth  int
+	outsideHeight int
 }
 
 func NewScreen(width, height int) *Screen {
@@ -29,6 +29,10 @@ func NewScreen(width, height int) *Screen {
 		},
 		isDirty: true,
 	}
+}
+
+func (s *Screen) OutsideSize() (int, int) {
+	return s.outsideWidth, s.outsideHeight
 }
 
 func (s *Screen) Buffer() *ebiten.Image {
@@ -56,9 +60,9 @@ func (s *Screen) Resize(width, height int) {
 }
 
 func (s *Screen) Layout(outsideWidth, outsideHeight int) (int, int) {
-	if s.isDirty || s.oldWidth != outsideWidth || s.oldHeight != outsideHeight {
+	if s.isDirty || s.outsideWidth != outsideWidth || s.outsideHeight != outsideHeight {
 		s.calculateLayout(outsideWidth, outsideHeight)
-		s.oldWidth, s.oldHeight = outsideWidth, outsideHeight
+		s.outsideWidth, s.outsideHeight = outsideWidth, outsideHeight
 		s.isDirty = false
 	}
 	return int(s.safeArea.Width), int(s.safeArea.Height)
