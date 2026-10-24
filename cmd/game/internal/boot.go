@@ -9,7 +9,7 @@ import (
 
 	"github.com/adm87/finch/cmd/game/internal/camera"
 	"github.com/adm87/finch/cmd/game/internal/config"
-	"github.com/adm87/finch/cmd/game/internal/game"
+	"github.com/adm87/finch/cmd/game/internal/debug"
 	"github.com/adm87/finch/cmd/game/internal/player"
 	"github.com/adm87/finch/cmd/game/internal/plugins"
 	"github.com/adm87/finch/content"
@@ -113,7 +113,7 @@ func run(app *application.Application, p *plugins.Plugins, l logger.Logger) erro
 		return fmt.Errorf("create test scene: %w", err)
 	}
 	opts := append(gameSystems(p),
-		engine.WithOverlay(engine.DrawerFunc(game.DrawDebugOverlay)),
+		engine.WithOverlay(engine.DrawerFunc(debug.DrawDebugOverlay)),
 		engine.WithResizeMode(ebiten.WindowResizingModeEnabled),
 		engine.WithLogger(l),
 	)
