@@ -11,11 +11,11 @@ import (
 )
 
 type shell struct {
+	clearColor   color.Color
 	app          *application.Application
 	options      *RunOptions
 	clock        *clock
 	worldDrawers Drawers
-	clearColor   color.Color
 }
 
 func newShell(app *application.Application, options *RunOptions, clock *clock) *shell {
