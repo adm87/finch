@@ -1,7 +1,7 @@
 package game
 
 import (
-	"github.com/adm87/finch/pkg/aseprite"
+	"github.com/adm87/finch/plugins/aseprite"
 )
 
 type Game struct {

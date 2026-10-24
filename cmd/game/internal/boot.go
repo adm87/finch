@@ -14,7 +14,6 @@ import (
 	"github.com/adm87/finch/cmd/game/internal/player"
 	"github.com/adm87/finch/content"
 	"github.com/adm87/finch/pkg/application"
-	"github.com/adm87/finch/pkg/aseprite"
 	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/data"
 	"github.com/adm87/finch/pkg/engine"
@@ -25,6 +24,7 @@ import (
 	"github.com/adm87/finch/pkg/rendering"
 	"github.com/adm87/finch/pkg/transform"
 	"github.com/adm87/finch/pkg/world"
+	"github.com/adm87/finch/plugins/aseprite"
 )
 
 const playerLibrary = "captain"

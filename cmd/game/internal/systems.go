@@ -10,8 +10,8 @@ import (
 	"github.com/adm87/finch/cmd/game/internal/input"
 	"github.com/adm87/finch/cmd/game/internal/player"
 	"github.com/adm87/finch/pkg/application"
-	"github.com/adm87/finch/pkg/aseprite"
 	"github.com/adm87/finch/pkg/engine"
+	"github.com/adm87/finch/plugins/aseprite"
 )
 
 func gameSystems(g *game.Game) []engine.RunOption {
