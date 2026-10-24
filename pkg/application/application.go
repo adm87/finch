@@ -1,13 +1,10 @@
 package application
 
 import (
-	"fmt"
 	"io/fs"
 
 	"github.com/adm87/finch/pkg/assets"
-	"github.com/adm87/finch/pkg/data"
 	"github.com/adm87/finch/pkg/display"
-	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/rendering"
 	"github.com/adm87/finch/pkg/world"
 )
@@ -23,10 +20,10 @@ type Application struct {
 	config         *Config
 }
 
-func New(config *Config, fileSystems map[assets.FileSystem]fs.FS) (*Application, error) {
+func New(config *Config) (*Application, error) {
 	cfg := *DefaultConfig()
 	if config != nil {
-		cfg = config.clone()
+		cfg = *config
 	}
 	if err := cfg.Validate(); err != nil {
 		return nil, err
@@ -35,21 +32,8 @@ func New(config *Config, fileSystems map[assets.FileSystem]fs.FS) (*Application,
 	as := assets.NewAssets()
 	cache := NewCache()
 
-	if err := as.RegisterImporter(data.NewImporter(cache.data), data.Types()); err != nil {
+	if err := registerAssetImporters(as, cache); err != nil {
 		return nil, err
-	}
-	if err := as.RegisterImporter(images.NewImporter(cache.images), images.Types()); err != nil {
-		return nil, err
-	}
-	for name, fsys := range fileSystems {
-		if err := as.RegisterFileSystem(name, fsys); err != nil {
-			return nil, err
-		}
-	}
-	for _, bundle := range cfg.Bundles {
-		if err := bundle.Load(as); err != nil {
-			return nil, fmt.Errorf("load bundle from %q: %w", bundle.FileSystem, err)
-		}
 	}
 
 	screen := display.NewScreen(cfg.Screen.Width, cfg.Screen.Height)
@@ -76,7 +60,7 @@ func New(config *Config, fileSystems map[assets.FileSystem]fs.FS) (*Application,
 }
 
 func (a *Application) Config() Config {
-	return a.config.clone()
+	return *a.config
 }
 
 func (a *Application) Cache() *Cache {
@@ -105,4 +89,14 @@ func (a *Application) View() *display.View {
 
 func (a *Application) World() *world.World {
 	return a.world
+}
+
+// RegisterFileSystems stops at the first error; file systems before it stay registered.
+func (a *Application) RegisterFileSystems(fileSystems map[assets.FileSystem]fs.FS) error {
+	for name, fsys := range fileSystems {
+		if err := a.assets.RegisterFileSystem(name, fsys); err != nil {
+			return err
+		}
+	}
+	return nil
 }
