@@ -20,13 +20,13 @@ func TestSliceFramesKeepsTrim(t *testing.T) {
 		{Rect: image.Rect(24, 0, 40, 16)},
 	}))
 
-	trimmed, err := cache.GetFrame(handle, 0)
+	trimmed, err := cache.Frame(handle, 0)
 	require.NoError(t, err)
 	require.Equal(t, image.Pt(24, 28), trimmed.Image.Bounds().Size())
 	require.Equal(t, image.Pt(26, 36), trimmed.Offset)
 	require.Equal(t, image.Pt(96, 96), trimmed.Size)
 
-	plain, err := cache.GetFrame(handle, 1)
+	plain, err := cache.Frame(handle, 1)
 	require.NoError(t, err)
 	require.Equal(t, image.Point{}, plain.Offset)
 	require.Equal(t, image.Pt(16, 16), plain.Size)
@@ -42,11 +42,11 @@ func TestSliceFramesRejectsFramesOffTheirCanvas(t *testing.T) {
 	require.ErrorIs(t, err, errs.ErrArgumentOutOfRange)
 }
 
-func TestGetFrameOfUnslicedImageIsUntrimmed(t *testing.T) {
+func TestFrameOfUnslicedImageIsUntrimmed(t *testing.T) {
 	cache := images.NewCache()
 	handle := cache.Put(ebiten.NewImage(10, 12))
 
-	frame, err := cache.GetFrame(handle, 3)
+	frame, err := cache.Frame(handle, 3)
 	require.NoError(t, err)
 	require.Equal(t, image.Point{}, frame.Offset)
 	require.Equal(t, image.Pt(10, 12), frame.Size)

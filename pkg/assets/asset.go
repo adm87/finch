@@ -25,7 +25,7 @@ type AssetBundle struct {
 }
 
 func (ab AssetBundle) Load(as *Assets) error {
-	filesystem, err := as.GetFileSystem(ab.FileSystem)
+	filesystem, err := as.FileSystem(ab.FileSystem)
 	if err != nil {
 		return err
 	}

@@ -61,9 +61,9 @@ func (ic *Cache) Delete(handle Handle) (*ebiten.Image, error) {
 	return img, nil
 }
 
-// GetFrame returns frame index of the image. An image that was never sliced
+// Frame returns frame index of the image. An image that was never sliced
 // is treated as a single frame and returned for any index.
-func (ic *Cache) GetFrame(handle Handle, index int) (Frame, error) {
+func (ic *Cache) Frame(handle Handle, index int) (Frame, error) {
 	if frames, ok := ic.frames[handle]; ok {
 		if index >= 0 && index < len(frames) {
 			return frames[index], nil
@@ -77,8 +77,8 @@ func (ic *Cache) GetFrame(handle Handle, index int) (Frame, error) {
 	return untrimmed(img), nil
 }
 
-// GetFrames returns the frames produced by the last slice call.
-func (ic *Cache) GetFrames(handle Handle) ([]Frame, error) {
+// Frames returns the frames produced by the last slice call.
+func (ic *Cache) Frames(handle Handle) ([]Frame, error) {
 	frames, ok := ic.frames[handle]
 	if !ok {
 		return nil, errs.NotFound("image frames", strconv.FormatUint(uint64(handle), 10))

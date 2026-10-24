@@ -19,7 +19,7 @@ func AdvanceAnimations(dt float64, libs *Libraries, entries []*donburi.Entry) er
 			continue
 		}
 
-		lib, err := libs.GetLibrary(anim.Library())
+		lib, err := libs.Library(anim.Library())
 		if err != nil {
 			return err
 		}

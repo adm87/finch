@@ -36,7 +36,7 @@ func (ir *Renderer) Render(target *ebiten.Image, rc *rendering.Candidate, _ geom
 
 		ir.drawOptions.ColorScale.ScaleWithColor(img.Color())
 
-		if cached, err := ir.cache.GetFrame(img.Handle(), img.Frame()); err == nil {
+		if cached, err := ir.cache.Frame(img.Handle(), img.Frame()); err == nil {
 			frame = cached
 		}
 	}
