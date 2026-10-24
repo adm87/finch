@@ -13,15 +13,18 @@ import (
 
 type FileSystem string
 
+// Handle is an importer's handle for a loaded asset.
+type Handle uint64
+
 type Importer interface {
-	Import(reader io.Reader) (uint64, error)
-	Delete(handle uint64) error
+	Import(reader io.Reader) (Handle, error)
+	Delete(handle Handle) error
 }
 
 type Assets struct {
 	importers   map[string]Importer
 	filesystems map[FileSystem]fs.FS
-	handles     map[Asset]uint64
+	handles     map[Asset]Handle
 	mu          sync.Mutex
 }
 
@@ -29,12 +32,12 @@ func NewAssets() *Assets {
 	return &Assets{
 		importers:   make(map[string]Importer),
 		filesystems: make(map[FileSystem]fs.FS),
-		handles:     make(map[Asset]uint64),
+		handles:     make(map[Asset]Handle),
 	}
 }
 
 // GetHandle returns a NotFoundError if the asset isn't loaded.
-func (a *Assets) GetHandle(asset Asset) (uint64, error) {
+func (a *Assets) GetHandle(asset Asset) (Handle, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 

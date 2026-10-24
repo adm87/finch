@@ -3,7 +3,7 @@ package rendering
 import "github.com/yohamta/donburi"
 
 type Renderer struct {
-	id      uint64
+	id      AdapterID
 	layer   int16
 	depth   int16
 	visible bool
@@ -20,11 +20,11 @@ func GetRenderer(entry *donburi.Entry) (*Renderer, bool) {
 	return RendererComponent.Get(entry), true
 }
 
-func (r *Renderer) ID() uint64 {
+func (r *Renderer) ID() AdapterID {
 	return r.id
 }
 
-func (r *Renderer) SetID(id uint64) {
+func (r *Renderer) SetID(id AdapterID) {
 	r.id = id
 }
 
