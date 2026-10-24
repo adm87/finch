@@ -1,29 +1,32 @@
 package config
 
 import (
+	"bytes"
+
+	"gopkg.in/yaml.v3"
+
 	"github.com/adm87/finch/pkg/application"
-	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/hexcolor"
 )
 
-type StaticContent []assets.AssetBundle
-
-func (sc StaticContent) Load(as *assets.Assets) error {
-	for _, r := range sc {
-		if err := r.Load(as); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 type GameConfig struct {
-	StaticContent StaticContent            `yaml:"static_content"`
-	Window        application.ScreenConfig `yaml:"window"`
-	FPS           int                      `yaml:"fps"`
-	Rendering     RenderingConfig          `yaml:"rendering"`
+	Application application.Config `yaml:"application"`
+	Rendering   RenderingConfig    `yaml:"rendering"`
 }
 
 type RenderingConfig struct {
 	ClearColor hexcolor.Color `yaml:"clear_color"`
+}
+
+// Parse decodes raw over the application's defaults. Unknown keys are errors.
+func Parse(raw []byte) (*GameConfig, error) {
+	cfg := GameConfig{Application: *application.DefaultConfig()}
+
+	dec := yaml.NewDecoder(bytes.NewReader(raw))
+	dec.KnownFields(true)
+
+	if err := dec.Decode(&cfg); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
 }

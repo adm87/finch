@@ -1,6 +1,9 @@
 package application
 
 import (
+	"fmt"
+	"io/fs"
+
 	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/data"
 	"github.com/adm87/finch/pkg/display"
@@ -15,11 +18,12 @@ type Application struct {
 	view   *display.View
 }
 
-// New uses DefaultConfig when config is nil.
-func New(config *Config) (*Application, error) {
+// New uses DefaultConfig when config is nil. It registers fileSystems with
+// the asset system and then loads the config's bundles.
+func New(config *Config, fileSystems map[assets.FileSystem]fs.FS) (*Application, error) {
 	cfg := *DefaultConfig()
 	if config != nil {
-		cfg = *config
+		cfg = config.clone()
 	}
 	if err := cfg.Validate(); err != nil {
 		return nil, err
@@ -34,6 +38,16 @@ func New(config *Config) (*Application, error) {
 	if err := as.RegisterImporter(images.NewImporter(cache.images), images.Types()); err != nil {
 		return nil, err
 	}
+	for name, fsys := range fileSystems {
+		if err := as.RegisterFileSystem(name, fsys); err != nil {
+			return nil, err
+		}
+	}
+	for _, bundle := range cfg.Bundles {
+		if err := bundle.Load(as); err != nil {
+			return nil, fmt.Errorf("load bundle from %q: %w", bundle.FileSystem, err)
+		}
+	}
 
 	screen := display.NewScreen(cfg.Screen.Width, cfg.Screen.Height)
 
@@ -47,7 +61,7 @@ func New(config *Config) (*Application, error) {
 }
 
 func (a *Application) Config() Config {
-	return a.config
+	return a.config.clone()
 }
 
 func (a *Application) Cache() *Cache {

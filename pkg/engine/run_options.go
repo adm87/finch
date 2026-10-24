@@ -9,8 +9,10 @@ import (
 )
 
 type RunOptions struct {
-	Updater Updater
-	Drawer  Drawer
+	Update      []System
+	FixedUpdate []System
+	LateUpdate  []System
+	Drawer      Drawer
 	// Overlay draws over the window after the screen buffer, in window coordinates.
 	Overlay    Drawer
 	ClearColor color.Color
@@ -22,7 +24,6 @@ type RunOption func(*RunOptions)
 
 func DefaultRunOptions() *RunOptions {
 	return &RunOptions{
-		Updater:    UpdaterFunc(noopUpdate),
 		Drawer:     DrawerFunc(noopDraw),
 		Overlay:    DrawerFunc(noopDraw),
 		ClearColor: color.Black,
@@ -31,9 +32,24 @@ func DefaultRunOptions() *RunOptions {
 	}
 }
 
-func WithUpdater(updater Updater) RunOption {
+// WithUpdate adds systems that run once per update, before the fixed steps.
+func WithUpdate(systems ...System) RunOption {
 	return func(ro *RunOptions) {
-		ro.Updater = updater
+		ro.Update = append(ro.Update, systems...)
+	}
+}
+
+// WithFixedUpdate adds systems that run once per fixed step at the app's tick rate.
+func WithFixedUpdate(systems ...System) RunOption {
+	return func(ro *RunOptions) {
+		ro.FixedUpdate = append(ro.FixedUpdate, systems...)
+	}
+}
+
+// WithLateUpdate adds systems that run once per update, after the fixed steps.
+func WithLateUpdate(systems ...System) RunOption {
+	return func(ro *RunOptions) {
+		ro.LateUpdate = append(ro.LateUpdate, systems...)
 	}
 }
 

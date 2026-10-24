@@ -1,8 +1,6 @@
 package engine
 
 import (
-	"image/color"
-
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/adm87/finch/pkg/application"
@@ -10,31 +8,52 @@ import (
 )
 
 type shell struct {
-	app        *application.Application
-	updater    Updater
-	drawer     Drawer
-	overlay    Drawer
-	clearColor color.Color
-	logger     logger.Logger
+	app     *application.Application
+	options *RunOptions
+	clock   *clock
+}
+
+func newShell(app *application.Application, options *RunOptions, clock *clock) *shell {
+	return &shell{app: app, options: options, clock: clock}
 }
 
 func (sh *shell) Update() error {
-	return sh.updater.Update(sh.app)
+	sh.clock.tick()
+
+	dt := sh.clock.delta.Seconds()
+	if err := sh.runSystems(sh.options.Update, dt); err != nil {
+		return err
+	}
+	for range sh.clock.fixedSteps {
+		if err := sh.runSystems(sh.options.FixedUpdate, sh.clock.fixedDelta.Seconds()); err != nil {
+			return err
+		}
+	}
+	return sh.runSystems(sh.options.LateUpdate, dt)
+}
+
+func (sh *shell) runSystems(systems []System, dt float64) error {
+	for _, system := range systems {
+		if err := system(sh.app, dt); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (sh *shell) Draw(target *ebiten.Image) {
 	screen := sh.app.Screen()
 	buf := screen.Buffer()
-	buf.Fill(sh.clearColor)
+	buf.Fill(sh.options.ClearColor)
 
-	if err := sh.drawer.Draw(buf, sh.app); err != nil {
-		sh.logger.Error("draw error", logger.ErrorField("error", err))
+	if err := sh.options.Drawer.Draw(buf, sh.app); err != nil {
+		sh.options.Logger.Error("draw error", logger.ErrorField("error", err))
 	}
 
 	target.DrawImage(buf, screen.Options())
 
-	if err := sh.overlay.Draw(target, sh.app); err != nil {
-		sh.logger.Error("overlay error", logger.ErrorField("error", err))
+	if err := sh.options.Overlay.Draw(target, sh.app); err != nil {
+		sh.options.Logger.Error("overlay error", logger.ErrorField("error", err))
 	}
 }
 

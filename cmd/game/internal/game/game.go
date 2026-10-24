@@ -12,7 +12,6 @@ type Game struct {
 	Aseprite  *aseprite.Libraries
 	Config    *config.GameConfig
 	Renderers *Renderers
-	Time      *Time
 }
 
 type Renderers struct {
