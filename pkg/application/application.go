@@ -8,18 +8,21 @@ import (
 	"github.com/adm87/finch/pkg/data"
 	"github.com/adm87/finch/pkg/display"
 	"github.com/adm87/finch/pkg/images"
+	"github.com/adm87/finch/pkg/rendering"
+	"github.com/adm87/finch/pkg/world"
 )
 
 type Application struct {
-	config Config
-	cache  *Cache
-	assets *assets.Assets
-	screen *display.Screen
-	view   *display.View
+	cache          *Cache
+	renderers      *Renderers
+	assets         *assets.Assets
+	screen         *display.Screen
+	view           *display.View
+	renderPipeline *rendering.Pipeline
+	world          *world.World
+	config         *Config
 }
 
-// New uses DefaultConfig when config is nil. It registers fileSystems with
-// the asset system and then loads the config's bundles.
 func New(config *Config, fileSystems map[assets.FileSystem]fs.FS) (*Application, error) {
 	cfg := *DefaultConfig()
 	if config != nil {
@@ -50,13 +53,25 @@ func New(config *Config, fileSystems map[assets.FileSystem]fs.FS) (*Application,
 	}
 
 	screen := display.NewScreen(cfg.Screen.Width, cfg.Screen.Height)
+	view := display.NewViewport(screen)
+
+	world := world.NewWorld()
+	renderPipeline := rendering.NewPipeline(view, world)
+
+	renderers, err := newRenderers(renderPipeline, cache)
+	if err != nil {
+		return nil, err
+	}
 
 	return &Application{
-		config: cfg,
-		cache:  cache,
-		assets: as,
-		screen: screen,
-		view:   display.NewViewport(screen),
+		config:         &cfg,
+		cache:          cache,
+		assets:         as,
+		screen:         screen,
+		renderers:      renderers,
+		renderPipeline: renderPipeline,
+		view:           view,
+		world:          world,
 	}, nil
 }
 
@@ -68,8 +83,16 @@ func (a *Application) Cache() *Cache {
 	return a.cache
 }
 
+func (a *Application) Renderers() *Renderers {
+	return a.renderers
+}
+
 func (a *Application) Assets() *assets.Assets {
 	return a.assets
+}
+
+func (a *Application) RenderPipeline() *rendering.Pipeline {
+	return a.renderPipeline
 }
 
 func (a *Application) Screen() *display.Screen {
@@ -78,4 +101,8 @@ func (a *Application) Screen() *display.Screen {
 
 func (a *Application) View() *display.View {
 	return a.view
+}
+
+func (a *Application) World() *world.World {
+	return a.world
 }

@@ -30,21 +30,19 @@ import (
 const playerLibrary = "captain"
 
 func Boot() error {
+	if err := content.InitializeFileSystems(); err != nil {
+		return fmt.Errorf("setup file systems: %w", err)
+	}
 	return boot(logger.NewLogger(os.Stdout, loggerOptions).Named("finch"))
 }
 
 func boot(l logger.Logger) error {
 	var g game.Game
 
-	if err := content.InitializeFileSystems(); err != nil {
-		return fmt.Errorf("setup file systems: %w", err)
-	}
-
 	cfg, err := loadGameConfig()
 	if err != nil {
 		return fmt.Errorf("load game config: %w", err)
 	}
-	g.Config = cfg
 
 	fileSystems, err := gameFileSystems()
 	if err != nil {
@@ -55,13 +53,12 @@ func boot(l logger.Logger) error {
 	if err != nil {
 		return fmt.Errorf("create application: %w", err)
 	}
-	g.App = app
 
-	if err := initializeAseprite(&g, l); err != nil {
+	if err := initializeAseprite(&g, app, l); err != nil {
 		return fmt.Errorf("initialize aseprite: %w", err)
 	}
 
-	return run(&g, l)
+	return run(&g, app, l)
 }
 
 func gameFileSystems() (map[assets.FileSystem]fs.FS, error) {
@@ -95,10 +92,10 @@ func loadGameConfig() (*config.GameConfig, error) {
 	return cfg, nil
 }
 
-func initializeAseprite(g *game.Game, logger logger.Logger) error {
-	cache := g.App.Cache()
+func initializeAseprite(g *game.Game, app *application.Application, logger logger.Logger) error {
+	cache := app.Cache()
 
-	handle, err := g.App.Assets().Handle(content.AsepriteConfig)
+	handle, err := app.Assets().Handle(content.AsepriteConfig)
 	if err != nil {
 		return err
 	}
@@ -112,7 +109,7 @@ func initializeAseprite(g *game.Game, logger logger.Logger) error {
 		return errs.Format(content.AsepriteConfig, "invalid yaml").Wrap(err)
 	}
 
-	ase, err := aseprite.New(g.App.Assets(), logger, cache.Data(), cache.Images(), &aseConfig)
+	ase, err := aseprite.New(app.Assets(), logger, cache.Data(), cache.Images(), &aseConfig)
 	if err != nil {
 		return err
 	}
@@ -121,49 +118,27 @@ func initializeAseprite(g *game.Game, logger logger.Logger) error {
 	return nil
 }
 
-func initializeGameRenderers(g *game.Game, rp *rendering.Pipeline) error {
-	ir, err := rp.RegisterRenderer(images.NewRenderer(g.App.Cache().Images()))
-	if err != nil {
-		return errs.InvalidOperation("register image renderer").Wrap(err)
-	}
-
-	g.Renderers = &game.Renderers{
-		Image: ir,
-	}
-
-	return nil
-}
-
-func run(g *game.Game, l logger.Logger) error {
-	w := world.NewWorld()
-
-	rp := rendering.NewPipeline(g.App.View(), w)
-	if err := initializeGameRenderers(g, rp); err != nil {
-		return err
-	}
-
-	if err := makeTestScene(g, w); err != nil {
+func run(g *game.Game, app *application.Application, l logger.Logger) error {
+	if err := makeTestScene(g, app); err != nil {
 		return fmt.Errorf("create test scene: %w", err)
 	}
 
-	opts := append(gameSystems(g, w),
-		engine.WithDrawer(engine.DrawerFunc(func(target *ebiten.Image, _ *application.Application) error {
-			return rp.Draw(target)
-		})),
+	opts := append(gameSystems(g),
 		engine.WithOverlay(engine.DrawerFunc(game.DrawDebugOverlay)),
-		engine.WithClearColor(g.Config.Rendering.ClearColor.ToRGBA()),
 		engine.WithResizeMode(ebiten.WindowResizingModeEnabled),
 		engine.WithLogger(l),
 	)
-	return engine.Run(g.App, opts...)
+	return engine.Run(app, opts...)
 }
 
-func makeTestScene(g *game.Game, w *world.World) error {
+func makeTestScene(g *game.Game, app *application.Application) error {
+	w := app.World()
+
 	c := w.Create(
 		camera.MainCamera,
 		world.DontPartition,
 	)
-	g.App.View().SetCamera(c)
+	app.View().SetCamera(c)
 
 	libraryID, err := g.Aseprite.CreateLibrary(playerLibrary, aseprite.LoadModeDynamic)
 	if err != nil {
@@ -175,7 +150,7 @@ func makeTestScene(g *game.Game, w *world.World) error {
 		return fmt.Errorf("library %q: %w", playerLibrary, err)
 	}
 
-	frame, err := g.App.Cache().Images().Frame(library.ImageHandle, 0)
+	frame, err := app.Cache().Images().Frame(library.ImageHandle, 0)
 	if err != nil {
 		return fmt.Errorf("first frame of %q: %w", playerLibrary, err)
 	}
@@ -195,7 +170,7 @@ func makeTestScene(g *game.Game, w *world.World) error {
 		player.Player,
 	)
 
-	rendering.RendererComponent.Get(entry).SetID(g.Renderers.Image)
+	rendering.RendererComponent.Get(entry).SetID(app.Renderers().Image)
 
 	img := images.ImageComponent.Get(entry)
 	img.SetHandle(library.ImageHandle)

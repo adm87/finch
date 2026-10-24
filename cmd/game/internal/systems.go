@@ -12,13 +12,13 @@ import (
 	"github.com/adm87/finch/pkg/application"
 	"github.com/adm87/finch/pkg/aseprite"
 	"github.com/adm87/finch/pkg/engine"
-	"github.com/adm87/finch/pkg/world"
 )
 
-func gameSystems(g *game.Game, w *world.World) []engine.RunOption {
+func gameSystems(g *game.Game) []engine.RunOption {
 	var entries []*donburi.Entry
 
-	handleInput := func(_ *application.Application, dt float64) error {
+	handleInput := func(app *application.Application, dt float64) error {
+		w := app.World()
 		if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 			return ebiten.Termination
 		}
@@ -33,7 +33,7 @@ func gameSystems(g *game.Game, w *world.World) []engine.RunOption {
 
 	collectVisible := func(app *application.Application, _ float64) error {
 		rect, _ := app.View().Viewport()
-		entries = w.Query(rect, entries[:0])
+		entries = app.World().Query(rect, entries[:0])
 		return nil
 	}
 
@@ -41,7 +41,8 @@ func gameSystems(g *game.Game, w *world.World) []engine.RunOption {
 		return aseprite.AdvanceAnimations(dt, g.Aseprite, entries)
 	}
 
-	followPlayer := func(_ *application.Application, dt float64) error {
+	followPlayer := func(app *application.Application, dt float64) error {
+		w := app.World()
 		c, cOk := camera.MainCamera.First(w.ECS())
 		p, pOk := player.Player.First(w.ECS())
 		if cOk && pOk {

@@ -12,7 +12,7 @@ import (
 
 type Color color.RGBA
 
-func (c *Color) ToRGBA() color.RGBA {
+func ToRGBA(c Color) color.RGBA {
 	return color.RGBA{
 		R: c.R,
 		G: c.G,

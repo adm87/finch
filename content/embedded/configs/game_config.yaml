@@ -6,13 +6,11 @@ application:
     width: 1280
     height: 720
     fullscreen: false
+    clear_color: "#6495EDFF"
 
-  # Bundles loaded when the game starts. They stay loaded for the whole game.
+  # Bundles loaded when the application starts. They stay loaded for the whole session.
   bundles:
     - filesystem: embedded
       assets:
         - embedded/configs/aseprite_config.yaml
         - embedded/images/default_10x10.png
-
-rendering:
-  clear_color: "#6495EDFF"
