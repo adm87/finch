@@ -6,6 +6,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 
+	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/errs"
 )
 
@@ -25,16 +26,17 @@ func NewImporter(cache *Cache) *Importer {
 	}
 }
 
-func (l *Importer) Import(reader io.Reader) (uint64, error) {
+// Import returns an assets.Handle that converts to a Handle in the cache.
+func (l *Importer) Import(reader io.Reader) (assets.Handle, error) {
 	img, _, err := ebitenutil.NewImageFromReader(reader)
 	if err != nil {
 		return 0, errs.Format("image", "decode").Wrap(err)
 	}
-	return l.cache.Put(img), nil
+	return assets.Handle(l.cache.Put(img)), nil
 }
 
-func (l *Importer) Delete(handle uint64) error {
-	img, err := l.cache.Delete(handle)
+func (l *Importer) Delete(handle assets.Handle) error {
+	img, err := l.cache.Delete(Handle(handle))
 	if err != nil {
 		return err
 	}

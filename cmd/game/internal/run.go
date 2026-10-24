@@ -112,7 +112,7 @@ func loadGameConfig(g *game.Game) (err error) {
 		return errs.NotFound(resourceHandle, content.GameConfig).Wrap(err)
 	}
 
-	raw, err := g.Cache.Data.Get(handle)
+	raw, err := g.Cache.Data.Get(data.Handle(handle))
 	if err != nil {
 		return errs.NotFound("cached data", content.GameConfig).Wrap(err)
 	}
@@ -139,7 +139,7 @@ func initializeAseprite(g *game.Game, logger logger.Logger) error {
 		return errs.NotFound(resourceHandle, content.AsepriteConfig).Wrap(err)
 	}
 
-	raw, err := g.Cache.Data.Get(handle)
+	raw, err := g.Cache.Data.Get(data.Handle(handle))
 	if err != nil {
 		return errs.NotFound("cached data", content.AsepriteConfig).Wrap(err)
 	}

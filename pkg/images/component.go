@@ -7,7 +7,7 @@ import (
 )
 
 type Image struct {
-	handle uint64
+	handle Handle
 	frame  int
 	ax, ay float64
 	color  color.RGBA
@@ -25,11 +25,11 @@ func GetImage(entry *donburi.Entry) (*Image, bool) {
 	return ImageComponent.Get(entry), true
 }
 
-func (i *Image) Handle() uint64 {
+func (i *Image) Handle() Handle {
 	return i.handle
 }
 
-func (i *Image) SetHandle(handle uint64) {
+func (i *Image) SetHandle(handle Handle) {
 	i.handle = handle
 }
 

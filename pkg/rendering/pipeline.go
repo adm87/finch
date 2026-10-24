@@ -38,13 +38,13 @@ func NewPipeline(viewport View, world World) *Pipeline {
 	}
 }
 
-func (rp *Pipeline) RegisterRenderer(adapter Adapter) (uint64, error) {
+func (rp *Pipeline) RegisterRenderer(adapter Adapter) (AdapterID, error) {
 	if adapter == nil {
 		return 0, errs.ArgumentNil("adapter")
 	}
 	k := rp.renderers.Insert(adapter)
 	// TODO: Should probably add support for checking if an item exists in a slotmap.
-	return k.Pack(), nil
+	return AdapterID(k.Pack()), nil
 }
 
 func (rp *Pipeline) Draw(target *ebiten.Image) error {
@@ -72,7 +72,7 @@ func (rp *Pipeline) Draw(target *ebiten.Image) error {
 			continue
 		}
 
-		key := slotmap.Unpack(rc.Renderer.ID())
+		key := slotmap.Unpack(uint64(rc.Renderer.ID()))
 		adapter, err := rp.renderers.Get(key)
 
 		if err != nil {

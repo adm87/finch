@@ -7,6 +7,7 @@ import (
 	"github.com/adm87/finch/pkg/data"
 	"github.com/adm87/finch/pkg/display"
 	"github.com/adm87/finch/pkg/images"
+	"github.com/adm87/finch/pkg/rendering"
 )
 
 type Game struct {
@@ -26,5 +27,5 @@ type Cache struct {
 }
 
 type Renderers struct {
-	Image uint64
+	Image rendering.AdapterID
 }

@@ -3,6 +3,8 @@ package data
 import (
 	"io"
 	"slices"
+
+	"github.com/adm87/finch/pkg/assets"
 )
 
 var dataTypes = []string{"json", "yml", "yaml"}
@@ -21,15 +23,16 @@ func NewImporter(cache *Cache) *Importer {
 	}
 }
 
-func (dl *Importer) Import(reader io.Reader) (uint64, error) {
+// Import returns an assets.Handle that converts to a Handle in the cache.
+func (dl *Importer) Import(reader io.Reader) (assets.Handle, error) {
 	raw, err := io.ReadAll(reader)
 	if err != nil {
 		return 0, err
 	}
-	return dl.cache.Put(raw), nil
+	return assets.Handle(dl.cache.Put(raw)), nil
 }
 
-func (dl *Importer) Delete(handle uint64) error {
-	_, err := dl.cache.Delete(handle)
+func (dl *Importer) Delete(handle assets.Handle) error {
+	_, err := dl.cache.Delete(Handle(handle))
 	return err
 }

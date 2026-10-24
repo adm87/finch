@@ -43,8 +43,8 @@ type LibraryID uint64
 // LibraryInfo is a decoded library and the handles of its content.
 type LibraryInfo struct {
 	Atlas       *Atlas
-	ImageHandle uint64
-	DataHandle  uint64
+	ImageHandle images.Handle
+	DataHandle  data.Handle
 	owned       bool
 }
 
@@ -194,14 +194,17 @@ func (l *Libraries) getLibraryConfig(name string) (*LibraryConfig, error) {
 func (l *Libraries) decodeLibrary(library *LibraryConfig) (LibraryInfo, error) {
 	atlasPath := library.Atlas.String()
 
-	dataHandle, err := l.as.GetHandle(library.Atlas)
+	atlasAsset, err := l.as.GetHandle(library.Atlas)
 	if err != nil {
 		return LibraryInfo{}, fmt.Errorf("atlas %q: %w", atlasPath, err)
 	}
-	imageHandle, err := l.as.GetHandle(library.Image)
+	imageAsset, err := l.as.GetHandle(library.Image)
 	if err != nil {
 		return LibraryInfo{}, fmt.Errorf("image %q: %w", library.Image.String(), err)
 	}
+	dataHandle := data.Handle(atlasAsset)
+	imageHandle := images.Handle(imageAsset)
+
 	raw, err := l.dc.Get(dataHandle)
 	if err != nil {
 		return LibraryInfo{}, fmt.Errorf("atlas %q: %w", atlasPath, err)
