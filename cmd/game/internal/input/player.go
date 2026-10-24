@@ -6,6 +6,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 
+	"github.com/adm87/finch/pkg/aseprite"
 	"github.com/adm87/finch/pkg/transform"
 	"github.com/adm87/finch/pkg/world"
 )
@@ -32,7 +33,23 @@ func UpdatePlayer(dt float64, entry *donburi.Entry, w world.World) error {
 		dy += 1
 	}
 
+	// This goes in late update, put here for now
+	if anim, ok := aseprite.GetAnimator(entry); ok {
+		if dx != 0 || dy != 0 {
+			sx, sy := t.Scale()
+			if dx < 0 {
+				t.SetScale(-math.Abs(sx), sy)
+			} else if dx > 0 {
+				t.SetScale(math.Abs(sx), sy)
+			}
+			anim.SetAnimation("Run")
+		} else {
+			anim.SetAnimation("Idle")
+		}
+	}
+
 	if dx != 0 || dy != 0 {
+
 		l := math.Hypot(dx, dy)
 		dx, dy = dx/l, dy/l
 
