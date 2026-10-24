@@ -6,7 +6,7 @@ window:
   fullscreen: false
 
 rendering:
-  clear_color: "#000000FF"
+  clear_color: "#6495EDFF"
 
 # Resource bundles that will be loaded when the game starts.
 # These assets are loaded once and remain available throughout the game.
