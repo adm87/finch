@@ -10,8 +10,8 @@ import (
 )
 
 type GameConfig struct {
-	Application application.Config   `yaml:"application"`
 	Bundles     []assets.AssetBundle `yaml:"bundles"`
+	Application application.Config   `yaml:"application"`
 }
 
 // Parse decodes raw over the application's defaults. Unknown keys are errors.
