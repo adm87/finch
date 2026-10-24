@@ -1,5 +1,7 @@
 package game
 
+import "github.com/adm87/finch/pkg/application"
+
 type UpdateFunc func(dt float64) error
 
 type Updater struct {
@@ -27,7 +29,7 @@ func (u *Updater) AddLate(update UpdateFunc) {
 	u.late = append(u.late, update)
 }
 
-func (u *Updater) Update() error {
+func (u *Updater) Update(*application.Application) error {
 	u.time.Tick()
 
 	dt := u.time.DeltaTime()
