@@ -36,8 +36,8 @@ func NewAssets() *Assets {
 	}
 }
 
-// GetHandle returns a NotFoundError if the asset isn't loaded.
-func (a *Assets) GetHandle(asset Asset) (Handle, error) {
+// Handle returns a NotFoundError if the asset isn't loaded.
+func (a *Assets) Handle(asset Asset) (Handle, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -49,7 +49,7 @@ func (a *Assets) GetHandle(asset Asset) (Handle, error) {
 	return handle, nil
 }
 
-func (a *Assets) GetFileSystem(name FileSystem) (fs.FS, error) {
+func (a *Assets) FileSystem(name FileSystem) (fs.FS, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 

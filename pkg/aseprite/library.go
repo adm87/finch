@@ -169,7 +169,7 @@ func (l *Libraries) ClearLibrary(name string, mode UnloadMode) error {
 	return nil
 }
 
-func (l *Libraries) GetLibrary(id LibraryID) (LibraryInfo, error) {
+func (l *Libraries) Library(id LibraryID) (LibraryInfo, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
@@ -194,11 +194,11 @@ func (l *Libraries) getLibraryConfig(name string) (*LibraryConfig, error) {
 func (l *Libraries) decodeLibrary(library *LibraryConfig) (LibraryInfo, error) {
 	atlasPath := library.Atlas.String()
 
-	atlasAsset, err := l.as.GetHandle(library.Atlas)
+	atlasAsset, err := l.as.Handle(library.Atlas)
 	if err != nil {
 		return LibraryInfo{}, fmt.Errorf("atlas %q: %w", atlasPath, err)
 	}
-	imageAsset, err := l.as.GetHandle(library.Image)
+	imageAsset, err := l.as.Handle(library.Image)
 	if err != nil {
 		return LibraryInfo{}, fmt.Errorf("image %q: %w", library.Image.String(), err)
 	}
@@ -228,7 +228,7 @@ func (l *Libraries) decodeLibrary(library *LibraryConfig) (LibraryInfo, error) {
 
 func (l *Libraries) isLibraryLoaded(cfg *LibraryConfig) (bool, error) {
 	for _, r := range cfg.Assets() {
-		_, err := l.as.GetHandle(r)
+		_, err := l.as.Handle(r)
 		if errs.IsNotFound(err) {
 			return false, nil
 		}

@@ -107,7 +107,7 @@ func loadGameConfig(g *game.Game) (err error) {
 		}
 	}()
 
-	handle, err := g.Assets.GetHandle(content.GameConfig)
+	handle, err := g.Assets.Handle(content.GameConfig)
 	if err != nil {
 		return errs.NotFound(resourceHandle, content.GameConfig).Wrap(err)
 	}
@@ -134,7 +134,7 @@ func loadGameConfig(g *game.Game) (err error) {
 }
 
 func initializeAseprite(g *game.Game, logger logger.Logger) error {
-	handle, err := g.Assets.GetHandle(content.AsepriteConfig)
+	handle, err := g.Assets.Handle(content.AsepriteConfig)
 	if err != nil {
 		return errs.NotFound(resourceHandle, content.AsepriteConfig).Wrap(err)
 	}
@@ -239,12 +239,12 @@ func makeTestScene(g *game.Game, w *world.World) error {
 		return fmt.Errorf("create aseprite library: %w", err)
 	}
 
-	library, err := g.Aseprite.GetLibrary(libraryID)
+	library, err := g.Aseprite.Library(libraryID)
 	if err != nil {
 		return fmt.Errorf("get aseprite image handle: %w", err)
 	}
 
-	frame, err := g.Cache.Images.GetFrame(library.ImageHandle, 0)
+	frame, err := g.Cache.Images.Frame(library.ImageHandle, 0)
 	if err != nil {
 		return errs.NotFound("image", content.DefaultImage10x10).Wrap(err)
 	}
