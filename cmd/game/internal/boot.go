@@ -44,14 +44,9 @@ func boot(l logger.Logger) error {
 		return fmt.Errorf("load game config: %w", err)
 	}
 
-	fileSystems, err := gameFileSystems()
+	app, err := initializeApplication(cfg)
 	if err != nil {
-		return err
-	}
-
-	app, err := application.New(&cfg.Application, fileSystems)
-	if err != nil {
-		return fmt.Errorf("create application: %w", err)
+		return fmt.Errorf("initialize application: %w", err)
 	}
 
 	if err := initializeAseprite(&g, app, l); err != nil {
@@ -59,18 +54,6 @@ func boot(l logger.Logger) error {
 	}
 
 	return run(&g, app, l)
-}
-
-func gameFileSystems() (map[assets.FileSystem]fs.FS, error) {
-	fileSystems := make(map[assets.FileSystem]fs.FS)
-	for _, id := range []content.FileSystemID{content.EmbeddedFS, content.AssetsFS} {
-		fsys, err := content.GetFileSystem(id)
-		if err != nil {
-			return nil, err
-		}
-		fileSystems[assets.FileSystem(id)] = fsys
-	}
-	return fileSystems, nil
 }
 
 // loadGameConfig skips the asset system because the config sizes the application that owns it.
@@ -90,6 +73,41 @@ func loadGameConfig() (*config.GameConfig, error) {
 		return nil, errs.Format(content.GameConfig, "invalid yaml").Wrap(err)
 	}
 	return cfg, nil
+}
+
+func initializeApplication(cfg *config.GameConfig) (*application.Application, error) {
+	fileSystems, err := gameFileSystems()
+	if err != nil {
+		return nil, fmt.Errorf("initialize game file systems: %w", err)
+	}
+
+	app, err := application.New(&cfg.Application)
+	if err != nil {
+		return nil, fmt.Errorf("create application: %w", err)
+	}
+	if err := app.RegisterFileSystems(fileSystems); err != nil {
+		return nil, fmt.Errorf("register file systems: %w", err)
+	}
+
+	for _, bundle := range cfg.Bundles {
+		if err := bundle.Load(app.Assets()); err != nil {
+			return nil, fmt.Errorf("load bundle from %q: %w", bundle.FileSystem, err)
+		}
+	}
+
+	return app, nil
+}
+
+func gameFileSystems() (map[assets.FileSystem]fs.FS, error) {
+	fileSystems := make(map[assets.FileSystem]fs.FS)
+	for _, id := range []content.FileSystemID{content.EmbeddedFS, content.AssetsFS} {
+		fsys, err := content.GetFileSystem(id)
+		if err != nil {
+			return nil, err
+		}
+		fileSystems[assets.FileSystem(id)] = fsys
+	}
+	return fileSystems, nil
 }
 
 func initializeAseprite(g *game.Game, app *application.Application, logger logger.Logger) error {

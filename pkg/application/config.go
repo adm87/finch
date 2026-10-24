@@ -2,9 +2,7 @@ package application
 
 import (
 	"errors"
-	"slices"
 
-	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/hexcolor"
 )
@@ -13,10 +11,9 @@ import (
 const maxScreenSize = 16384
 
 type Config struct {
-	Title    string               `yaml:"title"`
-	Bundles  []assets.AssetBundle `yaml:"bundles"`
-	Screen   ScreenConfig         `yaml:"screen"`
-	TickRate int                  `yaml:"tick_rate"`
+	Title    string       `yaml:"title"`
+	Screen   ScreenConfig `yaml:"screen"`
+	TickRate int          `yaml:"tick_rate"`
 }
 
 type ScreenConfig struct {
@@ -47,12 +44,4 @@ func (c Config) Validate() error {
 		errs.CheckRange("screen.height", c.Screen.Height, 1, maxScreenSize),
 	)
 	return errors.Join(errList...)
-}
-
-func (c Config) clone() Config {
-	c.Bundles = slices.Clone(c.Bundles)
-	for i := range c.Bundles {
-		c.Bundles[i].Assets = slices.Clone(c.Bundles[i].Assets)
-	}
-	return c
 }

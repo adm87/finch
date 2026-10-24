@@ -62,7 +62,7 @@ func TestClockCapsLongAndBackwardsGaps(t *testing.T) {
 }
 
 func TestShellRunsPhasesInOrder(t *testing.T) {
-	app, err := application.New(nil, nil)
+	app, err := application.New(nil)
 	require.NoError(t, err)
 
 	var calls []string
@@ -89,7 +89,7 @@ func TestShellRunsPhasesInOrder(t *testing.T) {
 }
 
 func TestShellStopsAtFirstError(t *testing.T) {
-	app, err := application.New(nil, nil)
+	app, err := application.New(nil)
 	require.NoError(t, err)
 
 	stop := errors.New("stop")

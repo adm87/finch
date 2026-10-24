@@ -20,7 +20,7 @@ func TestParseGameConfigFile(t *testing.T) {
 	cfg, err := config.Parse(raw)
 	require.NoError(t, err)
 	require.NoError(t, cfg.Application.Validate())
-	require.NotEmpty(t, cfg.Application.Bundles)
+	require.NotEmpty(t, cfg.Bundles)
 }
 
 func TestParseKeepsDefaultsForMissingKeys(t *testing.T) {

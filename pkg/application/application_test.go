@@ -18,7 +18,7 @@ import (
 )
 
 func TestNewWithNilConfigUsesDefaults(t *testing.T) {
-	app, err := application.New(nil, nil)
+	app, err := application.New(nil)
 	require.NoError(t, err)
 	require.Equal(t, *application.DefaultConfig(), app.Config())
 
@@ -45,7 +45,7 @@ func TestNewRejectsInvalidConfig(t *testing.T) {
 			cfg := *application.DefaultConfig()
 			cfg.Screen.Width, cfg.Screen.Height = tc.width, tc.height
 			cfg.TickRate = tc.tickRate
-			app, err := application.New(&cfg, nil)
+			app, err := application.New(&cfg)
 			require.Nil(t, app)
 			require.ErrorIs(t, err, errs.ErrArgumentOutOfRange)
 		})
@@ -55,49 +55,30 @@ func TestNewRejectsInvalidConfig(t *testing.T) {
 func TestNewCopiesConfig(t *testing.T) {
 	cfg := *application.DefaultConfig()
 	cfg.Screen.Width, cfg.Screen.Height = 320, 180
-	cfg.Bundles = []assets.AssetBundle{{FileSystem: "test", Assets: []assets.Asset{"config.json"}}}
 
-	app, err := application.New(&cfg, testFileSystems(t))
+	app, err := application.New(&cfg)
 	require.NoError(t, err)
 
 	cfg.Screen.Width = 1920
-	cfg.Bundles[0].Assets[0] = "changed.json"
-
 	got := app.Config()
 	require.Equal(t, 320, got.Screen.Width)
-	require.Equal(t, assets.Asset("config.json"), got.Bundles[0].Assets[0])
 
 	got.Screen.Height = 1
-	got.Bundles[0].Assets[0] = "changed.json"
 	require.Equal(t, 180, app.Config().Screen.Height)
-	require.Equal(t, assets.Asset("config.json"), app.Config().Bundles[0].Assets[0])
 }
 
-func TestNewLoadsBundles(t *testing.T) {
-	cfg := *application.DefaultConfig()
-	cfg.Bundles = []assets.AssetBundle{{FileSystem: "test", Assets: []assets.Asset{"sprite.png", "config.json"}}}
-
-	app, err := application.New(&cfg, testFileSystems(t))
+func TestRegisterFileSystems(t *testing.T) {
+	app, err := application.New(nil)
 	require.NoError(t, err)
 
-	_, err = app.Assets().Handle("sprite.png")
+	fileSystems := testFileSystems(t)
+	require.NoError(t, app.RegisterFileSystems(fileSystems))
+
+	fsys, err := app.Assets().FileSystem("test")
 	require.NoError(t, err)
-	_, err = app.Assets().Handle("config.json")
-	require.NoError(t, err)
-}
+	require.NotNil(t, fsys)
 
-func TestNewFailsOnMissingBundleContent(t *testing.T) {
-	cfg := *application.DefaultConfig()
-	cfg.Bundles = []assets.AssetBundle{{FileSystem: "test", Assets: []assets.Asset{"missing.json"}}}
-
-	app, err := application.New(&cfg, testFileSystems(t))
-	require.Nil(t, app)
-	require.True(t, errs.IsNotFound(err))
-
-	cfg.Bundles[0].FileSystem = "unregistered"
-	app, err = application.New(&cfg, testFileSystems(t))
-	require.Nil(t, app)
-	require.True(t, errs.IsNotFound(err))
+	require.True(t, errs.IsAlreadyExists(app.RegisterFileSystems(fileSystems)))
 }
 
 func testFileSystems(t *testing.T) map[assets.FileSystem]fs.FS {
@@ -115,8 +96,10 @@ func testFileSystems(t *testing.T) map[assets.FileSystem]fs.FS {
 
 func TestNewRegistersImporters(t *testing.T) {
 	fileSystems := testFileSystems(t)
-	app, err := application.New(nil, fileSystems)
+
+	app, err := application.New(nil)
 	require.NoError(t, err)
+	require.NoError(t, app.RegisterFileSystems(fileSystems))
 	require.NoError(t, app.Assets().Load(fileSystems["test"], "sprite.png", "config.json"))
 
 	imgHandle, err := app.Assets().Handle("sprite.png")
