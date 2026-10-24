@@ -126,31 +126,31 @@ var N Logger = &noopLogger{}
 
 type noopLogger struct{}
 
-func (n *noopLogger) With(fields ...Field) Logger {
+func (n *noopLogger) With(...Field) Logger {
 	return n
 }
 
-func (n *noopLogger) Named(name string) Logger {
+func (n *noopLogger) Named(string) Logger {
 	return n
 }
 
-func (n *noopLogger) Info(msg string, fields ...Field) {
+func (n *noopLogger) Info(string, ...Field) {
 	// no-op
 }
 
-func (n *noopLogger) Error(msg string, fields ...Field) {
+func (n *noopLogger) Error(string, ...Field) {
 	// no-op
 }
 
-func (n *noopLogger) Fatal(msg string, fields ...Field) {
+func (n *noopLogger) Fatal(string, ...Field) {
 	// no-op
 }
 
-func (n *noopLogger) Debug(msg string, fields ...Field) {
+func (n *noopLogger) Debug(string, ...Field) {
 	// no-op
 }
 
-func (n *noopLogger) Warn(msg string, fields ...Field) {
+func (n *noopLogger) Warn(string, ...Field) {
 	// no-op
 }
 

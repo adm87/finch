@@ -126,10 +126,10 @@ func (e *ArgumentOutOfRangeError) As(target any) bool {
 	return false
 }
 
-// CheckRange returns an ArgumentOutOfRangeError if value is outside [min, max].
-func CheckRange[T cmp.Ordered](param string, value, min, max T) error {
-	if value < min || value > max {
-		return ArgumentOutOfRange(param, value, fmt.Sprintf("must be between %v and %v", min, max))
+// CheckRange returns an ArgumentOutOfRangeError if value is outside [lo, hi].
+func CheckRange[T cmp.Ordered](param string, value, lo, hi T) error {
+	if value < lo || value > hi {
+		return ArgumentOutOfRange(param, value, fmt.Sprintf("must be between %v and %v", lo, hi))
 	}
 	return nil
 }

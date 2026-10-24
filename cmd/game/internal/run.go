@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/yohamta/donburi"
 	"gopkg.in/yaml.v3"
 
 	"github.com/adm87/finch/cmd/game/internal/camera"
@@ -72,7 +73,7 @@ func initializeGameAssets(g *game.Game) error {
 		return &errs.InvalidOperationError{Message: "register image importer", Inner: err}
 	}
 
-	g.Cache = &game.GameCache{
+	g.Cache = &game.Cache{
 		Data:   dc,
 		Images: ic,
 	}
@@ -163,7 +164,7 @@ func initializeGameRenderers(g *game.Game, rp *rendering.Pipeline) error {
 		return errs.InvalidOperation("register image renderer").Wrap(err)
 	}
 
-	g.Renderers = &game.GameRenderers{
+	g.Renderers = &game.Renderers{
 		Image: ir,
 	}
 
@@ -193,7 +194,7 @@ func run(g *game.Game, l logger.Logger) error {
 
 	g.Time = game.NewTime(g.Config.FPS)
 
-	gu := game.NewGameUpdate(g.Time)
+	gu := game.NewUpdater(g.Time)
 	if err := initializeFrameSchedule(g, w, gu); err != nil {
 		return err
 	}
@@ -205,7 +206,7 @@ func run(g *game.Game, l logger.Logger) error {
 	return engine.Run(
 		engine.WithUpdate(gu),
 		engine.WithDraw(
-			game.NewGameDraw(rp, g.Screen, g.View,
+			game.NewDrawer(rp, g.Screen, g.View,
 				game.WithClearColor(
 					g.Config.Rendering.ClearColor,
 				),
@@ -269,16 +270,16 @@ func makeTestScene(g *game.Game, w world.World) error {
 	a, aOk := aseprite.GetAnimator(entry)
 
 	if !rOk {
-		return missingComponent(int(entry.Entity()), "renderer")
+		return missingComponent(entry.Entity(), "renderer")
 	}
 	if !iOk {
-		return missingComponent(int(entry.Entity()), "image")
+		return missingComponent(entry.Entity(), "image")
 	}
 	if !bOk {
-		return missingComponent(int(entry.Entity()), "bounds")
+		return missingComponent(entry.Entity(), "bounds")
 	}
 	if !aOk {
-		return missingComponent(int(entry.Entity()), "aseprite animator")
+		return missingComponent(entry.Entity(), "aseprite animator")
 	}
 
 	r.SetID(g.Renderers.Image)
@@ -303,6 +304,6 @@ func makeTestScene(g *game.Game, w world.World) error {
 	return nil
 }
 
-func missingComponent(entity int, component string) error {
-	return errs.InvalidOperation(fmt.Sprintf("entity %d: missing %s component", entity, component))
+func missingComponent(entity donburi.Entity, component string) error {
+	return errs.InvalidOperation(fmt.Sprintf("entity %v: missing %s component", entity, component))
 }

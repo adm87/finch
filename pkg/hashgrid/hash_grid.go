@@ -53,11 +53,11 @@ func (k Key) slot() slotmap.K {
 type rangeLock int
 
 func (rl *rangeLock) Lock() {
-	*rl += 1
+	*rl++
 }
 
 func (rl *rangeLock) Unlock() {
-	*rl -= 1
+	*rl--
 }
 
 func (rl *rangeLock) Check() {
@@ -200,7 +200,7 @@ func (hg *HashGrid[T]) Query(region Region, dst []T) []T {
 	cx1, cy1, cx2, cy2 := hg.PaddedRegion(minX, minY, maxX, maxY)
 	cr := NewCellRange(cx1, cy1, cx2, cy2)
 
-	hg.each(cr, func(key Key, it *item[T]) bool {
+	hg.each(cr, func(_ Key, it *item[T]) bool {
 		dst = append(dst, it.value)
 		return true
 	})

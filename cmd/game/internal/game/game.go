@@ -13,18 +13,18 @@ type Game struct {
 	Aseprite  *aseprite.Libraries
 	Assets    *assets.Assets
 	Config    *config.GameConfig
-	Cache     *GameCache
-	Renderers *GameRenderers
+	Cache     *Cache
+	Renderers *Renderers
 	Screen    *display.Screen
 	View      *display.View
 	Time      *Time
 }
 
-type GameCache struct {
+type Cache struct {
 	Data   *data.Cache
 	Images *images.Cache
 }
 
-type GameRenderers struct {
+type Renderers struct {
 	Image uint64
 }

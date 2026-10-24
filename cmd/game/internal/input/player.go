@@ -21,16 +21,16 @@ func UpdatePlayer(dt float64, entry *donburi.Entry, w world.World) error {
 	// Movement
 	var dx, dy float64
 	if ebiten.IsKeyPressed(ebiten.KeyA) {
-		dx -= 1
+		dx--
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyD) {
-		dx += 1
+		dx++
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyW) {
-		dy -= 1
+		dy--
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyS) {
-		dy += 1
+		dy++
 	}
 
 	// This goes in late update, put here for now

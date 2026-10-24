@@ -22,7 +22,7 @@ func (n *noopUpdate) Update() error {
 
 type noopDraw struct{}
 
-func (n *noopDraw) Draw(target *ebiten.Image) error {
+func (n *noopDraw) Draw(*ebiten.Image) error {
 	return nil
 }
 

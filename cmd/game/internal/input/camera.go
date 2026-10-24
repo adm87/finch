@@ -22,10 +22,10 @@ func UpdateCamera(dt float64, c *donburi.Entry) {
 	sx, sy := t.Scale()
 	zoom := 0.0
 	if ebiten.IsKeyPressed(ebiten.KeyUp) {
-		zoom -= 1
+		zoom--
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyDown) {
-		zoom += 1
+		zoom++
 	}
 	if zoom != 0 {
 		f := math.Pow(camZoomRate, zoom*dt*60)

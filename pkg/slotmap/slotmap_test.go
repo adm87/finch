@@ -240,7 +240,7 @@ func BenchmarkSlotMap(b *testing.B) {
 			b.ResetTimer()
 			sum := 0
 			for range b.N {
-				sm.Range(func(k slotmap.K, v int) bool {
+				sm.Range(func(_ slotmap.K, v int) bool {
 					sum += v
 					return true
 				})
@@ -271,7 +271,7 @@ func BenchmarkSlotMap(b *testing.B) {
 			b.ResetTimer()
 			sum := 0
 			for range b.N {
-				sm.Range(func(k slotmap.K, v int) bool {
+				sm.Range(func(_ slotmap.K, v int) bool {
 					sum += v
 					return false
 				})
