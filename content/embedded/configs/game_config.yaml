@@ -1,17 +1,18 @@
-fps: 60
+application:
+  title: "Finch"
+  tick_rate: 60
 
-window:
-  width: 1280
-  height: 720
-  fullscreen: false
+  screen:
+    width: 1280
+    height: 720
+    fullscreen: false
+
+  # Bundles loaded when the game starts. They stay loaded for the whole game.
+  bundles:
+    - filesystem: embedded
+      assets:
+        - embedded/configs/aseprite_config.yaml
+        - embedded/images/default_10x10.png
 
 rendering:
   clear_color: "#6495EDFF"
-
-# Resource bundles that will be loaded when the game starts.
-# These assets are loaded once and remain available throughout the game.
-static_content:
-  - filesystem: embedded
-    assets: 
-      - embedded/configs/aseprite_config.yaml
-      - embedded/images/default_10x10.png

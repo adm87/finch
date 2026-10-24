@@ -9,11 +9,7 @@ import (
 	"github.com/adm87/finch/pkg/transform"
 )
 
-const (
-	camMoveSpeed = 300.0
-	camRotSpeed  = 3.0
-	camZoomRate  = 1.05
-)
+const camZoomRate = 1.05
 
 func UpdateCamera(dt float64, c *donburi.Entry) {
 	t := transform.TransformComponent.Get(c)

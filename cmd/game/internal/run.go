@@ -1,13 +1,11 @@
 package internal
 
 import (
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/yohamta/donburi"
 	"gopkg.in/yaml.v3"
 
 	"github.com/adm87/finch/cmd/game/internal/camera"
@@ -29,7 +27,7 @@ import (
 	"github.com/adm87/finch/pkg/world"
 )
 
-const resourceHandle = "resource handle"
+const playerLibrary = "captain"
 
 func Boot() error {
 	return boot(logger.NewLogger(os.Stdout, loggerOptions).Named("finch"))
@@ -48,21 +46,17 @@ func boot(l logger.Logger) error {
 	}
 	g.Config = cfg
 
-	app, err := application.New(&application.Config{Screen: cfg.Window})
+	fileSystems, err := gameFileSystems()
+	if err != nil {
+		return err
+	}
+
+	app, err := application.New(&cfg.Application, fileSystems)
 	if err != nil {
 		return fmt.Errorf("create application: %w", err)
 	}
 	g.App = app
 
-	if err := registerFileSystem(app.Assets(), content.EmbeddedFS); err != nil {
-		return err
-	}
-	if err := registerFileSystem(app.Assets(), content.AssetsFS); err != nil {
-		return err
-	}
-	if err := cfg.StaticContent.Load(app.Assets()); err != nil {
-		return fmt.Errorf("load static content: %w", err)
-	}
 	if err := initializeAseprite(&g, l); err != nil {
 		return fmt.Errorf("initialize aseprite: %w", err)
 	}
@@ -70,22 +64,23 @@ func boot(l logger.Logger) error {
 	return run(&g, l)
 }
 
-func registerFileSystem(as *assets.Assets, id content.FileSystemID) error {
-	fsys, err := content.GetFileSystem(id)
-	if err != nil {
-		return errs.NotFound("file system", id.String()).Wrap(err)
+func gameFileSystems() (map[assets.FileSystem]fs.FS, error) {
+	fileSystems := make(map[assets.FileSystem]fs.FS)
+	for _, id := range []content.FileSystemID{content.EmbeddedFS, content.AssetsFS} {
+		fsys, err := content.GetFileSystem(id)
+		if err != nil {
+			return nil, err
+		}
+		fileSystems[assets.FileSystem(id)] = fsys
 	}
-	if err := as.RegisterFileSystem(assets.FileSystem(id), fsys); err != nil {
-		return errs.InvalidOperation(fmt.Sprintf("register file system %q", id)).Wrap(err)
-	}
-	return nil
+	return fileSystems, nil
 }
 
 // loadGameConfig skips the asset system because the config sizes the application that owns it.
 func loadGameConfig() (*config.GameConfig, error) {
 	fsys, err := content.GetFileSystem(content.EmbeddedFS)
 	if err != nil {
-		return nil, errs.NotFound("file system", content.EmbeddedFS.String()).Wrap(err)
+		return nil, err
 	}
 
 	raw, err := fs.ReadFile(fsys, content.GameConfig)
@@ -93,25 +88,23 @@ func loadGameConfig() (*config.GameConfig, error) {
 		return nil, fmt.Errorf("read %q: %w", content.GameConfig, err)
 	}
 
-	var cfg config.GameConfig
-	if err := yaml.Unmarshal(raw, &cfg); err != nil {
+	cfg, err := config.Parse(raw)
+	if err != nil {
 		return nil, errs.Format(content.GameConfig, "invalid yaml").Wrap(err)
 	}
-	if err := validateGameConfig(&cfg); err != nil {
-		return nil, err
-	}
-	return &cfg, nil
+	return cfg, nil
 }
 
 func initializeAseprite(g *game.Game, logger logger.Logger) error {
+	cache := g.App.Cache()
+
 	handle, err := g.App.Assets().Handle(content.AsepriteConfig)
 	if err != nil {
-		return errs.NotFound(resourceHandle, content.AsepriteConfig).Wrap(err)
+		return err
 	}
-
-	raw, err := g.App.Cache().Data().Get(data.Handle(handle))
+	raw, err := cache.Data().Get(data.Handle(handle))
 	if err != nil {
-		return errs.NotFound("cached data", content.AsepriteConfig).Wrap(err)
+		return err
 	}
 
 	var aseConfig aseprite.Config
@@ -119,10 +112,9 @@ func initializeAseprite(g *game.Game, logger logger.Logger) error {
 		return errs.Format(content.AsepriteConfig, "invalid yaml").Wrap(err)
 	}
 
-	cache := g.App.Cache()
 	ase, err := aseprite.New(g.App.Assets(), logger, cache.Data(), cache.Images(), &aseConfig)
 	if err != nil {
-		return errs.InvalidOperation("initialize aseprite").Wrap(err)
+		return err
 	}
 
 	g.Aseprite = ase
@@ -142,13 +134,6 @@ func initializeGameRenderers(g *game.Game, rp *rendering.Pipeline) error {
 	return nil
 }
 
-func validateGameConfig(cfg *config.GameConfig) error {
-	return errors.Join(
-		errs.CheckRange("window.width", cfg.Window.Width, 1, 16384),
-		errs.CheckRange("window.height", cfg.Window.Height, 1, 16384),
-	)
-}
-
 func run(g *game.Game, l logger.Logger) error {
 	w := world.NewWorld()
 
@@ -157,19 +142,11 @@ func run(g *game.Game, l logger.Logger) error {
 		return err
 	}
 
-	g.Time = game.NewTime(g.Config.FPS)
-
-	gu := game.NewUpdater(g.Time)
-	if err := initializeFrameSchedule(g, w, gu); err != nil {
-		return err
-	}
-
 	if err := makeTestScene(g, w); err != nil {
-		return fmt.Errorf("create test renderables: %w", err)
+		return fmt.Errorf("create test scene: %w", err)
 	}
 
-	return engine.Run(g.App,
-		engine.WithUpdater(gu),
+	opts := append(gameSystems(g, w),
 		engine.WithDrawer(engine.DrawerFunc(func(target *ebiten.Image, _ *application.Application) error {
 			return rp.Draw(target)
 		})),
@@ -178,6 +155,7 @@ func run(g *game.Game, l logger.Logger) error {
 		engine.WithResizeMode(ebiten.WindowResizingModeEnabled),
 		engine.WithLogger(l),
 	)
+	return engine.Run(g.App, opts...)
 }
 
 func makeTestScene(g *game.Game, w *world.World) error {
@@ -187,19 +165,19 @@ func makeTestScene(g *game.Game, w *world.World) error {
 	)
 	g.App.View().SetCamera(c)
 
-	libraryID, err := g.Aseprite.CreateLibrary("captain", aseprite.LoadModeDynamic)
+	libraryID, err := g.Aseprite.CreateLibrary(playerLibrary, aseprite.LoadModeDynamic)
 	if err != nil {
-		return fmt.Errorf("create aseprite library: %w", err)
+		return fmt.Errorf("create library %q: %w", playerLibrary, err)
 	}
 
 	library, err := g.Aseprite.Library(libraryID)
 	if err != nil {
-		return fmt.Errorf("get aseprite image handle: %w", err)
+		return fmt.Errorf("library %q: %w", playerLibrary, err)
 	}
 
 	frame, err := g.App.Cache().Images().Frame(library.ImageHandle, 0)
 	if err != nil {
-		return errs.NotFound("image", content.DefaultImage10x10).Wrap(err)
+		return fmt.Errorf("first frame of %q: %w", playerLibrary, err)
 	}
 
 	width := float64(frame.Size.X)
@@ -217,46 +195,22 @@ func makeTestScene(g *game.Game, w *world.World) error {
 		player.Player,
 	)
 
-	r, rOk := rendering.GetRenderer(entry)
-	i, iOk := images.GetImage(entry)
-	b, bOk := transform.GetBounds(entry)
-	a, aOk := aseprite.GetAnimator(entry)
+	rendering.RendererComponent.Get(entry).SetID(g.Renderers.Image)
 
-	if !rOk {
-		return missingComponent(entry.Entity(), "renderer")
-	}
-	if !iOk {
-		return missingComponent(entry.Entity(), "image")
-	}
-	if !bOk {
-		return missingComponent(entry.Entity(), "bounds")
-	}
-	if !aOk {
-		return missingComponent(entry.Entity(), "aseprite animator")
-	}
+	img := images.ImageComponent.Get(entry)
+	img.SetHandle(library.ImageHandle)
+	img.SetAnchor(ax, ay)
 
-	r.SetID(g.Renderers.Image)
-
-	i.SetHandle(library.ImageHandle)
-	i.SetAnchor(ax, ay)
-
-	b.SetRect(geom.Rect{
+	transform.BoundsComponent.Get(entry).SetRect(geom.Rect{
 		X:      -width * ax,
 		Y:      -height * ay,
 		Width:  width,
 		Height: height,
 	})
 
-	a.SetLibrary(libraryID)
-	a.SetAnimation("Idle")
+	anim := aseprite.AnimatorComponent.Get(entry)
+	anim.SetLibrary(libraryID)
+	anim.SetAnimation("Idle")
 
-	if err := w.Add(entry); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func missingComponent(entity donburi.Entity, component string) error {
-	return errs.InvalidOperation(fmt.Sprintf("entity %v: missing %s component", entity, component))
+	return w.Add(entry)
 }
