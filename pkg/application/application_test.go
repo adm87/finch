@@ -15,10 +15,11 @@ import (
 	"github.com/adm87/finch/pkg/data"
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/images"
+	"github.com/adm87/finch/pkg/logger"
 )
 
 func TestNewWithNilConfigUsesDefaults(t *testing.T) {
-	app, err := application.New(nil)
+	app, err := application.New(nil, logger.N)
 	require.NoError(t, err)
 	require.Equal(t, *application.DefaultConfig(), app.Config())
 
@@ -45,7 +46,7 @@ func TestNewRejectsInvalidConfig(t *testing.T) {
 			cfg := *application.DefaultConfig()
 			cfg.Screen.Width, cfg.Screen.Height = tc.width, tc.height
 			cfg.TickRate = tc.tickRate
-			app, err := application.New(&cfg)
+			app, err := application.New(&cfg, logger.N)
 			require.Nil(t, app)
 			require.ErrorIs(t, err, errs.ErrArgumentOutOfRange)
 		})
@@ -56,7 +57,7 @@ func TestNewCopiesConfig(t *testing.T) {
 	cfg := *application.DefaultConfig()
 	cfg.Screen.Width, cfg.Screen.Height = 320, 180
 
-	app, err := application.New(&cfg)
+	app, err := application.New(&cfg, logger.N)
 	require.NoError(t, err)
 
 	cfg.Screen.Width = 1920
@@ -68,7 +69,7 @@ func TestNewCopiesConfig(t *testing.T) {
 }
 
 func TestRegisterFileSystems(t *testing.T) {
-	app, err := application.New(nil)
+	app, err := application.New(nil, logger.N)
 	require.NoError(t, err)
 
 	fileSystems := testFileSystems(t)
@@ -97,7 +98,7 @@ func testFileSystems(t *testing.T) map[assets.FileSystem]fs.FS {
 func TestNewRegistersImporters(t *testing.T) {
 	fileSystems := testFileSystems(t)
 
-	app, err := application.New(nil)
+	app, err := application.New(nil, logger.N)
 	require.NoError(t, err)
 	require.NoError(t, app.RegisterFileSystems(fileSystems))
 	require.NoError(t, app.Assets().Load(fileSystems["test"], "sprite.png", "config.json"))
@@ -113,4 +114,10 @@ func TestNewRegistersImporters(t *testing.T) {
 	raw, err := app.Cache().Data().Get(data.Handle(dataHandle))
 	require.NoError(t, err)
 	require.JSONEq(t, `{"ok": true}`, string(raw))
+}
+
+func TestNewDefaultsNilLogger(t *testing.T) {
+	app, err := application.New(nil, nil)
+	require.NoError(t, err)
+	require.Equal(t, logger.N, app.Logger())
 }

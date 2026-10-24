@@ -10,9 +10,8 @@ import (
 )
 
 type GameConfig struct {
-	Application application.Config `yaml:"application"`
-	// Bundles are loaded at startup and stay loaded for the whole session.
-	Bundles []assets.AssetBundle `yaml:"bundles"`
+	Application application.Config   `yaml:"application"`
+	Bundles     []assets.AssetBundle `yaml:"bundles"`
 }
 
 // Parse decodes raw over the application's defaults. Unknown keys are errors.
@@ -21,8 +20,10 @@ func Parse(raw []byte) (*GameConfig, error) {
 
 	dec := yaml.NewDecoder(bytes.NewReader(raw))
 	dec.KnownFields(true)
+
 	if err := dec.Decode(&cfg); err != nil {
 		return nil, err
 	}
+
 	return &cfg, nil
 }
