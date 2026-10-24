@@ -113,8 +113,13 @@ func run(app *application.Application, p *plugins.Plugins, l logger.Logger) erro
 		return fmt.Errorf("create test scene: %w", err)
 	}
 	opts := append(gameSystems(p),
-		engine.WithOverlay(engine.DrawerFunc(debug.DrawDebugOverlay)),
-		engine.WithResizeMode(ebiten.WindowResizingModeEnabled),
+		engine.WithOverlayDrawers(
+			engine.DrawerFunc(debug.OverlayFPS),
+			engine.DrawerFunc(debug.OverlayZeroZero),
+		),
+		engine.WithResizeMode(
+			ebiten.WindowResizingModeEnabled,
+		),
 		engine.WithLogger(l),
 	)
 	return engine.Run(app, opts...)

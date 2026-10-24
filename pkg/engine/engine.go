@@ -1,6 +1,8 @@
 package engine
 
 import (
+	"errors"
+
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/adm87/finch/pkg/application"
@@ -19,6 +21,14 @@ func (f DrawerFunc) Draw(target *ebiten.Image, app *application.Application) err
 	return f(target, app)
 }
 
-func noopDraw(*ebiten.Image, *application.Application) error {
-	return nil
+type Drawers []Drawer
+
+func (d Drawers) Draw(target *ebiten.Image, app *application.Application) error {
+	var errList []error
+	for _, drawer := range d {
+		if err := drawer.Draw(target, app); err != nil {
+			errList = append(errList, err)
+		}
+	}
+	return errors.Join(errList...)
 }

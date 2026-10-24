@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-openapi/testify/require"
+	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/adm87/finch/pkg/application"
 	"github.com/adm87/finch/pkg/logger"
@@ -103,4 +104,46 @@ func TestShellStopsAtFirstError(t *testing.T) {
 	c, _ := newFakeClock(60)
 	require.ErrorIs(t, newShell(app, options, c).Update(), stop)
 	require.False(t, late)
+}
+
+func TestDrawersDrawInOrderAndReportEveryError(t *testing.T) {
+	var calls []string
+	errA, errB := errors.New("a failed"), errors.New("b failed")
+	drawer := func(name string, err error) Drawer {
+		return DrawerFunc(func(*ebiten.Image, *application.Application) error {
+			calls = append(calls, name)
+			return err
+		})
+	}
+
+	err := Drawers{drawer("a", errA), drawer("b", nil), drawer("c", errB)}.Draw(nil, nil)
+
+	require.Equal(t, []string{"a", "b", "c"}, calls)
+	require.ErrorIs(t, err, errA)
+	require.ErrorIs(t, err, errB)
+	require.NoError(t, Drawers(nil).Draw(nil, nil))
+}
+
+func TestShellDefaultsWorldDrawersWithoutChangingOptions(t *testing.T) {
+	app, err := application.New(nil, logger.N)
+	require.NoError(t, err)
+
+	options := DefaultRunOptions()
+	c, _ := newFakeClock(60)
+	sh := newShell(app, options, c)
+
+	require.Len(t, sh.worldDrawers, 1)
+	require.Empty(t, options.WorldDrawers)
+
+	drewCustom := false
+	custom := DrawerFunc(func(*ebiten.Image, *application.Application) error {
+		drewCustom = true
+		return nil
+	})
+	WithWorldDrawers(custom)(options)
+	sh = newShell(app, options, c)
+
+	require.NoError(t, sh.worldDrawers.Draw(nil, app))
+	require.True(t, drewCustom)
+	require.Len(t, sh.worldDrawers, 1)
 }
