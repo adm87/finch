@@ -13,7 +13,7 @@ import (
 	"github.com/adm87/finch/pkg/world"
 )
 
-func initializeFrameSchedule(g *game.Game, w world.World, gu *game.Updater) error {
+func initializeFrameSchedule(g *game.Game, w *world.World, gu *game.Updater) error {
 	var entries []*donburi.Entry
 
 	// Input

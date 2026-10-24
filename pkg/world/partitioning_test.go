@@ -602,7 +602,7 @@ func TestWorldQueryAndRangeOver(t *testing.T) {
 	if len(got) != 3 {
 		t.Fatalf("Query(region, dst) appended incorrectly: got %d, want 3", len(got))
 	}
-	if !containsEntity(ptHitSet(w.(*wrld).partitions, region), inA.Entity()) || !containsEntity(ptHitSet(w.(*wrld).partitions, region), inB.Entity()) {
+	if !containsEntity(ptHitSet(w.partitions, region), inA.Entity()) || !containsEntity(ptHitSet(w.partitions, region), inB.Entity()) {
 		t.Fatalf("unexpected query result set after append: %#v", got)
 	}
 

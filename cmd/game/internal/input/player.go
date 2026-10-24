@@ -15,7 +15,7 @@ const (
 	playerMoveSpeed = 100.0
 )
 
-func UpdatePlayer(dt float64, entry *donburi.Entry, w world.World) error {
+func UpdatePlayer(dt float64, entry *donburi.Entry, w *world.World) error {
 	t := transform.TransformComponent.Get(entry)
 
 	// Movement
