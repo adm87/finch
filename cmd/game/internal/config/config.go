@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/adm87/finch/pkg/application"
 	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/hexcolor"
 )
@@ -17,16 +18,10 @@ func (sc StaticContent) Load(as *assets.Assets) error {
 }
 
 type GameConfig struct {
-	StaticContent StaticContent   `yaml:"static_content"`
-	Window        WindowConfig    `yaml:"window"`
-	FPS           int             `yaml:"fps"`
-	Rendering     RenderingConfig `yaml:"rendering"`
-}
-
-type WindowConfig struct {
-	Width      int  `yaml:"width"`
-	Height     int  `yaml:"height"`
-	Fullscreen bool `yaml:"fullscreen"`
+	StaticContent StaticContent            `yaml:"static_content"`
+	Window        application.ScreenConfig `yaml:"window"`
+	FPS           int                      `yaml:"fps"`
+	Rendering     RenderingConfig          `yaml:"rendering"`
 }
 
 type RenderingConfig struct {

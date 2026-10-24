@@ -32,7 +32,7 @@ func initializeFrameSchedule(g *game.Game, w *world.World, gu *game.Updater) err
 
 	// Collect entries for processing
 	gu.AddLate(func(float64) error {
-		rect, _ := g.View.Viewport()
+		rect, _ := g.App.View().Viewport()
 		entries = w.Query(rect, entries[:0])
 		return nil
 	})

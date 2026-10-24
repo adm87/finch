@@ -1,21 +1,20 @@
 package engine
 
 import (
-	"github.com/adm87/finch/pkg/logger"
+	"image/color"
+
 	"github.com/hajimehoshi/ebiten/v2"
+
+	"github.com/adm87/finch/pkg/logger"
 )
 
 type RunOptions struct {
-	Update GameUpdate
-	Draw   GameDraw
-	Layout GameLayout
-
-	Logger logger.Logger
-
-	WindowWidth  int
-	WindowHeight int
-	Fullscreen   bool
-
+	Updater Updater
+	Drawer  Drawer
+	// Overlay draws over the window after the screen buffer, in window coordinates.
+	Overlay    Drawer
+	ClearColor color.Color
+	Logger     logger.Logger
 	ResizeMode ebiten.WindowResizingModeType
 }
 
@@ -23,51 +22,42 @@ type RunOption func(*RunOptions)
 
 func DefaultRunOptions() *RunOptions {
 	return &RunOptions{
-		Update:       &noopUpdate{},
-		Draw:         &noopDraw{},
-		Layout:       &noopLayout{},
-		Logger:       logger.N,
-		WindowWidth:  800,
-		WindowHeight: 600,
-		Fullscreen:   false,
-		ResizeMode:   ebiten.WindowResizingModeDisabled,
+		Updater:    UpdaterFunc(noopUpdate),
+		Drawer:     DrawerFunc(noopDraw),
+		Overlay:    DrawerFunc(noopDraw),
+		ClearColor: color.Black,
+		Logger:     logger.N,
+		ResizeMode: ebiten.WindowResizingModeDisabled,
 	}
 }
 
-func WithUpdate(update GameUpdate) RunOption {
+func WithUpdater(updater Updater) RunOption {
 	return func(ro *RunOptions) {
-		ro.Update = update
+		ro.Updater = updater
 	}
 }
 
-func WithDraw(draw GameDraw) RunOption {
+func WithDrawer(drawer Drawer) RunOption {
 	return func(ro *RunOptions) {
-		ro.Draw = draw
+		ro.Drawer = drawer
 	}
 }
 
-func WithLayout(layout GameLayout) RunOption {
+func WithOverlay(overlay Drawer) RunOption {
 	return func(ro *RunOptions) {
-		ro.Layout = layout
+		ro.Overlay = overlay
+	}
+}
+
+func WithClearColor(c color.Color) RunOption {
+	return func(ro *RunOptions) {
+		ro.ClearColor = c
 	}
 }
 
 func WithLogger(logger logger.Logger) RunOption {
 	return func(ro *RunOptions) {
 		ro.Logger = logger
-	}
-}
-
-func WithWindowSize(width, height int) RunOption {
-	return func(ro *RunOptions) {
-		ro.WindowWidth = width
-		ro.WindowHeight = height
-	}
-}
-
-func WithFullscreen(fullscreen bool) RunOption {
-	return func(ro *RunOptions) {
-		ro.Fullscreen = fullscreen
 	}
 }
 

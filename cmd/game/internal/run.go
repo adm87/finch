@@ -3,6 +3,7 @@ package internal
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -14,10 +15,10 @@ import (
 	"github.com/adm87/finch/cmd/game/internal/game"
 	"github.com/adm87/finch/cmd/game/internal/player"
 	"github.com/adm87/finch/content"
+	"github.com/adm87/finch/pkg/application"
 	"github.com/adm87/finch/pkg/aseprite"
 	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/data"
-	"github.com/adm87/finch/pkg/display"
 	"github.com/adm87/finch/pkg/engine"
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/geom"
@@ -40,45 +41,33 @@ func boot(l logger.Logger) error {
 	if err := content.InitializeFileSystems(); err != nil {
 		return fmt.Errorf("setup file systems: %w", err)
 	}
-	if err := initializeGameAssets(&g); err != nil {
-		return fmt.Errorf("initialize game assets: %w", err)
-	}
-	if err := loadGameConfig(&g); err != nil {
+
+	cfg, err := loadGameConfig()
+	if err != nil {
 		return fmt.Errorf("load game config: %w", err)
+	}
+	g.Config = cfg
+
+	app, err := application.New(&application.Config{Screen: cfg.Window})
+	if err != nil {
+		return fmt.Errorf("create application: %w", err)
+	}
+	g.App = app
+
+	if err := registerFileSystem(app.Assets(), content.EmbeddedFS); err != nil {
+		return err
+	}
+	if err := registerFileSystem(app.Assets(), content.AssetsFS); err != nil {
+		return err
+	}
+	if err := cfg.StaticContent.Load(app.Assets()); err != nil {
+		return fmt.Errorf("load static content: %w", err)
 	}
 	if err := initializeAseprite(&g, l); err != nil {
 		return fmt.Errorf("initialize aseprite: %w", err)
 	}
 
 	return run(&g, l)
-}
-
-func initializeGameAssets(g *game.Game) error {
-	g.Assets = assets.NewAssets()
-
-	if err := registerFileSystem(g.Assets, content.EmbeddedFS); err != nil {
-		return err
-	}
-	if err := registerFileSystem(g.Assets, content.AssetsFS); err != nil {
-		return err
-	}
-
-	dc := data.NewCache()
-	if err := g.Assets.RegisterImporter(data.NewImporter(dc), data.Types()); err != nil {
-		return &errs.InvalidOperationError{Message: "register data importer", Inner: err}
-	}
-
-	ic := images.NewCache()
-	if err := g.Assets.RegisterImporter(images.NewImporter(ic), images.Types()); err != nil {
-		return &errs.InvalidOperationError{Message: "register image importer", Inner: err}
-	}
-
-	g.Cache = &game.Cache{
-		Data:   dc,
-		Images: ic,
-	}
-
-	return nil
 }
 
 func registerFileSystem(as *assets.Assets, id content.FileSystemID) error {
@@ -92,54 +81,35 @@ func registerFileSystem(as *assets.Assets, id content.FileSystemID) error {
 	return nil
 }
 
-func loadGameConfig(g *game.Game) (err error) {
+// loadGameConfig skips the asset system because the config sizes the application that owns it.
+func loadGameConfig() (*config.GameConfig, error) {
 	fsys, err := content.GetFileSystem(content.EmbeddedFS)
 	if err != nil {
-		return errs.NotFound("file system", content.EmbeddedFS.String()).Wrap(err)
-	}
-	if err := g.Assets.Load(fsys, content.GameConfig); err != nil {
-		return fmt.Errorf("load %q: %w", content.GameConfig, err)
+		return nil, errs.NotFound("file system", content.EmbeddedFS.String()).Wrap(err)
 	}
 
-	defer func() {
-		if uerr := g.Assets.Unload(content.GameConfig); uerr != nil {
-			err = errors.Join(err, fmt.Errorf("unload %q: %w", content.GameConfig, uerr))
-		}
-	}()
-
-	handle, err := g.Assets.Handle(content.GameConfig)
+	raw, err := fs.ReadFile(fsys, content.GameConfig)
 	if err != nil {
-		return errs.NotFound(resourceHandle, content.GameConfig).Wrap(err)
-	}
-
-	raw, err := g.Cache.Data.Get(data.Handle(handle))
-	if err != nil {
-		return errs.NotFound("cached data", content.GameConfig).Wrap(err)
+		return nil, fmt.Errorf("read %q: %w", content.GameConfig, err)
 	}
 
 	var cfg config.GameConfig
 	if err := yaml.Unmarshal(raw, &cfg); err != nil {
-		return errs.Format(content.GameConfig, "invalid yaml").Wrap(err)
+		return nil, errs.Format(content.GameConfig, "invalid yaml").Wrap(err)
 	}
 	if err := validateGameConfig(&cfg); err != nil {
-		return err
+		return nil, err
 	}
-
-	if err := cfg.StaticContent.Load(g.Assets); err != nil {
-		return fmt.Errorf("load static content: %w", err)
-	}
-
-	g.Config = &cfg
-	return nil
+	return &cfg, nil
 }
 
 func initializeAseprite(g *game.Game, logger logger.Logger) error {
-	handle, err := g.Assets.Handle(content.AsepriteConfig)
+	handle, err := g.App.Assets().Handle(content.AsepriteConfig)
 	if err != nil {
 		return errs.NotFound(resourceHandle, content.AsepriteConfig).Wrap(err)
 	}
 
-	raw, err := g.Cache.Data.Get(data.Handle(handle))
+	raw, err := g.App.Cache().Data().Get(data.Handle(handle))
 	if err != nil {
 		return errs.NotFound("cached data", content.AsepriteConfig).Wrap(err)
 	}
@@ -149,7 +119,8 @@ func initializeAseprite(g *game.Game, logger logger.Logger) error {
 		return errs.Format(content.AsepriteConfig, "invalid yaml").Wrap(err)
 	}
 
-	ase, err := aseprite.New(g.Assets, logger, g.Cache.Data, g.Cache.Images, &aseConfig)
+	cache := g.App.Cache()
+	ase, err := aseprite.New(g.App.Assets(), logger, cache.Data(), cache.Images(), &aseConfig)
 	if err != nil {
 		return errs.InvalidOperation("initialize aseprite").Wrap(err)
 	}
@@ -159,7 +130,7 @@ func initializeAseprite(g *game.Game, logger logger.Logger) error {
 }
 
 func initializeGameRenderers(g *game.Game, rp *rendering.Pipeline) error {
-	ir, err := rp.RegisterRenderer(images.NewRenderer(g.Cache.Images))
+	ir, err := rp.RegisterRenderer(images.NewRenderer(g.App.Cache().Images()))
 	if err != nil {
 		return errs.InvalidOperation("register image renderer").Wrap(err)
 	}
@@ -181,13 +152,7 @@ func validateGameConfig(cfg *config.GameConfig) error {
 func run(g *game.Game, l logger.Logger) error {
 	w := world.NewWorld()
 
-	g.Screen = display.NewScreen(
-		g.Config.Window.Width,
-		g.Config.Window.Height,
-	)
-	g.View = display.NewViewport(g.Screen)
-
-	rp := rendering.NewPipeline(g.View, w)
+	rp := rendering.NewPipeline(g.App.View(), w)
 	if err := initializeGameRenderers(g, rp); err != nil {
 		return err
 	}
@@ -203,26 +168,14 @@ func run(g *game.Game, l logger.Logger) error {
 		return fmt.Errorf("create test renderables: %w", err)
 	}
 
-	return engine.Run(
-		engine.WithUpdate(gu),
-		engine.WithDraw(
-			game.NewDrawer(rp, g.Screen, g.View,
-				game.WithClearColor(
-					g.Config.Rendering.ClearColor,
-				),
-			),
-		),
-		engine.WithLayout(g.Screen),
-		engine.WithWindowSize(
-			g.Config.Window.Width,
-			g.Config.Window.Height,
-		),
-		engine.WithResizeMode(
-			ebiten.WindowResizingModeEnabled,
-		),
-		engine.WithFullscreen(
-			g.Config.Window.Fullscreen,
-		),
+	return engine.Run(g.App,
+		engine.WithUpdater(gu),
+		engine.WithDrawer(engine.DrawerFunc(func(target *ebiten.Image, _ *application.Application) error {
+			return rp.Draw(target)
+		})),
+		engine.WithOverlay(engine.DrawerFunc(game.DrawDebugOverlay)),
+		engine.WithClearColor(g.Config.Rendering.ClearColor.ToRGBA()),
+		engine.WithResizeMode(ebiten.WindowResizingModeEnabled),
 		engine.WithLogger(l),
 	)
 }
@@ -232,7 +185,7 @@ func makeTestScene(g *game.Game, w *world.World) error {
 		camera.MainCamera,
 		world.DontPartition,
 	)
-	g.View.SetCamera(c)
+	g.App.View().SetCamera(c)
 
 	libraryID, err := g.Aseprite.CreateLibrary("captain", aseprite.LoadModeDynamic)
 	if err != nil {
@@ -244,7 +197,7 @@ func makeTestScene(g *game.Game, w *world.World) error {
 		return fmt.Errorf("get aseprite image handle: %w", err)
 	}
 
-	frame, err := g.Cache.Images.Frame(library.ImageHandle, 0)
+	frame, err := g.App.Cache().Images().Frame(library.ImageHandle, 0)
 	if err != nil {
 		return errs.NotFound("image", content.DefaultImage10x10).Wrap(err)
 	}
