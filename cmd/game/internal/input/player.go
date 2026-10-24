@@ -6,9 +6,9 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 
-	"github.com/adm87/finch/pkg/aseprite"
 	"github.com/adm87/finch/pkg/transform"
 	"github.com/adm87/finch/pkg/world"
+	"github.com/adm87/finch/plugins/aseprite"
 )
 
 const (

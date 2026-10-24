@@ -7,9 +7,9 @@ import (
 
 	"github.com/go-openapi/testify/require"
 
-	"github.com/adm87/finch/pkg/aseprite"
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/images"
+	"github.com/adm87/finch/plugins/aseprite"
 )
 
 func TestFramesUnmarshalArray(t *testing.T) {
