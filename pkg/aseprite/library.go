@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"sync"
 
 	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/data"
@@ -56,7 +55,6 @@ type Libraries struct {
 	libraries  *slotmap.SlotMap[LibraryInfo]
 	config     *Config
 	libsByName map[string]LibraryID
-	mu         sync.Mutex
 }
 
 func New(as *assets.Assets, log logger.Logger, dc *data.Cache, ic *images.Cache, config *Config) (*Libraries, error) {
@@ -93,9 +91,6 @@ func New(as *assets.Assets, log logger.Logger, dc *data.Cache, ic *images.Cache,
 }
 
 func (l *Libraries) CreateLibrary(name string, mode LoadMode) (LibraryID, error) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
 	if id, exists := l.libsByName[name]; exists {
 		return id, nil
 	}
@@ -141,9 +136,6 @@ func (l *Libraries) CreateLibrary(name string, mode LoadMode) (LibraryID, error)
 }
 
 func (l *Libraries) ClearLibrary(name string, mode UnloadMode) error {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
 	id, exists := l.libsByName[name]
 	if !exists {
 		return errs.NotFound(libraryKind, name)
@@ -170,9 +162,6 @@ func (l *Libraries) ClearLibrary(name string, mode UnloadMode) error {
 }
 
 func (l *Libraries) Library(id LibraryID) (LibraryInfo, error) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
 	info, err := l.libraries.Get(slotmap.Unpack(uint64(id)))
 	if err != nil {
 		return LibraryInfo{}, errs.NotFound(libraryKind, strconv.FormatUint(uint64(id), 10)).Wrap(err)

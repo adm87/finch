@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/fs"
 	"slices"
-	"sync"
 
 	"github.com/adm87/finch/pkg/errs"
 )
@@ -25,7 +24,6 @@ type Assets struct {
 	importers   map[string]Importer
 	filesystems map[FileSystem]fs.FS
 	handles     map[Asset]Handle
-	mu          sync.Mutex
 }
 
 func NewAssets() *Assets {
@@ -38,9 +36,6 @@ func NewAssets() *Assets {
 
 // Handle returns a NotFoundError if the asset isn't loaded.
 func (a *Assets) Handle(asset Asset) (Handle, error) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
 	handle, exists := a.handles[asset]
 	if !exists {
 		return 0, errs.NotFound("asset", asset.String())
@@ -50,9 +45,6 @@ func (a *Assets) Handle(asset Asset) (Handle, error) {
 }
 
 func (a *Assets) FileSystem(name FileSystem) (fs.FS, error) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
 	fsys, exists := a.filesystems[name]
 	if !exists {
 		return nil, errs.NotFound("file system", string(name))
@@ -73,9 +65,6 @@ func (a *Assets) RegisterImporter(importer Importer, assetTypes []string) error 
 		}
 	}
 
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
 	for i, normalized := range types {
 		if _, exists := a.importers[normalized]; exists || slices.Contains(types[:i], normalized) {
 			return errs.AlreadyExists("importer", normalized)
@@ -93,9 +82,6 @@ func (a *Assets) RegisterFileSystem(name FileSystem, filesystem fs.FS) error {
 	if filesystem == nil {
 		return errs.ArgumentNil("filesystem")
 	}
-
-	a.mu.Lock()
-	defer a.mu.Unlock()
 
 	if _, exists := a.filesystems[name]; exists {
 		return errs.AlreadyExists("file system", string(name))
@@ -140,9 +126,6 @@ func (a *Assets) run(batch []Asset, operation func(Asset) error) error {
 func (a *Assets) load(fsys fs.FS, asset Asset) error {
 	name := asset.String()
 
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
 	if _, loaded := a.handles[asset]; loaded {
 		return errs.AlreadyExists("asset", name)
 	}
@@ -169,20 +152,15 @@ func (a *Assets) load(fsys fs.FS, asset Asset) error {
 }
 
 func (a *Assets) unload(asset Asset) error {
-	a.mu.Lock()
-	importer, hasImporter := a.importers[asset.Type()]
 	handle, loaded := a.handles[asset]
-	if loaded && hasImporter {
-		delete(a.handles, asset)
-	}
-	a.mu.Unlock()
-
 	if !loaded {
 		return errs.NotFound("asset", asset.String())
 	}
-	if !hasImporter {
+	importer, ok := a.importers[asset.Type()]
+	if !ok {
 		return errs.NotFound("importer", asset.Type())
 	}
+	delete(a.handles, asset)
 
 	if err := importer.Delete(handle); err != nil {
 		return fmt.Errorf("unload %q: %w", asset, err)
