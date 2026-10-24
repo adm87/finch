@@ -227,7 +227,7 @@ func run(g *game.Game, l logger.Logger) error {
 	)
 }
 
-func makeTestScene(g *game.Game, w world.World) error {
+func makeTestScene(g *game.Game, w *world.World) error {
 	c := w.Create(
 		camera.MainCamera,
 		world.DontPartition,
