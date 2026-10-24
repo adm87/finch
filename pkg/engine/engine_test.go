@@ -8,6 +8,7 @@ import (
 	"github.com/go-openapi/testify/require"
 
 	"github.com/adm87/finch/pkg/application"
+	"github.com/adm87/finch/pkg/logger"
 )
 
 type fakeTime struct{ t time.Time }
@@ -62,7 +63,7 @@ func TestClockCapsLongAndBackwardsGaps(t *testing.T) {
 }
 
 func TestShellRunsPhasesInOrder(t *testing.T) {
-	app, err := application.New(nil)
+	app, err := application.New(nil, logger.N)
 	require.NoError(t, err)
 
 	var calls []string
@@ -89,7 +90,7 @@ func TestShellRunsPhasesInOrder(t *testing.T) {
 }
 
 func TestShellStopsAtFirstError(t *testing.T) {
-	app, err := application.New(nil)
+	app, err := application.New(nil, logger.N)
 	require.NoError(t, err)
 
 	stop := errors.New("stop")

@@ -6,16 +6,15 @@ import (
 	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"gopkg.in/yaml.v3"
 
 	"github.com/adm87/finch/cmd/game/internal/camera"
 	"github.com/adm87/finch/cmd/game/internal/config"
 	"github.com/adm87/finch/cmd/game/internal/game"
 	"github.com/adm87/finch/cmd/game/internal/player"
+	"github.com/adm87/finch/cmd/game/internal/plugins"
 	"github.com/adm87/finch/content"
 	"github.com/adm87/finch/pkg/application"
 	"github.com/adm87/finch/pkg/assets"
-	"github.com/adm87/finch/pkg/data"
 	"github.com/adm87/finch/pkg/engine"
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/geom"
@@ -37,23 +36,22 @@ func Boot() error {
 }
 
 func boot(l logger.Logger) error {
-	var g game.Game
-
 	cfg, err := loadGameConfig()
 	if err != nil {
 		return fmt.Errorf("load game config: %w", err)
 	}
 
-	app, err := initializeApplication(cfg)
+	app, err := initializeApplication(cfg, l)
 	if err != nil {
 		return fmt.Errorf("initialize application: %w", err)
 	}
 
-	if err := initializeAseprite(&g, app, l); err != nil {
-		return fmt.Errorf("initialize aseprite: %w", err)
+	p, err := plugins.New(app, l)
+	if err != nil {
+		return fmt.Errorf("initialize plugins: %w", err)
 	}
 
-	return run(&g, app, l)
+	return run(app, p, l)
 }
 
 // loadGameConfig skips the asset system because the config sizes the application that owns it.
@@ -75,13 +73,13 @@ func loadGameConfig() (*config.GameConfig, error) {
 	return cfg, nil
 }
 
-func initializeApplication(cfg *config.GameConfig) (*application.Application, error) {
+func initializeApplication(cfg *config.GameConfig, logger logger.Logger) (*application.Application, error) {
 	fileSystems, err := gameFileSystems()
 	if err != nil {
 		return nil, fmt.Errorf("initialize game file systems: %w", err)
 	}
 
-	app, err := application.New(&cfg.Application)
+	app, err := application.New(&cfg.Application, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create application: %w", err)
 	}
@@ -110,38 +108,11 @@ func gameFileSystems() (map[assets.FileSystem]fs.FS, error) {
 	return fileSystems, nil
 }
 
-func initializeAseprite(g *game.Game, app *application.Application, logger logger.Logger) error {
-	cache := app.Cache()
-
-	handle, err := app.Assets().Handle(content.AsepriteConfig)
-	if err != nil {
-		return err
-	}
-	raw, err := cache.Data().Get(data.Handle(handle))
-	if err != nil {
-		return err
-	}
-
-	var aseConfig aseprite.Config
-	if err := yaml.Unmarshal(raw, &aseConfig); err != nil {
-		return errs.Format(content.AsepriteConfig, "invalid yaml").Wrap(err)
-	}
-
-	ase, err := aseprite.New(app.Assets(), logger, cache.Data(), cache.Images(), &aseConfig)
-	if err != nil {
-		return err
-	}
-
-	g.Aseprite = ase
-	return nil
-}
-
-func run(g *game.Game, app *application.Application, l logger.Logger) error {
-	if err := makeTestScene(g, app); err != nil {
+func run(app *application.Application, p *plugins.Plugins, l logger.Logger) error {
+	if err := makeTestScene(app, p); err != nil {
 		return fmt.Errorf("create test scene: %w", err)
 	}
-
-	opts := append(gameSystems(g),
+	opts := append(gameSystems(p),
 		engine.WithOverlay(engine.DrawerFunc(game.DrawDebugOverlay)),
 		engine.WithResizeMode(ebiten.WindowResizingModeEnabled),
 		engine.WithLogger(l),
@@ -149,7 +120,7 @@ func run(g *game.Game, app *application.Application, l logger.Logger) error {
 	return engine.Run(app, opts...)
 }
 
-func makeTestScene(g *game.Game, app *application.Application) error {
+func makeTestScene(app *application.Application, p *plugins.Plugins) error {
 	w := app.World()
 
 	c := w.Create(
@@ -158,12 +129,12 @@ func makeTestScene(g *game.Game, app *application.Application) error {
 	)
 	app.View().SetCamera(c)
 
-	libraryID, err := g.Aseprite.CreateLibrary(playerLibrary, aseprite.LoadModeDynamic)
+	libraryID, err := p.Aseprite.CreateLibrary(playerLibrary, aseprite.LoadModeDynamic)
 	if err != nil {
 		return fmt.Errorf("create library %q: %w", playerLibrary, err)
 	}
 
-	library, err := g.Aseprite.Library(libraryID)
+	library, err := p.Aseprite.Library(libraryID)
 	if err != nil {
 		return fmt.Errorf("library %q: %w", playerLibrary, err)
 	}

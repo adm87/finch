@@ -5,6 +5,7 @@ import (
 
 	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/display"
+	"github.com/adm87/finch/pkg/logger"
 	"github.com/adm87/finch/pkg/rendering"
 	"github.com/adm87/finch/pkg/world"
 )
@@ -18,15 +19,20 @@ type Application struct {
 	renderPipeline *rendering.Pipeline
 	world          *world.World
 	config         *Config
+	logger         logger.Logger
 }
 
-func New(config *Config) (*Application, error) {
+// New uses DefaultConfig when config is nil and a no-op logger when log is nil.
+func New(config *Config, log logger.Logger) (*Application, error) {
 	cfg := *DefaultConfig()
 	if config != nil {
 		cfg = *config
 	}
 	if err := cfg.Validate(); err != nil {
 		return nil, err
+	}
+	if log == nil {
+		log = logger.N
 	}
 
 	as := assets.NewAssets()
@@ -56,11 +62,16 @@ func New(config *Config) (*Application, error) {
 		renderPipeline: renderPipeline,
 		view:           view,
 		world:          world,
+		logger:         log,
 	}, nil
 }
 
 func (a *Application) Config() Config {
 	return *a.config
+}
+
+func (a *Application) Logger() logger.Logger {
+	return a.logger
 }
 
 func (a *Application) Cache() *Cache {

@@ -6,15 +6,15 @@ import (
 	"github.com/yohamta/donburi"
 
 	"github.com/adm87/finch/cmd/game/internal/camera"
-	"github.com/adm87/finch/cmd/game/internal/game"
 	"github.com/adm87/finch/cmd/game/internal/input"
 	"github.com/adm87/finch/cmd/game/internal/player"
+	"github.com/adm87/finch/cmd/game/internal/plugins"
 	"github.com/adm87/finch/pkg/application"
 	"github.com/adm87/finch/pkg/engine"
 	"github.com/adm87/finch/plugins/aseprite"
 )
 
-func gameSystems(g *game.Game) []engine.RunOption {
+func gameSystems(p *plugins.Plugins) []engine.RunOption {
 	var entries []*donburi.Entry
 
 	handleInput := func(app *application.Application, dt float64) error {
@@ -38,7 +38,7 @@ func gameSystems(g *game.Game) []engine.RunOption {
 	}
 
 	animate := func(_ *application.Application, dt float64) error {
-		return aseprite.AdvanceAnimations(dt, g.Aseprite, entries)
+		return aseprite.AdvanceAnimations(dt, p.Aseprite, entries)
 	}
 
 	followPlayer := func(app *application.Application, dt float64) error {
