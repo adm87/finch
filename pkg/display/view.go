@@ -63,7 +63,7 @@ func (v *View) WorldToScreen(worldX, worldY float64) (screenX, screenY float64) 
 	}
 
 	_, geoM := v.Viewport()
-	return v.screen.SafeAreaToScreen(geoM.Apply(worldX, worldY))
+	return v.screen.BufferToWindow(geoM.Apply(worldX, worldY))
 }
 
 func (v *View) ScreenToWorld(screenX, screenY float64) (worldX, worldY float64) {
@@ -78,7 +78,7 @@ func (v *View) ScreenToWorld(screenX, screenY float64) (worldX, worldY float64) 
 
 	v.refresh(t)
 	geoM := t.GeoM()
-	return geoM.Apply(v.screen.ScreenToSafeArea(screenX, screenY))
+	return geoM.Apply(v.screen.WindowToBuffer(screenX, screenY))
 }
 
 func (v *View) refresh(t *transform.Transform) geom.Rect {

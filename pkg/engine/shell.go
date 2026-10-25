@@ -2,6 +2,7 @@ package engine
 
 import (
 	"image/color"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -102,6 +103,12 @@ func (sh *shell) Draw(target *ebiten.Image) {
 	}
 }
 
+// Layout isn't called since LayoutF exists, but ebiten.Game needs it.
 func (sh *shell) Layout(outsideWidth, outsideHeight int) (int, int) {
+	w, h := sh.LayoutF(float64(outsideWidth), float64(outsideHeight))
+	return int(math.Ceil(w)), int(math.Ceil(h))
+}
+
+func (sh *shell) LayoutF(outsideWidth, outsideHeight float64) (float64, float64) {
 	return sh.app.Screen().Layout(outsideWidth, outsideHeight)
 }

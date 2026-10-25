@@ -234,9 +234,9 @@ func TestShellGivesOverlaysTheWindowMatrix(t *testing.T) {
 	app, err := application.New(&cfg, logger.N)
 	require.NoError(t, err)
 
-	app.Screen().Layout(400, 180)
-	safeArea := app.Screen().SafeArea()
-	require.NotZero(t, safeArea.Y)
+	app.Screen().Fit(1280, 800)
+	require.NotZero(t, app.Screen().SafeArea().X)
+	require.NotEqual(t, 1.0, app.Screen().Scale())
 
 	camera := app.World().Create(world.DontPartition)
 	transform.TransformComponent.Get(camera).SetPosition(50, -20)
@@ -254,12 +254,13 @@ func TestShellGivesOverlaysTheWindowMatrix(t *testing.T) {
 	}))(options)
 
 	c, _ := newFakeClock(60)
-	newShell(app, *DefaultConfig(), options, c).Draw(ebiten.NewImage(400, 180))
+	newShell(app, *DefaultConfig(), options, c).Draw(ebiten.NewImage(1280, 800))
 
 	bx, by := worldMatrix.Apply(10, 20)
+	wantX, wantY := app.Screen().BufferToWindow(bx, by)
 	wx, wy := overlayMatrix.Apply(10, 20)
-	require.InDelta(t, bx-safeArea.X, wx, 1e-9)
-	require.InDelta(t, by-safeArea.Y, wy, 1e-9)
+	require.InDelta(t, wantX, wx, 1e-9)
+	require.InDelta(t, wantY, wy, 1e-9)
 }
 
 func TestShellWithoutCameraStillRunsOverlays(t *testing.T) {
