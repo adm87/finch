@@ -10,10 +10,18 @@ import (
 	"github.com/adm87/finch/pkg/errs"
 )
 
-// Run sets up the window from the app's config and runs the game loop.
-func Run(app *application.Application, opts ...RunOption) error {
+// Run sets up the window and runs the game loop. A nil config uses DefaultConfig.
+func Run(app *application.Application, config *Config, opts ...RunOption) error {
 	if app == nil {
 		return errs.ArgumentNil("app")
+	}
+
+	cfg := *DefaultConfig()
+	if config != nil {
+		cfg = *config
+	}
+	if err := cfg.Validate(); err != nil {
+		return err
 	}
 
 	options := DefaultRunOptions()
@@ -25,14 +33,18 @@ func Run(app *application.Application, opts ...RunOption) error {
 		return err
 	}
 
-	cfg := app.Config()
+	resizing := ebiten.WindowResizingModeDisabled
+	if cfg.Window.Resizable {
+		resizing = ebiten.WindowResizingModeEnabled
+	}
+
 	ebiten.SetWindowTitle(cfg.Title)
-	ebiten.SetWindowSize(cfg.Screen.Width, cfg.Screen.Height)
-	ebiten.SetFullscreen(cfg.Screen.Fullscreen)
-	ebiten.SetWindowResizingMode(options.ResizeMode)
+	ebiten.SetWindowSize(cfg.Window.Width, cfg.Window.Height)
+	ebiten.SetFullscreen(cfg.Window.Fullscreen)
+	ebiten.SetWindowResizingMode(resizing)
 	ebiten.SetTPS(cfg.TickRate)
 
-	return ebiten.RunGame(newShell(app, options, newClock(cfg.TickRate, time.Now)))
+	return ebiten.RunGame(newShell(app, cfg, options, newClock(cfg.TickRate, time.Now)))
 }
 
 // start runs the startup functions in order.

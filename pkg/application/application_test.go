@@ -32,20 +32,17 @@ func TestNewRejectsInvalidConfig(t *testing.T) {
 	cases := []struct {
 		name          string
 		width, height int
-		tickRate      int
 	}{
-		{"zero size", 0, 0, 60},
-		{"zero width", 0, 600, 60},
-		{"negative height", 800, -1, 60},
-		{"larger than ebiten allows", 16385, 600, 60},
-		{"zero tick rate", 800, 600, 0},
+		{"zero size", 0, 0},
+		{"zero width", 0, 600},
+		{"negative height", 800, -1},
+		{"larger than ebiten allows", 16385, 600},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := *application.DefaultConfig()
 			cfg.Screen.Width, cfg.Screen.Height = tc.width, tc.height
-			cfg.TickRate = tc.tickRate
 			app, err := application.New(&cfg, logger.N)
 			require.Nil(t, app)
 			require.ErrorIs(t, err, errs.ErrArgumentOutOfRange)

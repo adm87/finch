@@ -1,12 +1,18 @@
+# The buffer the game draws into.
 application:
-  title: "Finch"
-  tick_rate: 60
-
   screen:
     width: 1280
     height: 720
+
+engine:
+  title: "Finch"
+  tick_rate: 60
+  clear_color: "#6495EDFF"
+  window:
+    width: 1280
+    height: 720
     fullscreen: false
-    clear_color: "#6495EDFF"
+    resizable: true
 
 # Bundles loaded when the game starts. They stay loaded for the whole session.
 bundles:

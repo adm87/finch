@@ -10,7 +10,9 @@ import (
 	"github.com/yohamta/donburi"
 
 	"github.com/adm87/finch/pkg/application"
+	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/geom"
+	"github.com/adm87/finch/pkg/hexcolor"
 	"github.com/adm87/finch/pkg/logger"
 	"github.com/adm87/finch/pkg/transform"
 	"github.com/adm87/finch/pkg/world"
@@ -86,7 +88,7 @@ func TestShellRunsPhasesInOrder(t *testing.T) {
 	WithLateUpdate(record("late"), record("late 2"))(options)
 
 	c, ft := newFakeClock(10)
-	sh := newShell(app, options, c)
+	sh := newShell(app, *DefaultConfig(), options, c)
 	c.tick()
 	ft.advance(200 * time.Millisecond)
 
@@ -106,7 +108,7 @@ func TestShellStopsAtFirstError(t *testing.T) {
 	WithLateUpdate(func(*application.Application, float64) error { late = true; return nil })(options)
 
 	c, _ := newFakeClock(60)
-	require.ErrorIs(t, newShell(app, options, c).Update(), stop)
+	require.ErrorIs(t, newShell(app, *DefaultConfig(), options, c).Update(), stop)
 	require.False(t, late)
 }
 
@@ -134,7 +136,7 @@ func TestShellDefaultsWorldDrawersWithoutChangingOptions(t *testing.T) {
 
 	options := DefaultRunOptions()
 	c, _ := newFakeClock(60)
-	sh := newShell(app, options, c)
+	sh := newShell(app, *DefaultConfig(), options, c)
 
 	require.Len(t, sh.worldDrawers, 1)
 	require.Empty(t, options.WorldDrawers)
@@ -145,7 +147,7 @@ func TestShellDefaultsWorldDrawersWithoutChangingOptions(t *testing.T) {
 		return nil
 	})
 	WithWorldDrawers(custom)(options)
-	sh = newShell(app, options, c)
+	sh = newShell(app, *DefaultConfig(), options, c)
 
 	require.NoError(t, sh.worldDrawers.Draw(nil, &DrawContext{}))
 	require.True(t, drewCustom)
@@ -173,7 +175,7 @@ func TestShellSyncsWorldBeforeLateUpdate(t *testing.T) {
 	})(options)
 
 	c, _ := newFakeClock(60)
-	require.NoError(t, newShell(app, options, c).Update())
+	require.NoError(t, newShell(app, *DefaultConfig(), options, c).Update())
 	require.Len(t, seen, 1)
 	require.Equal(t, entry.Entity(), seen[0].Entity())
 }
@@ -217,7 +219,7 @@ func TestShellSyncsWorldAfterEveryPhase(t *testing.T) {
 	})(options)
 
 	c, ft := newFakeClock(10)
-	sh := newShell(app, options, c)
+	sh := newShell(app, *DefaultConfig(), options, c)
 	c.tick()
 	ft.advance(200 * time.Millisecond)
 
@@ -252,7 +254,7 @@ func TestShellGivesOverlaysTheWindowMatrix(t *testing.T) {
 	}))(options)
 
 	c, _ := newFakeClock(60)
-	newShell(app, options, c).Draw(ebiten.NewImage(400, 180))
+	newShell(app, *DefaultConfig(), options, c).Draw(ebiten.NewImage(400, 180))
 
 	bx, by := worldMatrix.Apply(10, 20)
 	wx, wy := overlayMatrix.Apply(10, 20)
@@ -285,7 +287,7 @@ func TestShellWithoutCameraStillRunsOverlays(t *testing.T) {
 	}))(options)
 
 	c, _ := newFakeClock(60)
-	newShell(app, options, c).Draw(ebiten.NewImage(800, 600))
+	newShell(app, *DefaultConfig(), options, c).Draw(ebiten.NewImage(800, 600))
 
 	require.False(t, drewWorld)
 	require.True(t, drewOverlay)
@@ -316,4 +318,30 @@ func TestStartRunsStartupInOrder(t *testing.T) {
 	require.ErrorIs(t, err, broken)
 	require.ErrorContains(t, err, "startup:")
 	require.Equal(t, []string{"a"}, calls)
+}
+
+func TestConfigValidate(t *testing.T) {
+	require.NoError(t, DefaultConfig().Validate())
+
+	cfg := *DefaultConfig()
+	cfg.TickRate = 0
+	cfg.Window.Width = 0
+	cfg.Window.Height = -1
+	err := cfg.Validate()
+	require.ErrorIs(t, err, errs.ErrArgumentOutOfRange)
+	require.ErrorContains(t, err, "tick_rate")
+	require.ErrorContains(t, err, "window.width")
+	require.ErrorContains(t, err, "window.height")
+}
+
+func TestShellClearsWithTheEngineColor(t *testing.T) {
+	app, err := application.New(nil, logger.N)
+	require.NoError(t, err)
+
+	cfg := *DefaultConfig()
+	cfg.ClearColor = hexcolor.Color{R: 10, G: 20, B: 30, A: 255}
+	c, _ := newFakeClock(60)
+	sh := newShell(app, cfg, DefaultRunOptions(), c)
+
+	require.Equal(t, hexcolor.ToRGBA(cfg.ClearColor), sh.clearColor)
 }

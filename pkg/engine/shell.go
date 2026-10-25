@@ -19,7 +19,7 @@ type shell struct {
 	drawCtx      DrawContext
 }
 
-func newShell(app *application.Application, options *RunOptions, clock *clock) *shell {
+func newShell(app *application.Application, cfg Config, options *RunOptions, clock *clock) *shell {
 	worldDrawers := options.WorldDrawers
 	if len(worldDrawers) == 0 {
 		worldDrawers = Drawers{DrawerFunc(drawPipeline(app))}
@@ -29,7 +29,7 @@ func newShell(app *application.Application, options *RunOptions, clock *clock) *
 		options:      options,
 		clock:        clock,
 		worldDrawers: worldDrawers,
-		clearColor:   hexcolor.ToRGBA(app.Config().Screen.ClearColor),
+		clearColor:   hexcolor.ToRGBA(cfg.ClearColor),
 	}
 }
 

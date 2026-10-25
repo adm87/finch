@@ -1,8 +1,6 @@
 package engine
 
 import (
-	"github.com/hajimehoshi/ebiten/v2"
-
 	"github.com/adm87/finch/pkg/logger"
 )
 
@@ -14,15 +12,13 @@ type RunOptions struct {
 	Update         []System
 	FixedUpdate    []System
 	LateUpdate     []System
-	ResizeMode     ebiten.WindowResizingModeType
 }
 
 type RunOption func(*RunOptions)
 
 func DefaultRunOptions() *RunOptions {
 	return &RunOptions{
-		Logger:     logger.N,
-		ResizeMode: ebiten.WindowResizingModeDisabled,
+		Logger: logger.N,
 	}
 }
 
@@ -40,7 +36,7 @@ func WithUpdate(systems ...System) RunOption {
 	}
 }
 
-// WithFixedUpdate adds systems that run once per fixed step at the app's tick rate.
+// WithFixedUpdate adds systems that run once per fixed step at the tick rate.
 func WithFixedUpdate(systems ...System) RunOption {
 	return func(ro *RunOptions) {
 		ro.FixedUpdate = append(ro.FixedUpdate, systems...)
@@ -71,11 +67,5 @@ func WithOverlayDrawers(drawers ...Drawer) RunOption {
 func WithLogger(logger logger.Logger) RunOption {
 	return func(ro *RunOptions) {
 		ro.Logger = logger
-	}
-}
-
-func WithResizeMode(resizeMode ebiten.WindowResizingModeType) RunOption {
-	return func(ro *RunOptions) {
-		ro.ResizeMode = resizeMode
 	}
 }

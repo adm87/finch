@@ -1,13 +1,9 @@
 package internal
 
 import (
-	"bytes"
 	"fmt"
 	"io/fs"
 	"os"
-
-	"github.com/hajimehoshi/ebiten/v2"
-	"gopkg.in/yaml.v3"
 
 	"github.com/adm87/finch/cmd/game/internal/camera"
 	"github.com/adm87/finch/cmd/game/internal/config"
@@ -16,9 +12,7 @@ import (
 	"github.com/adm87/finch/content"
 	"github.com/adm87/finch/pkg/application"
 	"github.com/adm87/finch/pkg/assets"
-	"github.com/adm87/finch/pkg/data"
 	"github.com/adm87/finch/pkg/engine"
-	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/logger"
 	"github.com/adm87/finch/pkg/rendering"
@@ -35,8 +29,13 @@ func Boot() error {
 		return fmt.Errorf("setup file systems: %w", err)
 	}
 
-	cfg, err := loadGameConfig()
+	embedded, err := content.GetFileSystem(content.EmbeddedFS)
 	if err != nil {
+		return err
+	}
+
+	cfg := config.Default()
+	if err := config.Load(embedded, content.GameConfig.String(), cfg); err != nil {
 		return fmt.Errorf("load game config: %w", err)
 	}
 
@@ -45,30 +44,11 @@ func Boot() error {
 		return err
 	}
 
-	if err := registerPlugins(app); err != nil {
+	if err := registerPlugins(app, embedded); err != nil {
 		return fmt.Errorf("register plugins: %w", err)
 	}
 
 	return run(app, cfg, l)
-}
-
-// loadGameConfig reads the file directly. The asset system lives in the app, which isn't built yet.
-func loadGameConfig() (*config.GameConfig, error) {
-	fsys, err := content.GetFileSystem(content.EmbeddedFS)
-	if err != nil {
-		return nil, err
-	}
-
-	raw, err := fs.ReadFile(fsys, content.GameConfig.String())
-	if err != nil {
-		return nil, fmt.Errorf("read %q: %w", content.GameConfig, err)
-	}
-
-	cfg, err := config.Parse(raw)
-	if err != nil {
-		return nil, errs.Format(content.GameConfig.String(), "invalid yaml").Wrap(err)
-	}
-	return cfg, nil
 }
 
 func newApplication(cfg *config.GameConfig, l logger.Logger) (*application.Application, error) {
@@ -108,61 +88,30 @@ func run(app *application.Application, cfg *config.GameConfig, l logger.Logger) 
 			debug.OverlayFPS(app.World()),
 			debug.OverlayZeroZero(app.World()),
 		),
-		engine.WithResizeMode(
-			ebiten.WindowResizingModeEnabled,
-		),
 		engine.WithLogger(l),
 	)
 
-	return engine.Run(app, opts...)
+	return engine.Run(app, &cfg.Engine, opts...)
 }
 
-func registerPlugins(app *application.Application) error {
-	aseCfg, err := loadConfig[aseprite.Config](app, assets.FileSystem(content.EmbeddedFS), content.AsepriteConfig)
-	if err != nil {
+// registerPlugins loads each plugin's config from fsys and registers it.
+func registerPlugins(app *application.Application, fsys fs.FS) error {
+	var aseCfg aseprite.Config
+	if err := config.Load(fsys, content.AsepriteConfig.String(), &aseCfg); err != nil {
 		return fmt.Errorf("load aseprite config: %w", err)
 	}
-	if err := app.RegisterPlugin(aseprite.NewPlugin(aseCfg)); err != nil {
+	if err := app.RegisterPlugin(aseprite.NewPlugin(&aseCfg)); err != nil {
 		return fmt.Errorf("register aseprite plugin: %w", err)
 	}
 
-	tiledCfg, err := loadConfig[tiled.Config](app, assets.FileSystem(content.EmbeddedFS), content.TiledConfig)
-	if err != nil {
+	var tiledCfg tiled.Config
+	if err := config.Load(fsys, content.TiledConfig.String(), &tiledCfg); err != nil {
 		return fmt.Errorf("load tiled config: %w", err)
 	}
-	if err := app.RegisterPlugin(tiled.NewPlugin(tiledCfg)); err != nil {
+	if err := app.RegisterPlugin(tiled.NewPlugin(&tiledCfg)); err != nil {
 		return fmt.Errorf("register tiled plugin: %w", err)
 	}
 	return nil
-}
-
-// loadConfig reads a plugin's YAML config. Unknown keys are errors.
-func loadConfig[T any](app *application.Application, filesystem assets.FileSystem, config assets.Asset) (*T, error) {
-	as := app.Assets()
-	cache := app.Cache()
-
-	bundle := assets.AssetBundle{FileSystem: filesystem, Assets: []assets.Asset{config}}
-	if err := bundle.Load(as); err != nil && !errs.IsAlreadyExists(err) {
-		return nil, err
-	}
-
-	handle, err := as.Handle(config)
-	if err != nil {
-		return nil, err
-	}
-	raw, err := cache.Data().Get(data.Handle(handle))
-	if err != nil {
-		return nil, err
-	}
-
-	var cfg T
-	dec := yaml.NewDecoder(bytes.NewReader(raw))
-	dec.KnownFields(true)
-	if err := dec.Decode(&cfg); err != nil {
-		return nil, errs.Format(config.String(), "invalid yaml").Wrap(err)
-	}
-
-	return &cfg, nil
 }
 
 func makeTestScene(app *application.Application) error {
