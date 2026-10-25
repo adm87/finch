@@ -8,6 +8,7 @@ import (
 
 	"github.com/adm87/finch/pkg/engine"
 	"github.com/adm87/finch/pkg/transform"
+	"github.com/adm87/finch/pkg/world"
 )
 
 var (
@@ -18,25 +19,30 @@ var (
 const originMarkerSize = 3
 
 // OverlayEntityBounds outlines each entity's bounds and marks its origin.
-func OverlayEntityBounds(target *ebiten.Image, ctx *engine.DrawContext) error {
-	for _, entry := range ctx.Entries {
-		t, tOk := transform.GetTransform(entry)
-		b, bOk := transform.GetBounds(entry)
-		if !tOk || !bOk {
-			continue
+func OverlayEntityBounds(w *world.World) engine.Drawer {
+	return engine.DrawerFunc(func(target *ebiten.Image, ctx *engine.DrawContext) error {
+		if !GetDebug(w.ECS()).HasOverlay(OverlayTypeEntities) {
+			return nil
 		}
+		for _, entry := range ctx.Entries {
+			t, tOk := transform.GetTransform(entry)
+			b, bOk := transform.GetBounds(entry)
+			if !tOk || !bOk {
+				continue
+			}
 
-		// The entries are a rough match, so skip anything outside the view.
-		rect := b.WorldRect(t)
-		if !rect.Intersects(ctx.View) {
-			continue
+			// The entries are a rough match, so skip anything outside the view.
+			rect := b.WorldRect(t)
+			if !rect.Intersects(ctx.View) {
+				continue
+			}
+			strokeWorldRect(target, ctx.Matrix, rect, 1, entityBoundsColor)
+
+			px, py := t.Position()
+			x, y := applyFloat32(ctx.Matrix, px, py)
+			vector.StrokeLine(target, x-originMarkerSize, y, x+originMarkerSize, y, 1, entityOriginColor, false)
+			vector.StrokeLine(target, x, y-originMarkerSize, x, y+originMarkerSize, 1, entityOriginColor, false)
 		}
-		strokeWorldRect(target, ctx.Matrix, rect, 1, entityBoundsColor)
-
-		px, py := t.Position()
-		x, y := applyFloat32(ctx.Matrix, px, py)
-		vector.StrokeLine(target, x-originMarkerSize, y, x+originMarkerSize, y, 1, entityOriginColor, false)
-		vector.StrokeLine(target, x, y-originMarkerSize, x, y+originMarkerSize, 1, entityOriginColor, false)
-	}
-	return nil
+		return nil
+	})
 }

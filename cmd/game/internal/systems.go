@@ -6,6 +6,7 @@ import (
 	"github.com/yohamta/donburi"
 
 	"github.com/adm87/finch/cmd/game/internal/camera"
+	"github.com/adm87/finch/cmd/game/internal/debug"
 	"github.com/adm87/finch/cmd/game/internal/input"
 	"github.com/adm87/finch/cmd/game/internal/player"
 	"github.com/adm87/finch/cmd/game/internal/plugins"
@@ -22,12 +23,15 @@ func gameSystems(p *plugins.Plugins) []engine.RunOption {
 		if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 			return ebiten.Termination
 		}
+
 		if c, ok := camera.MainCamera.First(w.ECS()); ok {
 			input.UpdateCamera(dt, c)
 		}
 		if p, ok := player.Player.First(w.ECS()); ok {
 			input.UpdatePlayer(dt, p)
 		}
+
+		debug.PollInput(w)
 		return nil
 	}
 

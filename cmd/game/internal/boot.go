@@ -107,21 +107,25 @@ func gameFileSystems() (map[assets.FileSystem]fs.FS, error) {
 }
 
 func run(app *application.Application, p *plugins.Plugins, l logger.Logger) error {
+	app.World().Create(debug.DebugComponent, world.DontPartition)
+
 	if err := makeTestScene(app, p); err != nil {
 		return fmt.Errorf("create test scene: %w", err)
 	}
+
 	opts := append(gameSystems(p),
 		engine.WithOverlayDrawers(
-			&debug.Partitions{World: app.World()},
-			engine.DrawerFunc(debug.OverlayEntityBounds),
-			engine.DrawerFunc(debug.OverlayFPS),
-			engine.DrawerFunc(debug.OverlayZeroZero),
+			debug.OverlayPartitions(app.World()),
+			debug.OverlayEntityBounds(app.World()),
+			debug.OverlayFPS(app.World()),
+			debug.OverlayZeroZero(app.World()),
 		),
 		engine.WithResizeMode(
 			ebiten.WindowResizingModeEnabled,
 		),
 		engine.WithLogger(l),
 	)
+
 	return engine.Run(app, opts...)
 }
 
