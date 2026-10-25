@@ -35,7 +35,7 @@ func (rp *Pipeline) RegisterRenderer(adapter Adapter) (AdapterID, error) {
 	return AdapterID(k.Pack()), nil
 }
 
-func (rp *Pipeline) Draw(target *ebiten.Image, entries []*donburi.Entry, viewRect geom.Rect, viewMatrix ebiten.GeoM) error {
+func (rp *Pipeline) Draw(target *ebiten.Image, entries []*donburi.Entry, viewRect geom.Rect, viewMatrix geom.Matrix) error {
 	rp.queue.Clear()
 
 	rp.buildRenderQueue(entries, viewRect)

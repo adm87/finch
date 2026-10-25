@@ -11,5 +11,5 @@ type AdapterID uint64
 
 // Adapter draws one kind of render candidate.
 type Adapter interface {
-	Render(target *ebiten.Image, candidate *Candidate, viewport geom.Rect, matrix ebiten.GeoM)
+	Render(target *ebiten.Image, candidate *Candidate, viewport geom.Rect, matrix geom.Matrix)
 }

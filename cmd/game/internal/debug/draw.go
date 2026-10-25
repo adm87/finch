@@ -9,13 +9,13 @@ import (
 	"github.com/adm87/finch/pkg/geom"
 )
 
-func applyFloat32(m ebiten.GeoM, x, y float64) (float32, float32) {
+func applyFloat32(m geom.Matrix, x, y float64) (float32, float32) {
 	sx, sy := m.Apply(x, y)
 	return float32(sx), float32(sy)
 }
 
 // strokeWorldRect outlines a world-space rect. It still lines up when the camera rotates.
-func strokeWorldRect(target *ebiten.Image, viewMatrix ebiten.GeoM, rect geom.Rect, width float32, clr color.Color) {
+func strokeWorldRect(target *ebiten.Image, viewMatrix geom.Matrix, rect geom.Rect, width float32, clr color.Color) {
 	minX, minY := rect.Min()
 	maxX, maxY := rect.Max()
 	x0, y0 := applyFloat32(viewMatrix, minX, minY)

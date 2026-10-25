@@ -240,7 +240,7 @@ func TestShellGivesOverlaysTheWindowMatrix(t *testing.T) {
 	transform.TransformComponent.Get(camera).SetPosition(50, -20)
 	app.View().SetCamera(camera)
 
-	var worldMatrix, overlayMatrix ebiten.GeoM
+	var worldMatrix, overlayMatrix geom.Matrix
 	options := DefaultRunOptions()
 	WithWorldDrawers(DrawerFunc(func(_ *ebiten.Image, ctx *DrawContext) error {
 		worldMatrix = ctx.Matrix

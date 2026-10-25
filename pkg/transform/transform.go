@@ -1,8 +1,9 @@
 package transform
 
 import (
-	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
+
+	"github.com/adm87/finch/pkg/geom"
 )
 
 type Transform struct {
@@ -10,7 +11,7 @@ type Transform struct {
 	ox, oy      float64
 	sx, sy      float64
 	rotation    float64
-	geoM        ebiten.GeoM
+	geoM        geom.Matrix
 	geoMVersion uint64
 	version     uint64
 }
@@ -86,7 +87,7 @@ func (t *Transform) Version() uint64 {
 	return t.version
 }
 
-func (t *Transform) GeoM() ebiten.GeoM {
+func (t *Transform) GeoM() geom.Matrix {
 	if t.geoMVersion != t.version {
 		t.geoM.Reset()
 		t.geoM.Translate(-t.ox, -t.oy)

@@ -15,12 +15,9 @@ type System func(app *application.Application, dt float64) error
 
 // DrawContext holds what a drawer needs for one frame. It's reused, so don't hold on to it.
 type DrawContext struct {
-	// Entries is a rough list of what's in view. Check bounds before relying on it.
 	Entries []*donburi.Entry
 	View    geom.Rect
-	// Matrix maps world space to the target: the screen buffer for world drawers,
-	// the window for overlays.
-	Matrix ebiten.GeoM
+	Matrix  geom.Matrix
 }
 
 type Drawer interface {

@@ -1,7 +1,6 @@
 package display
 
 import (
-	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 
 	"github.com/adm87/finch/pkg/geom"
@@ -37,21 +36,21 @@ func (v *View) SetCamera(camera *donburi.Entry) {
 	}
 }
 
-func (v *View) Viewport() (geom.Rect, ebiten.GeoM) {
+func (v *View) Viewport() (geom.Rect, geom.Matrix) {
 	if v.camera == nil {
-		return geom.Rect{}, ebiten.GeoM{}
+		return geom.Rect{}, geom.Matrix{}
 	}
 
 	t, tOk := transform.GetTransform(v.camera)
 	if !tOk {
-		return geom.Rect{}, ebiten.GeoM{}
+		return geom.Rect{}, geom.Matrix{}
 	}
 
 	bounds := v.refresh(t)
 
 	geoM := t.GeoM()
 	if !geoM.IsInvertible() {
-		return bounds, ebiten.GeoM{}
+		return bounds, geom.Matrix{}
 	}
 
 	geoM.Invert()
