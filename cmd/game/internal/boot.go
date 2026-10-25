@@ -59,29 +59,24 @@ func loadGameConfig() (*config.GameConfig, error) {
 		return nil, err
 	}
 
-	raw, err := fs.ReadFile(fsys, content.GameConfig)
+	raw, err := fs.ReadFile(fsys, content.GameConfig.String())
 	if err != nil {
 		return nil, fmt.Errorf("read %q: %w", content.GameConfig, err)
 	}
 
 	cfg, err := config.Parse(raw)
 	if err != nil {
-		return nil, errs.Format(content.GameConfig, "invalid yaml").Wrap(err)
+		return nil, errs.Format(content.GameConfig.String(), "invalid yaml").Wrap(err)
 	}
 	return cfg, nil
 }
 
 func newApplication(cfg *config.GameConfig, l logger.Logger) (*application.Application, error) {
-	fileSystems, err := gameFileSystems()
-	if err != nil {
-		return nil, fmt.Errorf("initialize game file systems: %w", err)
-	}
-
 	app, err := application.New(&cfg.Application, l)
 	if err != nil {
 		return nil, fmt.Errorf("create application: %w", err)
 	}
-	if err := app.RegisterFileSystems(fileSystems); err != nil {
+	if err := app.RegisterFileSystems(content.FileSystemRegistry); err != nil {
 		return nil, fmt.Errorf("register file systems: %w", err)
 	}
 	return app, nil
@@ -97,18 +92,6 @@ func loadBundles(bundles []assets.AssetBundle) engine.Startup {
 		}
 		return nil
 	}
-}
-
-func gameFileSystems() (map[assets.FileSystem]fs.FS, error) {
-	fileSystems := make(map[assets.FileSystem]fs.FS)
-	for _, id := range []content.FileSystemID{content.EmbeddedFS, content.AssetsFS} {
-		fsys, err := content.GetFileSystem(id)
-		if err != nil {
-			return nil, err
-		}
-		fileSystems[assets.FileSystem(id)] = fsys
-	}
-	return fileSystems, nil
 }
 
 func run(app *application.Application, cfg *config.GameConfig, l logger.Logger) error {

@@ -14,7 +14,7 @@ import (
 func TestParseGameConfigFile(t *testing.T) {
 	fsys, err := content.GetFileSystem(content.EmbeddedFS)
 	require.NoError(t, err)
-	raw, err := fs.ReadFile(fsys, content.GameConfig)
+	raw, err := fs.ReadFile(fsys, content.GameConfig.String())
 	require.NoError(t, err)
 
 	cfg, err := config.Parse(raw)

@@ -6,33 +6,28 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/errs"
 )
 
-type FileSystemID string
-
-func (f FileSystemID) String() string {
-	return string(f)
-}
-
-type FileSystems map[FileSystemID]fs.FS
+type FileSystems map[assets.FileSystem]fs.FS
 
 const (
-	EmbeddedFS FileSystemID = "embedded"
-	AssetsFS   FileSystemID = "assets"
+	EmbeddedFS assets.FileSystem = "embedded"
+	AssetsFS   assets.FileSystem = "assets"
 )
 
 const (
-	AsepriteConfig    = "embedded/configs/aseprite_config.yaml"
-	TiledConfig       = "embedded/configs/tiled_config.yaml"
-	GameConfig        = "embedded/configs/game_config.yaml"
-	DefaultImage10x10 = "embedded/images/default_10x10.png"
+	AsepriteConfig    assets.Asset = "embedded/configs/aseprite_config.yaml"
+	TiledConfig       assets.Asset = "embedded/configs/tiled_config.yaml"
+	GameConfig        assets.Asset = "embedded/configs/game_config.yaml"
+	DefaultImage10x10 assets.Asset = "embedded/images/default_10x10.png"
 )
 
 //go:embed embedded
 var embeddedFiles embed.FS
 
-var fileSystems = FileSystems{
+var FileSystemRegistry = FileSystems{
 	EmbeddedFS: embeddedFiles,
 }
 
@@ -44,12 +39,12 @@ func InitializeFileSystems() error {
 
 	contentDir := filepath.Join(root, "content")
 
-	fileSystems[AssetsFS] = os.DirFS(filepath.Join(contentDir, string(AssetsFS)))
+	FileSystemRegistry[AssetsFS] = os.DirFS(filepath.Join(contentDir, string(AssetsFS)))
 	return nil
 }
 
-func GetFileSystem(id FileSystemID) (fs.FS, error) {
-	fs, ok := fileSystems[id]
+func GetFileSystem(id assets.FileSystem) (fs.FS, error) {
+	fs, ok := FileSystemRegistry[id]
 	if !ok {
 		return nil, errs.NotFound("file system", id.String())
 	}

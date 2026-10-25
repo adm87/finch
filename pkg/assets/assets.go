@@ -12,6 +12,10 @@ import (
 
 type FileSystem string
 
+func (f FileSystem) String() string {
+	return string(f)
+}
+
 // Handle is an importer's handle for a loaded asset.
 type Handle uint64
 
