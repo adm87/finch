@@ -57,7 +57,7 @@ type Libraries struct {
 	libsByName map[string]LibraryID
 }
 
-func New(as *assets.Assets, log logger.Logger, dc *data.Cache, ic *images.Cache, config *Config) (*Libraries, error) {
+func NewLibraries(as *assets.Assets, log logger.Logger, dc *data.Cache, ic *images.Cache, config *Config) (*Libraries, error) {
 	var errList []error
 	if as == nil {
 		errList = append(errList, errs.ArgumentNil("as"))

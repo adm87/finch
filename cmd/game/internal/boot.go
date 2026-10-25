@@ -6,15 +6,16 @@ import (
 	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/adm87/finch/cmd/game/internal/camera"
 	"github.com/adm87/finch/cmd/game/internal/config"
 	"github.com/adm87/finch/cmd/game/internal/debug"
 	"github.com/adm87/finch/cmd/game/internal/player"
-	"github.com/adm87/finch/cmd/game/internal/plugins"
 	"github.com/adm87/finch/content"
 	"github.com/adm87/finch/pkg/application"
 	"github.com/adm87/finch/pkg/assets"
+	"github.com/adm87/finch/pkg/data"
 	"github.com/adm87/finch/pkg/engine"
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/images"
@@ -22,34 +23,32 @@ import (
 	"github.com/adm87/finch/pkg/rendering"
 	"github.com/adm87/finch/pkg/world"
 	"github.com/adm87/finch/plugins/aseprite"
+	"github.com/adm87/finch/plugins/tiled"
 )
 
 const playerLibrary = "captain"
 
 func Boot() error {
+	l := logger.NewLogger(os.Stdout, loggerOptions).Named("finch")
 	if err := content.InitializeFileSystems(); err != nil {
 		return fmt.Errorf("setup file systems: %w", err)
 	}
-	return boot(logger.NewLogger(os.Stdout, loggerOptions).Named("finch"))
-}
 
-func boot(l logger.Logger) error {
 	cfg, err := loadGameConfig()
 	if err != nil {
 		return fmt.Errorf("load game config: %w", err)
 	}
 
-	app, err := initializeApplication(cfg, l)
+	app, err := newApplication(cfg, l)
 	if err != nil {
-		return fmt.Errorf("initialize application: %w", err)
+		return err
 	}
 
-	p, err := plugins.New(app, l)
-	if err != nil {
-		return fmt.Errorf("initialize plugins: %w", err)
+	if err := registerPlugins(app); err != nil {
+		return fmt.Errorf("register plugins: %w", err)
 	}
 
-	return run(app, p, l)
+	return run(app, cfg, l)
 }
 
 // loadGameConfig reads the file directly. The asset system lives in the app, which isn't built yet.
@@ -71,27 +70,32 @@ func loadGameConfig() (*config.GameConfig, error) {
 	return cfg, nil
 }
 
-func initializeApplication(cfg *config.GameConfig, logger logger.Logger) (*application.Application, error) {
+func newApplication(cfg *config.GameConfig, l logger.Logger) (*application.Application, error) {
 	fileSystems, err := gameFileSystems()
 	if err != nil {
 		return nil, fmt.Errorf("initialize game file systems: %w", err)
 	}
 
-	app, err := application.New(&cfg.Application, logger)
+	app, err := application.New(&cfg.Application, l)
 	if err != nil {
 		return nil, fmt.Errorf("create application: %w", err)
 	}
 	if err := app.RegisterFileSystems(fileSystems); err != nil {
 		return nil, fmt.Errorf("register file systems: %w", err)
 	}
-
-	for _, bundle := range cfg.Bundles {
-		if err := bundle.Load(app.Assets()); err != nil {
-			return nil, fmt.Errorf("load bundle from %q: %w", bundle.FileSystem, err)
-		}
-	}
-
 	return app, nil
+}
+
+// loadBundles runs at startup, after plugins have registered their importers.
+func loadBundles(bundles []assets.AssetBundle) engine.Startup {
+	return func(app *application.Application) error {
+		for _, bundle := range bundles {
+			if err := bundle.Load(app.Assets()); err != nil {
+				return fmt.Errorf("load bundle from %q: %w", bundle.FileSystem, err)
+			}
+		}
+		return nil
+	}
 }
 
 func gameFileSystems() (map[assets.FileSystem]fs.FS, error) {
@@ -106,14 +110,14 @@ func gameFileSystems() (map[assets.FileSystem]fs.FS, error) {
 	return fileSystems, nil
 }
 
-func run(app *application.Application, p *plugins.Plugins, l logger.Logger) error {
+func run(app *application.Application, cfg *config.GameConfig, l logger.Logger) error {
 	app.World().Create(debug.DebugComponent, world.DontPartition)
 
-	if err := makeTestScene(app, p); err != nil {
-		return fmt.Errorf("create test scene: %w", err)
-	}
-
-	opts := append(gameSystems(p),
+	opts := append(gameSystems(app),
+		engine.WithStartup(
+			loadBundles(cfg.Bundles),
+			makeTestScene,
+		),
 		engine.WithOverlayDrawers(
 			debug.OverlayPartitions(app.World()),
 			debug.OverlayEntityBounds(app.World()),
@@ -129,7 +133,52 @@ func run(app *application.Application, p *plugins.Plugins, l logger.Logger) erro
 	return engine.Run(app, opts...)
 }
 
-func makeTestScene(app *application.Application, p *plugins.Plugins) error {
+func registerPlugins(app *application.Application) error {
+	aseCfg, err := loadConfig[aseprite.Config](app, assets.FileSystem(content.EmbeddedFS), content.AsepriteConfig)
+	if err != nil {
+		return fmt.Errorf("load aseprite config: %w", err)
+	}
+	if err := app.RegisterPlugin(aseprite.NewPlugin(aseCfg)); err != nil {
+		return fmt.Errorf("register aseprite plugin: %w", err)
+	}
+
+	tiledCfg, err := loadConfig[tiled.Config](app, assets.FileSystem(content.EmbeddedFS), content.TiledConfig)
+	if err != nil {
+		return fmt.Errorf("load tiled config: %w", err)
+	}
+	if err := app.RegisterPlugin(tiled.NewPlugin(tiledCfg)); err != nil {
+		return fmt.Errorf("register tiled plugin: %w", err)
+	}
+	return nil
+}
+
+func loadConfig[T any](app *application.Application, filesystem assets.FileSystem, config assets.Asset) (*T, error) {
+	as := app.Assets()
+	cache := app.Cache()
+
+	bundle := assets.AssetBundle{FileSystem: filesystem, Assets: []assets.Asset{config}}
+	if err := bundle.Load(as); err != nil && !errs.IsAlreadyExists(err) {
+		return nil, err
+	}
+
+	handle, err := as.Handle(config)
+	if err != nil {
+		return nil, err
+	}
+	raw, err := cache.Data().Get(data.Handle(handle))
+	if err != nil {
+		return nil, err
+	}
+
+	var cfg T
+	if err := yaml.Unmarshal(raw, &cfg); err != nil {
+		return nil, errs.Format(config.String(), "invalid yaml").Wrap(err)
+	}
+
+	return &cfg, nil
+}
+
+func makeTestScene(app *application.Application) error {
 	w := app.World()
 
 	c := w.Create(
@@ -138,12 +187,18 @@ func makeTestScene(app *application.Application, p *plugins.Plugins) error {
 	)
 	app.View().SetCamera(c)
 
-	libraryID, err := p.Aseprite.CreateLibrary(playerLibrary, aseprite.LoadModeDynamic)
+	ase, err := application.GetPlugin[*aseprite.Plugin](app, "aseprite")
+	if err != nil {
+		return fmt.Errorf("get aseprite plugin: %w", err)
+	}
+	libraries := ase.Libraries()
+
+	libraryID, err := libraries.CreateLibrary(playerLibrary, aseprite.LoadModeDynamic)
 	if err != nil {
 		return fmt.Errorf("create library %q: %w", playerLibrary, err)
 	}
 
-	library, err := p.Aseprite.Library(libraryID)
+	library, err := libraries.Library(libraryID)
 	if err != nil {
 		return fmt.Errorf("library %q: %w", playerLibrary, err)
 	}

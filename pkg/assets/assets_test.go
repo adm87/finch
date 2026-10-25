@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"io/fs"
+	"path"
 	"testing"
 	"testing/fstest"
 
@@ -16,6 +17,8 @@ import (
 type fakeImporter struct {
 	next      assets.Handle
 	contents  map[assets.Handle]string
+	imported  []assets.Asset
+	fsys      fs.FS
 	deleted   []assets.Handle
 	importErr error
 }
@@ -24,7 +27,9 @@ func newFakeImporter() *fakeImporter {
 	return &fakeImporter{contents: make(map[assets.Handle]string)}
 }
 
-func (f *fakeImporter) Import(reader io.Reader) (assets.Handle, error) {
+func (f *fakeImporter) Import(asset assets.Asset, fsys fs.FS, reader io.Reader) (assets.Handle, error) {
+	f.imported = append(f.imported, asset)
+	f.fsys = fsys
 	if f.importErr != nil {
 		return 0, f.importErr
 	}
@@ -211,4 +216,53 @@ func TestRegisterFileSystem(t *testing.T) {
 	fsys, err := as.FileSystem("test")
 	require.NoError(t, err)
 	require.NotNil(t, fsys)
+}
+
+func TestImportReceivesTheAssetAndFileSystem(t *testing.T) {
+	as, imp := newAssets(t)
+
+	require.NoError(t, as.Load(testFS, "a.txt", "b.txt"))
+	require.ElementsMatch(t, []assets.Asset{"a.txt", "b.txt"}, imp.imported)
+	require.Equal(t, testFS, imp.fsys)
+}
+
+// refImporter loads the asset its file names, relative to the file itself, the
+// way a Tiled map loads its tilesets.
+type refImporter struct {
+	as   *assets.Assets
+	next assets.Handle
+}
+
+func (r *refImporter) Import(asset assets.Asset, fsys fs.FS, reader io.Reader) (assets.Handle, error) {
+	raw, err := io.ReadAll(reader)
+	if err != nil {
+		return 0, err
+	}
+	ref := assets.Asset(path.Join(path.Dir(asset.String()), string(raw)))
+	if err := r.as.Load(fsys, ref); err != nil {
+		return 0, err
+	}
+	r.next++
+	return r.next, nil
+}
+
+func (r *refImporter) Delete(assets.Handle) error {
+	return nil
+}
+
+func TestImporterCanLoadAssetsItRefersTo(t *testing.T) {
+	as, imp := newAssets(t)
+	require.NoError(t, as.RegisterImporter(&refImporter{as: as}, []string{"map"}))
+
+	fsys := fstest.MapFS{
+		"maps/level.map":  {Data: []byte("../tiles/grass.txt")},
+		"tiles/grass.txt": {Data: []byte("grass")},
+	}
+	require.NoError(t, as.Load(fsys, "maps/level.map"))
+
+	_, err := as.Handle("maps/level.map")
+	require.NoError(t, err)
+	tile, err := as.Handle("tiles/grass.txt")
+	require.NoError(t, err)
+	require.Equal(t, "grass", imp.contents[tile])
 }

@@ -5,21 +5,39 @@ import (
 
 	"github.com/go-openapi/testify/require"
 
-	"github.com/adm87/finch/cmd/game/internal/plugins"
 	"github.com/adm87/finch/content"
+	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/logger"
+	"github.com/adm87/finch/plugins/aseprite"
+	"github.com/adm87/finch/plugins/tiled"
 )
 
-func TestBootSetsUpApplicationAndPlugins(t *testing.T) {
+// TestBootSequence follows the order engine.Run uses: plugins, then startup.
+func TestBootSequence(t *testing.T) {
+	t.Chdir("../../..") // content's assets folder is found from the repo root
 	require.NoError(t, content.InitializeFileSystems())
 
 	cfg, err := loadGameConfig()
 	require.NoError(t, err)
 
-	app, err := initializeApplication(cfg, logger.N)
+	app, err := newApplication(cfg, logger.N)
 	require.NoError(t, err)
 
-	p, err := plugins.New(app, logger.N)
+	aseCfg, err := loadConfig[aseprite.Config](app, assets.FileSystem(content.EmbeddedFS), content.AsepriteConfig)
 	require.NoError(t, err)
-	require.NotNil(t, p.Aseprite)
+
+	ase := aseprite.NewPlugin(aseCfg)
+	require.NoError(t, ase.Init(app))
+
+	tldCfg, err := loadConfig[tiled.Config](app, assets.FileSystem(content.EmbeddedFS), content.TiledConfig)
+	require.NoError(t, err)
+
+	tld := tiled.NewPlugin(tldCfg)
+	require.NoError(t, tld.Init(app))
+
+	require.NoError(t, app.RegisterPlugin(ase))
+	require.NoError(t, app.RegisterPlugin(tld))
+
+	require.NoError(t, loadBundles(cfg.Bundles)(app))
+	require.NoError(t, makeTestScene(app))
 }

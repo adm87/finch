@@ -292,3 +292,16 @@ func TestShellWithoutCameraStillRunsOverlays(t *testing.T) {
 	require.Empty(t, overlayEntries)
 	require.Zero(t, overlayRect.Area())
 }
+
+type fakePlugin struct {
+	name  string
+	calls *[]string
+	err   error
+}
+
+func (p fakePlugin) Name() string { return p.name }
+
+func (p fakePlugin) Init(*application.Application) error {
+	*p.calls = append(*p.calls, "init "+p.name)
+	return p.err
+}

@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -20,6 +21,10 @@ func Run(app *application.Application, opts ...RunOption) error {
 		opt(options)
 	}
 
+	if err := start(app, options); err != nil {
+		return err
+	}
+
 	cfg := app.Config()
 	ebiten.SetWindowTitle(cfg.Title)
 	ebiten.SetWindowSize(cfg.Screen.Width, cfg.Screen.Height)
@@ -28,4 +33,14 @@ func Run(app *application.Application, opts ...RunOption) error {
 	ebiten.SetTPS(cfg.TickRate)
 
 	return ebiten.RunGame(newShell(app, options, newClock(cfg.TickRate, time.Now)))
+}
+
+// start initializes the plugins, then runs the startup functions.
+func start(app *application.Application, options *RunOptions) error {
+	for _, startup := range options.Startup {
+		if err := startup(app); err != nil {
+			return fmt.Errorf("startup: %w", err)
+		}
+	}
+	return nil
 }

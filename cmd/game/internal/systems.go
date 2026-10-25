@@ -9,14 +9,18 @@ import (
 	"github.com/adm87/finch/cmd/game/internal/debug"
 	"github.com/adm87/finch/cmd/game/internal/input"
 	"github.com/adm87/finch/cmd/game/internal/player"
-	"github.com/adm87/finch/cmd/game/internal/plugins"
 	"github.com/adm87/finch/pkg/application"
 	"github.com/adm87/finch/pkg/engine"
 	"github.com/adm87/finch/plugins/aseprite"
 )
 
-func gameSystems(p *plugins.Plugins) []engine.RunOption {
+func gameSystems(app *application.Application) []engine.RunOption {
 	var entries []*donburi.Entry
+
+	ase, err := application.GetPlugin[*aseprite.Plugin](app, "aseprite")
+	if err != nil {
+		panic(err)
+	}
 
 	handleInput := func(app *application.Application, dt float64) error {
 		w := app.World()
@@ -42,7 +46,7 @@ func gameSystems(p *plugins.Plugins) []engine.RunOption {
 	}
 
 	animate := func(_ *application.Application, dt float64) error {
-		return aseprite.AdvanceAnimations(dt, p.Aseprite, entries)
+		return aseprite.AdvanceAnimations(dt, ase.Libraries(), entries)
 	}
 
 	followPlayer := func(app *application.Application, dt float64) error {

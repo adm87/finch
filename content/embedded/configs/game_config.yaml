@@ -12,5 +12,4 @@ application:
 bundles:
   - filesystem: embedded
     assets:
-      - embedded/configs/aseprite_config.yaml
       - embedded/images/default_10x10.png

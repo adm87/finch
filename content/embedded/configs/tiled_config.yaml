@@ -1,0 +1,4 @@
+maps:
+  gym04:
+    filesystem: assets
+    tmx: tiled/gym04.tmx

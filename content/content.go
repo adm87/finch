@@ -24,6 +24,7 @@ const (
 
 const (
 	AsepriteConfig    = "embedded/configs/aseprite_config.yaml"
+	TiledConfig       = "embedded/configs/tiled_config.yaml"
 	GameConfig        = "embedded/configs/game_config.yaml"
 	DefaultImage10x10 = "embedded/images/default_10x10.png"
 )

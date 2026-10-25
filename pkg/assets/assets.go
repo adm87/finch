@@ -16,7 +16,9 @@ type FileSystem string
 type Handle uint64
 
 type Importer interface {
-	Import(reader io.Reader) (Handle, error)
+	// Import decodes reader, which holds asset from fsys. Paths that asset
+	// refers to can be resolved against it and loaded from fsys.
+	Import(asset Asset, fsys fs.FS, reader io.Reader) (Handle, error)
 	Delete(handle Handle) error
 }
 
@@ -143,7 +145,7 @@ func (a *Assets) load(fsys fs.FS, asset Asset) error {
 	}
 	defer func() { _ = file.Close() }()
 
-	handle, err := importer.Import(file)
+	handle, err := importer.Import(asset, fsys, file)
 	if err != nil {
 		return fmt.Errorf("import %q: %w", name, err)
 	}

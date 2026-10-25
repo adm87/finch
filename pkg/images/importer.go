@@ -2,6 +2,7 @@ package images
 
 import (
 	"io"
+	"io/fs"
 	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -27,7 +28,7 @@ func NewImporter(cache *Cache) *Importer {
 }
 
 // Import returns an assets.Handle that converts to a Handle in the cache.
-func (l *Importer) Import(reader io.Reader) (assets.Handle, error) {
+func (l *Importer) Import(_ assets.Asset, _ fs.FS, reader io.Reader) (assets.Handle, error) {
 	img, _, err := ebitenutil.NewImageFromReader(reader)
 	if err != nil {
 		return 0, errs.Format("image", "decode").Wrap(err)

@@ -11,7 +11,7 @@ import (
 )
 
 func OverlayFPS(w *world.World) engine.Drawer {
-	return engine.DrawerFunc(func(target *ebiten.Image, ctx *engine.DrawContext) error {
+	return engine.DrawerFunc(func(target *ebiten.Image, _ *engine.DrawContext) error {
 		if !GetDebug(w.ECS()).HasOverlay(OverlayTypeFPS) {
 			return nil
 		}

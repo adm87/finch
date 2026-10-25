@@ -13,6 +13,9 @@ import (
 // System runs once per update phase, with dt in seconds.
 type System func(app *application.Application, dt float64) error
 
+// Startup runs once, after plugins are ready and before the first update.
+type Startup func(app *application.Application) error
+
 // DrawContext holds what a drawer needs for one frame. It's reused, so don't hold on to it.
 type DrawContext struct {
 	Entries []*donburi.Entry

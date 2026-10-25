@@ -1,16 +1,25 @@
 package application
 
 import (
+	"fmt"
 	"io/fs"
 
 	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/display"
+	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/logger"
 	"github.com/adm87/finch/pkg/rendering"
 	"github.com/adm87/finch/pkg/world"
 )
 
+// Plugin hooks a third-party tool into the app. Init runs once, before startup.
+type Plugin interface {
+	Name() string
+	Init(app *Application) error
+}
+
 type Application struct {
+	logger         logger.Logger
 	cache          *Cache
 	renderers      *Renderers
 	assets         *assets.Assets
@@ -19,7 +28,7 @@ type Application struct {
 	renderPipeline *rendering.Pipeline
 	world          *world.World
 	config         *Config
-	logger         logger.Logger
+	plugins        map[string]Plugin
 }
 
 // New falls back to DefaultConfig and a no-op logger when given nil.
@@ -63,6 +72,7 @@ func New(config *Config, log logger.Logger) (*Application, error) {
 		view:           view,
 		world:          world,
 		logger:         log,
+		plugins:        make(map[string]Plugin),
 	}, nil
 }
 
@@ -110,4 +120,33 @@ func (a *Application) RegisterFileSystems(fileSystems map[assets.FileSystem]fs.F
 		}
 	}
 	return nil
+}
+
+// RegisterPlugin registers a plugin with the application.
+// It returns an error if a plugin with the same name is already registered or if the plugin initialization fails.
+func (a *Application) RegisterPlugin(plugin Plugin) error {
+	if _, exists := a.plugins[plugin.Name()]; exists {
+		return errs.AlreadyExists("plugin", plugin.Name())
+	}
+	if err := plugin.Init(a); err != nil {
+		return err
+	}
+	a.plugins[plugin.Name()] = plugin
+	return nil
+}
+
+// GetPlugin retrieves a registered plugin by name and asserts its type.
+// It returns an error if the plugin is not found or if it is not of the expected type.
+func GetPlugin[T Plugin](app *Application, name string) (T, error) {
+	plugin, exists := app.plugins[name]
+	if !exists {
+		var zero T
+		return zero, errs.NotFound("plugin", name)
+	}
+	p, ok := plugin.(T)
+	if !ok {
+		var zero T
+		return zero, errs.InvalidOperation(fmt.Sprintf("plugin %q is not of the expected type", name))
+	}
+	return p, nil
 }
