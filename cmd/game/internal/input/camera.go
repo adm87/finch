@@ -6,28 +6,20 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 
-	"github.com/adm87/finch/pkg/transform"
+	"github.com/adm87/finch/cmd/game/internal/camera"
 )
 
 const camZoomRate = 1.05
 
 func UpdateCamera(dt float64, c *donburi.Entry) {
-	t := transform.TransformComponent.Get(c)
-
-	// Zoom
-	sx, sy := t.Scale()
-	zoom := 0.0
+	var dir float64
 	if ebiten.IsKeyPressed(ebiten.KeyUp) {
-		zoom--
+		dir++
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyDown) {
-		zoom++
+		dir--
 	}
-	if zoom != 0 {
-		f := math.Pow(camZoomRate, zoom*dt*60)
-		sx *= f
-		sy *= f
+	if dir != 0 {
+		camera.ZoomBy(c, math.Pow(camZoomRate, dir*dt*60))
 	}
-
-	t.SetScale(sx, sy)
 }

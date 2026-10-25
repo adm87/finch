@@ -28,7 +28,7 @@ func gameSystems(app *application.Application) []engine.RunOption {
 			return ebiten.Termination
 		}
 
-		if c, ok := camera.MainCamera.First(w.ECS()); ok {
+		if c, ok := camera.Main(w); ok {
 			input.UpdateCamera(dt, c)
 		}
 		if p, ok := player.Player.First(w.ECS()); ok {
@@ -51,10 +51,10 @@ func gameSystems(app *application.Application) []engine.RunOption {
 
 	followPlayer := func(app *application.Application, dt float64) error {
 		w := app.World()
-		c, cOk := camera.MainCamera.First(w.ECS())
+		c, cOk := camera.Main(w)
 		p, pOk := player.Player.First(w.ECS())
 		if cOk && pOk {
-			camera.FollowTarget(dt, c, p)
+			camera.Follow(dt, c, p)
 		}
 		return nil
 	}

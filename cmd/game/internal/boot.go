@@ -117,10 +117,8 @@ func registerPlugins(app *application.Application, fsys fs.FS) error {
 func makeTestScene(app *application.Application) error {
 	w := app.World()
 
-	c := w.Create(
-		camera.MainCamera,
-		world.DontPartition,
-	)
+	c := camera.NewMain(w)
+	camera.SetZoom(c, 2)
 	app.View().SetCamera(c)
 
 	ase, err := application.GetPlugin[*aseprite.Plugin](app, "aseprite")
