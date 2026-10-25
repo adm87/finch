@@ -1,30 +1,32 @@
 package tiled
 
 import (
+	"errors"
+	"fmt"
+
+	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/errs"
 )
 
 type MapConfig struct {
-	Name       string `yaml:"name"`
-	FileSystem string `yaml:"filesystem"`
-	TMX        string `yaml:"tmx"`
+	FileSystem assets.FileSystem `yaml:"filesystem"`
+	TMX        assets.Asset      `yaml:"tmx"`
 }
 
+// Config lists maps by name.
 type Config struct {
 	Maps map[string]MapConfig `yaml:"maps"`
 }
 
 func (c Config) Validate() error {
-	for _, m := range c.Maps {
-		if m.Name == "" {
-			return errs.Argument("name", "map name is required")
-		}
+	var errList []error
+	for name, m := range c.Maps {
 		if m.FileSystem == "" {
-			return errs.Argument("filesystem", "map filesystem is required")
+			errList = append(errList, errs.Argument("filesystem", fmt.Sprintf("map %q needs a file system", name)))
 		}
 		if m.TMX == "" {
-			return errs.Argument("tmx", "map tmx is required")
+			errList = append(errList, errs.Argument("tmx", fmt.Sprintf("map %q needs a .tmx file", name)))
 		}
 	}
-	return nil
+	return errors.Join(errList...)
 }

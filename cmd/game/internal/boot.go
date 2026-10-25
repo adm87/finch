@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"bytes"
 	"fmt"
 	"io/fs"
 	"os"
@@ -152,6 +153,7 @@ func registerPlugins(app *application.Application) error {
 	return nil
 }
 
+// loadConfig reads a plugin's YAML config. Unknown keys are errors.
 func loadConfig[T any](app *application.Application, filesystem assets.FileSystem, config assets.Asset) (*T, error) {
 	as := app.Assets()
 	cache := app.Cache()
@@ -171,7 +173,9 @@ func loadConfig[T any](app *application.Application, filesystem assets.FileSyste
 	}
 
 	var cfg T
-	if err := yaml.Unmarshal(raw, &cfg); err != nil {
+	dec := yaml.NewDecoder(bytes.NewReader(raw))
+	dec.KnownFields(true)
+	if err := dec.Decode(&cfg); err != nil {
 		return nil, errs.Format(config.String(), "invalid yaml").Wrap(err)
 	}
 

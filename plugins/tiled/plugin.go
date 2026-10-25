@@ -2,11 +2,11 @@ package tiled
 
 import (
 	"github.com/adm87/finch/pkg/application"
+	"github.com/adm87/finch/pkg/errs"
 )
 
 type Plugin struct {
 	config *Config
-	maps   []MapConfig
 }
 
 func NewPlugin(cfg *Config) *Plugin {
@@ -17,7 +17,11 @@ func (p *Plugin) Name() string {
 	return "tiled"
 }
 
-// Init will register the .tmx and .tsx importers and the map renderer.
+// Init checks the config. It will also register the .tmx and .tsx importers and
+// the map renderer.
 func (p *Plugin) Init(*application.Application) error {
-	return nil
+	if p.config == nil {
+		return errs.ArgumentNil("config")
+	}
+	return p.config.Validate()
 }

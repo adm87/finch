@@ -35,7 +35,7 @@ func Run(app *application.Application, opts ...RunOption) error {
 	return ebiten.RunGame(newShell(app, options, newClock(cfg.TickRate, time.Now)))
 }
 
-// start initializes the plugins, then runs the startup functions.
+// start runs the startup functions in order.
 func start(app *application.Application, options *RunOptions) error {
 	for _, startup := range options.Startup {
 		if err := startup(app); err != nil {

@@ -4,7 +4,7 @@ import (
 	"github.com/adm87/finch/pkg/application"
 )
 
-// Plugin loads its config from fileSystem when it initializes.
+// Plugin builds the Aseprite libraries from the config the game gives it.
 type Plugin struct {
 	libraries *Libraries
 	config    *Config

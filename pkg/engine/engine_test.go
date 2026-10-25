@@ -293,15 +293,27 @@ func TestShellWithoutCameraStillRunsOverlays(t *testing.T) {
 	require.Zero(t, overlayRect.Area())
 }
 
-type fakePlugin struct {
-	name  string
-	calls *[]string
-	err   error
-}
+func TestStartRunsStartupInOrder(t *testing.T) {
+	var calls []string
+	record := func(name string, err error) Startup {
+		return func(*application.Application) error {
+			calls = append(calls, name)
+			return err
+		}
+	}
 
-func (p fakePlugin) Name() string { return p.name }
+	options := DefaultRunOptions()
+	WithStartup(record("a", nil), record("b", nil))(options)
+	require.NoError(t, start(nil, options))
+	require.Equal(t, []string{"a", "b"}, calls)
 
-func (p fakePlugin) Init(*application.Application) error {
-	*p.calls = append(*p.calls, "init "+p.name)
-	return p.err
+	calls = nil
+	broken := errors.New("broken")
+	options = DefaultRunOptions()
+	WithStartup(record("a", broken), record("b", nil))(options)
+
+	err := start(nil, options)
+	require.ErrorIs(t, err, broken)
+	require.ErrorContains(t, err, "startup:")
+	require.Equal(t, []string{"a"}, calls)
 }

@@ -26,7 +26,7 @@ func DefaultRunOptions() *RunOptions {
 	}
 }
 
-// WithStartup adds functions that run once, in order, after the plugins.
+// WithStartup adds functions that run once, in order, before the first update.
 func WithStartup(startup ...Startup) RunOption {
 	return func(ro *RunOptions) {
 		ro.Startup = append(ro.Startup, startup...)
