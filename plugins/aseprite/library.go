@@ -212,6 +212,7 @@ func (l *Libraries) decodeLibrary(library *LibraryConfig) (LibraryInfo, error) {
 	if err := info.Atlas.Validate(); err != nil {
 		return LibraryInfo{}, fmt.Errorf("atlas %q: %w", atlasPath, err)
 	}
+	info.Atlas.fitTagsToFrames()
 	return info, nil
 }
 

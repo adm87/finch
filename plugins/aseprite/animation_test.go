@@ -6,7 +6,9 @@ import (
 	"github.com/go-openapi/testify/require"
 	"github.com/yohamta/donburi"
 
+	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/images"
+	"github.com/adm87/finch/pkg/transform"
 )
 
 func TestCycleFrame(t *testing.T) {
@@ -82,7 +84,7 @@ func TestAdvanceAnimation(t *testing.T) {
 			anim := &Animator{animation: "Run", loops: LoopForever}
 			img := &images.Image{}
 
-			advanceAnimation(tc.dt, lib, anim, img)
+			advanceAnimation(tc.dt, lib, anim, img, nil)
 			require.Equal(t, tc.wantFrame, anim.Frame())
 			require.Equal(t, from+tc.wantFrame, img.Frame())
 			require.InDelta(t, tc.wantElapsed, anim.Elapsed(), 1e-6)
@@ -98,22 +100,22 @@ func TestAdvanceAnimationRestarts(t *testing.T) {
 	anim.SetAnimation("Run")
 	img := &images.Image{}
 
-	advanceAnimation(0.15, lib, anim, img)
+	advanceAnimation(0.15, lib, anim, img, nil)
 	require.Equal(t, 1, anim.Frame())
 
 	anim.SetAnimation("Run")
-	advanceAnimation(0, lib, anim, img)
+	advanceAnimation(0, lib, anim, img, nil)
 	require.Equal(t, 1, anim.Frame())
 	require.InDelta(t, 50, anim.Elapsed(), 1e-6)
 
 	anim.SetAnimation("Back")
-	advanceAnimation(0, lib, anim, img)
+	advanceAnimation(0, lib, anim, img, nil)
 	require.Equal(t, 2, anim.Frame())
 	require.Zero(t, anim.Elapsed())
 
-	advanceAnimation(0.05, lib, anim, img)
+	advanceAnimation(0.05, lib, anim, img, nil)
 	anim.SetLibrary(anim.Library())
-	advanceAnimation(0, lib, anim, img)
+	advanceAnimation(0, lib, anim, img, nil)
 	require.Equal(t, 2, anim.Frame())
 	require.Zero(t, anim.Elapsed())
 }
@@ -123,7 +125,7 @@ func TestAdvanceAnimationUnknownTag(t *testing.T) {
 	anim := &Animator{animation: "Missing", loops: LoopForever}
 	img := &images.Image{}
 
-	advanceAnimation(1, lib, anim, img)
+	advanceAnimation(1, lib, anim, img, nil)
 	require.Equal(t, 0, img.Frame())
 	require.Zero(t, anim.Elapsed())
 }
@@ -162,7 +164,7 @@ func TestAdvanceAnimationLoops(t *testing.T) {
 			anim.SetLoops(tc.loops)
 			img := &images.Image{}
 
-			advanceAnimation(tc.dt, lib, anim, img)
+			advanceAnimation(tc.dt, lib, anim, img, nil)
 			require.Equal(t, tc.wantFrame, anim.Frame())
 			require.Equal(t, tc.wantFinished, anim.Finished())
 		})
@@ -175,14 +177,14 @@ func TestAnimatorLoopChanges(t *testing.T) {
 
 	t.Run("more loops resume a finished animation", func(t *testing.T) {
 		anim := &Animator{animation: "Run"}
-		advanceAnimation(0.3, lib, anim, img)
+		advanceAnimation(0.3, lib, anim, img, nil)
 		require.True(t, anim.Finished())
 
 		anim.SetLoops(1)
-		advanceAnimation(0.05, lib, anim, img)
+		advanceAnimation(0.05, lib, anim, img, nil)
 		require.False(t, anim.Finished())
 		require.Equal(t, 0, anim.Frame())
-		advanceAnimation(0.25, lib, anim, img)
+		advanceAnimation(0.25, lib, anim, img, nil)
 		require.True(t, anim.Finished())
 		require.Equal(t, 2, anim.Frame())
 	})
@@ -190,25 +192,25 @@ func TestAnimatorLoopChanges(t *testing.T) {
 	t.Run("fewer loops finish at the end of the current cycle", func(t *testing.T) {
 		anim := &Animator{animation: "Run"}
 		anim.SetLoops(3)
-		advanceAnimation(0.45, lib, anim, img)
+		advanceAnimation(0.45, lib, anim, img, nil)
 		require.Equal(t, 1, anim.Frame())
 
 		anim.SetLoops(0)
 		require.False(t, anim.Finished())
-		advanceAnimation(0.1, lib, anim, img)
+		advanceAnimation(0.1, lib, anim, img, nil)
 		require.False(t, anim.Finished())
-		advanceAnimation(0.1, lib, anim, img)
+		advanceAnimation(0.1, lib, anim, img, nil)
 		require.True(t, anim.Finished())
 		require.Equal(t, 2, anim.Frame())
 	})
 
 	t.Run("restart plays a finished animation again", func(t *testing.T) {
 		anim := &Animator{animation: "Run"}
-		advanceAnimation(1, lib, anim, img)
+		advanceAnimation(1, lib, anim, img, nil)
 		require.True(t, anim.Finished())
 
 		anim.Restart()
-		advanceAnimation(0, lib, anim, img)
+		advanceAnimation(0, lib, anim, img, nil)
 		require.False(t, anim.Finished())
 		require.Equal(t, 0, anim.Frame())
 	})
@@ -225,4 +227,76 @@ func TestAnimatorLoopChanges(t *testing.T) {
 		anim.SetLoops(-5)
 		require.Equal(t, LoopForever, anim.Loops())
 	})
+}
+
+func TestAnchoredRect(t *testing.T) {
+	rect := geom.Rect{X: 26, Y: 36, Width: 24, Height: 28}
+	canvas := geom.Rect{Width: 96, Height: 96}
+
+	requireRect(t, geom.Rect{X: -12, Y: -28, Width: 24, Height: 28}, anchoredRect(rect, canvas, 38.0/96, 64.0/96))
+	requireRect(t, rect, anchoredRect(rect, canvas, 0, 0))
+}
+
+func requireRect(t *testing.T, want, got geom.Rect) {
+	t.Helper()
+	require.InDelta(t, want.X, got.X, 1e-9)
+	require.InDelta(t, want.Y, got.Y, 1e-9)
+	require.InDelta(t, want.Width, got.Width, 1e-9)
+	require.InDelta(t, want.Height, got.Height, 1e-9)
+}
+
+// newBoundsLibrary has a "Run" tag over frames 0-2 and a "Back" tag over frames 3-4.
+func newBoundsLibrary() LibraryInfo {
+	visible := []geom.Rect{
+		{X: 10, Y: 12, Width: 20, Height: 28},
+		{X: 10, Y: 10, Width: 20, Height: 30},
+		{X: 8, Y: 12, Width: 24, Height: 28},
+		{X: 5, Y: 5, Width: 10, Height: 10},
+		{X: 6, Y: 4, Width: 10, Height: 10},
+	}
+	atlas := &Atlas{
+		Frames: make(Frames, len(visible)),
+		Meta: Meta{FrameTags: FrameTags{
+			{Name: "Run", Direction: DirectionForward, From: 0, To: 2},
+			{Name: "Back", Direction: DirectionForward, From: 3, To: 4},
+		}},
+	}
+	for i, r := range visible {
+		atlas.Frames[i] = Frame{SpriteSourceSize: r, SourceSize: geom.Rect{Width: 40, Height: 40}, Duration: 100}
+	}
+	atlas.fitTagsToFrames()
+	return LibraryInfo{Atlas: atlas}
+}
+
+func TestFitTagsToFrames(t *testing.T) {
+	lib := newBoundsLibrary()
+	tags := lib.Atlas.Meta.FrameTags
+
+	require.Equal(t, geom.Rect{X: 8, Y: 10, Width: 24, Height: 30}, tags.ByName("Run").VisibleRect())
+	require.Equal(t, geom.Rect{X: 5, Y: 4, Width: 11, Height: 11}, tags.ByName("Back").VisibleRect())
+}
+
+func TestAdvanceAnimationFitsBoundsToTheTag(t *testing.T) {
+	lib := newBoundsLibrary()
+
+	w := donburi.NewWorld()
+	entry := w.Entry(w.Create(transform.BoundsComponent))
+	bounds := transform.BoundsComponent.Get(entry)
+
+	anim := &Animator{animation: "Run", loops: LoopForever}
+	img := &images.Image{}
+	img.SetAnchor(0.5, 1)
+
+	advanceAnimation(0, lib, anim, img, bounds)
+	requireRect(t, geom.Rect{X: -12, Y: -30, Width: 24, Height: 30}, bounds.Rect())
+
+	version := bounds.Version()
+	for range 5 {
+		advanceAnimation(0.1, lib, anim, img, bounds)
+	}
+	require.Equal(t, version, bounds.Version())
+
+	anim.SetAnimation("Back")
+	advanceAnimation(0, lib, anim, img, bounds)
+	requireRect(t, geom.Rect{X: -15, Y: -36, Width: 11, Height: 11}, bounds.Rect())
 }

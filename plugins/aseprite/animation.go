@@ -3,10 +3,13 @@ package aseprite
 import (
 	"github.com/yohamta/donburi"
 
+	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/images"
+	"github.com/adm87/finch/pkg/transform"
 )
 
-// AdvanceAnimations steps every entry that has an Animator and an Image.
+// AdvanceAnimations steps every entry that has an Animator and an Image, and
+// fits its Bounds, if it has one, to the visible pixels of the current tag.
 func AdvanceAnimations(dt float64, libs *Libraries, entries []*donburi.Entry) error {
 	for _, entry := range entries {
 		anim, ok := GetAnimator(entry)
@@ -24,12 +27,13 @@ func AdvanceAnimations(dt float64, libs *Libraries, entries []*donburi.Entry) er
 			return err
 		}
 
-		advanceAnimation(dt, lib, anim, img)
+		bounds, _ := transform.GetBounds(entry)
+		advanceAnimation(dt, lib, anim, img, bounds)
 	}
 	return nil
 }
 
-func advanceAnimation(dt float64, library LibraryInfo, anim *Animator, img *images.Image) {
+func advanceAnimation(dt float64, library LibraryInfo, anim *Animator, img *images.Image, bounds *transform.Bounds) {
 	tag := library.Atlas.Meta.FrameTags.ByName(anim.Animation())
 	if tag == nil {
 		return
@@ -46,6 +50,22 @@ func advanceAnimation(dt float64, library LibraryInfo, anim *Animator, img *imag
 
 	anim.frame = cycleFrame(anim.position, len(frames), tag.Direction)
 	img.SetFrame(tag.From + anim.frame)
+
+	if bounds != nil {
+		ax, ay := img.Anchor()
+		bounds.SetRect(anchoredRect(tag.VisibleRect(), frames[anim.frame].SourceSize, ax, ay))
+	}
+}
+
+// anchoredRect moves rect, given in canvas pixels, so the anchor sits at the
+// entity's origin.
+func anchoredRect(rect, canvas geom.Rect, ax, ay float64) geom.Rect {
+	return geom.Rect{
+		X:      rect.X - ax*canvas.Width,
+		Y:      rect.Y - ay*canvas.Height,
+		Width:  rect.Width,
+		Height: rect.Height,
+	}
 }
 
 func restartAnimation(a *Animator) {

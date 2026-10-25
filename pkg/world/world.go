@@ -3,6 +3,7 @@ package world
 import (
 	"errors"
 	"fmt"
+	"iter"
 
 	"github.com/yohamta/donburi"
 
@@ -175,6 +176,33 @@ func (w *World) Sync() error {
 		}
 	})
 	return errors.Join(errList...)
+}
+
+// PartitionCell is an occupied cell of one of the world's spatial partitions.
+type PartitionCell struct {
+	Bounds geom.Rect
+	// Partition is 0 for the partition with the smallest cells.
+	Partition int
+	Entities  int
+}
+
+// PartitionCells iterates the occupied partition cells that overlap region.
+func (w *World) PartitionCells(region geom.Rect) iter.Seq[PartitionCell] {
+	return func(yield func(PartitionCell) bool) {
+		for i, g := range w.partitions.grids {
+			for cell, entities := range g.Cells(region) {
+				minX, minY, maxX, maxY := g.CellBounds(cell)
+				pc := PartitionCell{
+					Bounds:    geom.Rect{X: minX, Y: minY, Width: maxX - minX, Height: maxY - minY},
+					Partition: i,
+					Entities:  entities,
+				}
+				if !yield(pc) {
+					return
+				}
+			}
+		}
+	}
 }
 
 // Query appends the entities in region to dst. Pass dst[:0] to reuse a buffer.

@@ -56,6 +56,10 @@ func (cr CellRange) Overlaps(other CellRange) bool {
 	return cr.minX < other.maxX && cr.maxX > other.minX && cr.minY < other.maxY && cr.maxY > other.minY
 }
 
+func (cr CellRange) size() int64 {
+	return int64(cr.maxX-cr.minX) * int64(cr.maxY-cr.minY)
+}
+
 // All iterates over the cells row by row.
 func (cr CellRange) All() iter.Seq[Cell] {
 	return func(yield func(Cell) bool) {

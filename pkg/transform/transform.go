@@ -6,12 +6,11 @@ import (
 )
 
 type Transform struct {
-	x, y     float64
-	ox, oy   float64
-	sx, sy   float64
-	rotation float64
-	geoM     ebiten.GeoM
-	// geoMVersion is the version geoM was built for.
+	x, y        float64
+	ox, oy      float64
+	sx, sy      float64
+	rotation    float64
+	geoM        ebiten.GeoM
 	geoMVersion uint64
 	version     uint64
 }

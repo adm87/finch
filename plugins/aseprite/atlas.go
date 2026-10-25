@@ -50,6 +50,17 @@ func (a *Atlas) Validate() error {
 	return errors.Join(errList...)
 }
 
+// fitTagsToFrames records each tag's visible rect. Tags must be valid first.
+func (a *Atlas) fitTagsToFrames() {
+	for i := range a.Meta.FrameTags {
+		tag := &a.Meta.FrameTags[i]
+		tag.visible = a.Frames[tag.From].SpriteSourceSize
+		for _, frame := range a.Frames[tag.From+1 : tag.To+1] {
+			tag.visible = tag.visible.Union(frame.SpriteSourceSize)
+		}
+	}
+}
+
 // Frames holds an atlas's frames in file order.
 type Frames []Frame
 
@@ -172,6 +183,12 @@ type FrameTag struct {
 	From      int            `json:"from"`
 	To        int            `json:"to"`
 	Color     hexcolor.Color `json:"color"`
+	visible   geom.Rect
+}
+
+// VisibleRect is the canvas area covered by any of the tag's frames.
+func (t *FrameTag) VisibleRect() geom.Rect {
+	return t.visible
 }
 
 // Direction is the playback order of a frame tag.

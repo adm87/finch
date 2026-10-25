@@ -25,6 +25,18 @@ func (r Rect) Area() float64 {
 	return r.Width * r.Height
 }
 
+// Union returns the smallest rect containing both r and other.
+func (r Rect) Union(other Rect) Rect {
+	rMinX, rMinY := r.Min()
+	rMaxX, rMaxY := r.Max()
+	oMinX, oMinY := other.Min()
+	oMaxX, oMaxY := other.Max()
+
+	minX, minY := min(rMinX, oMinX), min(rMinY, oMinY)
+	maxX, maxY := max(rMaxX, oMaxX), max(rMaxY, oMaxY)
+	return Rect{X: minX, Y: minY, Width: maxX - minX, Height: maxY - minY}
+}
+
 func (r Rect) Intersects(other Rect) bool {
 	rMinX, rMinY := r.Min()
 	rMaxX, rMaxY := r.Max()

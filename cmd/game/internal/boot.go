@@ -17,11 +17,9 @@ import (
 	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/engine"
 	"github.com/adm87/finch/pkg/errs"
-	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/logger"
 	"github.com/adm87/finch/pkg/rendering"
-	"github.com/adm87/finch/pkg/transform"
 	"github.com/adm87/finch/pkg/world"
 	"github.com/adm87/finch/plugins/aseprite"
 )
@@ -114,6 +112,8 @@ func run(app *application.Application, p *plugins.Plugins, l logger.Logger) erro
 	}
 	opts := append(gameSystems(p),
 		engine.WithOverlayDrawers(
+			engine.DrawerFunc(debug.OverlayPartitions),
+			&debug.EntityBounds{},
 			engine.DrawerFunc(debug.OverlayFPS),
 			engine.DrawerFunc(debug.OverlayZeroZero),
 		),
@@ -169,13 +169,6 @@ func makeTestScene(app *application.Application, p *plugins.Plugins) error {
 	img := images.ImageComponent.Get(entry)
 	img.SetHandle(library.ImageHandle)
 	img.SetAnchor(ax, ay)
-
-	transform.BoundsComponent.Get(entry).SetRect(geom.Rect{
-		X:      -width * ax,
-		Y:      -height * ay,
-		Width:  width,
-		Height: height,
-	})
 
 	anim := aseprite.AnimatorComponent.Get(entry)
 	anim.SetLibrary(libraryID)

@@ -227,6 +227,43 @@ func (hg *HashGrid[T]) Range(region Region) iter.Seq2[Key, T] {
 	}
 }
 
+// Cells iterates the occupied cells covered by region, unpadded, with the number
+// of entries in each. Insert, Update and Delete panic during iteration.
+func (hg *HashGrid[T]) Cells(region Region) iter.Seq2[Cell, int] {
+	minX, minY := region.Min()
+	maxX, maxY := region.Max()
+
+	cr := NewCellRange(hg.Snap(minX, minY, maxX, maxY))
+
+	return func(yield func(Cell, int) bool) {
+		hg.rl.Lock()
+		defer hg.rl.Unlock()
+
+		// Walk whichever is smaller: the cells in range or the occupied cells.
+		if cr.size() > int64(len(hg.grid)) {
+			for cell, keys := range hg.grid {
+				if x, y := UnpackCell(cell); cr.Contains(x, y) && !yield(cell, len(keys)) {
+					return
+				}
+			}
+			return
+		}
+		for cell := range cr.All() {
+			if keys, ok := hg.grid[cell]; ok && !yield(cell, len(keys)) {
+				return
+			}
+		}
+	}
+}
+
+// CellBounds returns the min and max corners of c in world space.
+func (hg *HashGrid[T]) CellBounds(c Cell) (minX, minY, maxX, maxY float64) {
+	x, y := UnpackCell(c)
+	size := float64(hg.cellSize)
+	minX, minY = float64(x)*size, float64(y)*size
+	return minX, minY, minX + size, minY + size
+}
+
 func (hg *HashGrid[T]) PaddedRegion(minX, minY, maxX, maxY float64) (int32, int32, int32, int32) {
 	cx1, cy1, cx2, cy2 := hg.Snap(minX, minY, maxX, maxY)
 	return cx1 - hg.padding.Left,

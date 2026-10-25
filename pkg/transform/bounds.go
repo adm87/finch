@@ -6,6 +6,8 @@ import (
 	"github.com/adm87/finch/pkg/geom"
 )
 
+// Bounds is the area an entity occupies, relative to its transform. Animation
+// can change it every frame, so it is not a collision shape.
 type Bounds struct {
 	rect    geom.Rect
 	version uint64
