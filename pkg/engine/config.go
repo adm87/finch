@@ -20,12 +20,14 @@ type WindowConfig struct {
 	Height     int  `yaml:"height"`
 	Fullscreen bool `yaml:"fullscreen"`
 	Resizable  bool `yaml:"resizable"`
+	// ResolutionScale is the window's resolution relative to the display.
+	ResolutionScale float64 `yaml:"resolution_scale"`
 }
 
 func DefaultConfig() *Config {
 	return &Config{
 		ClearColor: hexcolor.Color{A: 255},
-		Window:     WindowConfig{Width: 800, Height: 600},
+		Window:     WindowConfig{Width: 800, Height: 600, ResolutionScale: 1},
 		TickRate:   60,
 	}
 }
@@ -40,6 +42,9 @@ func (c Config) Validate() error {
 	}
 	if c.Window.Height <= 0 {
 		errList = append(errList, errs.ArgumentOutOfRange("window.height", c.Window.Height, "must be positive"))
+	}
+	if c.Window.ResolutionScale <= 0 {
+		errList = append(errList, errs.ArgumentOutOfRange("window.resolution_scale", c.Window.ResolutionScale, "must be positive"))
 	}
 	return errors.Join(errList...)
 }

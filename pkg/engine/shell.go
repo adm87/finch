@@ -21,6 +21,8 @@ type shell struct {
 }
 
 func newShell(app *application.Application, cfg Config, options *RunOptions, clock *clock) *shell {
+	app.Screen().SetResolutionScale(cfg.Window.ResolutionScale)
+
 	worldDrawers := options.WorldDrawers
 	if len(worldDrawers) == 0 {
 		worldDrawers = Drawers{DrawerFunc(drawPipeline(app))}

@@ -82,3 +82,13 @@ func TestScreenFitIgnoresAnEmptyWindow(t *testing.T) {
 	require.Equal(t, 1280.0, w)
 	require.Equal(t, 720.0, h)
 }
+
+func TestScreenSetResolutionScaleIgnoresNonPositive(t *testing.T) {
+	screen := display.NewScreen(320, 180)
+	require.Equal(t, 1.0, screen.ResolutionScale())
+
+	screen.SetResolutionScale(0.5)
+	screen.SetResolutionScale(0)
+	screen.SetResolutionScale(-1)
+	require.Equal(t, 0.5, screen.ResolutionScale())
+}

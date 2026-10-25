@@ -14,12 +14,13 @@ type Screen struct {
 	buffer  *ebiten.Image
 	options *ebiten.DrawImageOptions
 	// safeArea is the visible part of the buffer.
-	safeArea     geom.Rect
-	scale        float64
-	deviceScale  float64
-	windowWidth  float64
-	windowHeight float64
-	isDirty      bool
+	safeArea        geom.Rect
+	scale           float64
+	deviceScale     float64
+	resolutionScale float64
+	windowWidth     float64
+	windowHeight    float64
+	isDirty         bool
 }
 
 func NewScreen(width, height int) *Screen {
@@ -33,13 +34,14 @@ func NewScreen(width, height int) *Screen {
 			Width:  float64(width),
 			Height: float64(height),
 		},
-		scale:       1,
-		deviceScale: 1,
-		isDirty:     true,
+		scale:           1,
+		deviceScale:     1,
+		resolutionScale: 1,
+		isDirty:         true,
 	}
 }
 
-// WindowSize is in device pixels.
+// WindowSize is in window pixels.
 func (s *Screen) WindowSize() (float64, float64) {
 	return s.windowWidth, s.windowHeight
 }
@@ -73,16 +75,30 @@ func (s *Screen) Resize(width, height int) {
 	s.isDirty = true
 }
 
-// Layout takes the window size from Ebiten and returns it in device pixels, so
-// the window is drawn at full resolution.
+// ResolutionScale is the window's resolution relative to the display. 1 draws
+// at full resolution and 0.5 at half.
+func (s *Screen) ResolutionScale() float64 {
+	return s.resolutionScale
+}
+
+func (s *Screen) SetResolutionScale(scale float64) {
+	if scale <= 0 || scale == s.resolutionScale {
+		return
+	}
+	s.resolutionScale = scale
+	s.isDirty = true
+}
+
+// Layout takes the window size from Ebiten and returns it in window pixels.
 func (s *Screen) Layout(outsideWidth, outsideHeight float64) (float64, float64) {
 	if m := ebiten.Monitor(); m != nil {
 		s.deviceScale = m.DeviceScaleFactor()
 	}
-	return s.Fit(outsideWidth*s.deviceScale, outsideHeight*s.deviceScale)
+	scale := s.pixelScale()
+	return s.Fit(outsideWidth*scale, outsideHeight*scale)
 }
 
-// Fit scales the buffer to a window size in device pixels.
+// Fit scales the buffer to a window size in window pixels.
 func (s *Screen) Fit(windowWidth, windowHeight float64) (float64, float64) {
 	if windowWidth <= 0 || windowHeight <= 0 {
 		return windowWidth, windowHeight
@@ -95,10 +111,16 @@ func (s *Screen) Fit(windowWidth, windowHeight float64) (float64, float64) {
 	return windowWidth, windowHeight
 }
 
-// CursorPosition is the mouse position in device pixels.
+// CursorPosition is the mouse position in window pixels.
 func (s *Screen) CursorPosition() (float64, float64) {
 	x, y := ebiten.CursorPosition()
-	return float64(x) * s.deviceScale, float64(y) * s.deviceScale
+	scale := s.pixelScale()
+	return float64(x) * scale, float64(y) * scale
+}
+
+// pixelScale is window pixels per logical pixel.
+func (s *Screen) pixelScale() float64 {
+	return s.deviceScale * s.resolutionScale
 }
 
 func (s *Screen) BufferToWindow(x, y float64) (float64, float64) {

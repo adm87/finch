@@ -328,11 +328,13 @@ func TestConfigValidate(t *testing.T) {
 	cfg.TickRate = 0
 	cfg.Window.Width = 0
 	cfg.Window.Height = -1
+	cfg.Window.ResolutionScale = 0
 	err := cfg.Validate()
 	require.ErrorIs(t, err, errs.ErrArgumentOutOfRange)
 	require.ErrorContains(t, err, "tick_rate")
 	require.ErrorContains(t, err, "window.width")
 	require.ErrorContains(t, err, "window.height")
+	require.ErrorContains(t, err, "window.resolution_scale")
 }
 
 func TestShellClearsWithTheEngineColor(t *testing.T) {
@@ -345,4 +347,16 @@ func TestShellClearsWithTheEngineColor(t *testing.T) {
 	sh := newShell(app, cfg, DefaultRunOptions(), c)
 
 	require.Equal(t, hexcolor.ToRGBA(cfg.ClearColor), sh.clearColor)
+}
+
+func TestShellSetsTheResolutionScale(t *testing.T) {
+	app, err := application.New(nil, logger.N)
+	require.NoError(t, err)
+
+	cfg := *DefaultConfig()
+	cfg.Window.ResolutionScale = 0.5
+	c, _ := newFakeClock(60)
+	newShell(app, cfg, DefaultRunOptions(), c)
+
+	require.Equal(t, 0.5, app.Screen().ResolutionScale())
 }
