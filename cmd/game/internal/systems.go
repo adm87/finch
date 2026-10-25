@@ -26,7 +26,7 @@ func gameSystems(p *plugins.Plugins) []engine.RunOption {
 			input.UpdateCamera(dt, c)
 		}
 		if p, ok := player.Player.First(w.ECS()); ok {
-			return input.UpdatePlayer(dt, p, w)
+			input.UpdatePlayer(dt, p)
 		}
 		return nil
 	}

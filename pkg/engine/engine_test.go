@@ -7,9 +7,12 @@ import (
 
 	"github.com/go-openapi/testify/require"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/yohamta/donburi"
 
 	"github.com/adm87/finch/pkg/application"
+	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/logger"
+	"github.com/adm87/finch/pkg/transform"
 )
 
 type fakeTime struct{ t time.Time }
@@ -146,4 +149,78 @@ func TestShellDefaultsWorldDrawersWithoutChangingOptions(t *testing.T) {
 	require.NoError(t, sh.worldDrawers.Draw(nil, app))
 	require.True(t, drewCustom)
 	require.Len(t, sh.worldDrawers, 1)
+}
+
+func TestShellSyncsWorldBeforeLateUpdate(t *testing.T) {
+	app, err := application.New(nil, logger.N)
+	require.NoError(t, err)
+
+	w := app.World()
+	entry := w.Create()
+	transform.BoundsComponent.Get(entry).SetRect(geom.Rect{Width: 10, Height: 10})
+
+	options := DefaultRunOptions()
+	WithUpdate(func(*application.Application, float64) error {
+		transform.TransformComponent.Get(entry).SetPosition(300, 300)
+		return nil
+	})(options)
+
+	var seen []*donburi.Entry
+	WithLateUpdate(func(app *application.Application, _ float64) error {
+		seen = app.World().Query(geom.Rect{X: 300, Y: 300, Width: 10, Height: 10}, seen[:0])
+		return nil
+	})(options)
+
+	c, _ := newFakeClock(60)
+	require.NoError(t, newShell(app, options, c).Update())
+	require.Len(t, seen, 1)
+	require.Equal(t, entry.Entity(), seen[0].Entity())
+}
+
+func TestShellSyncsWorldAfterEveryPhase(t *testing.T) {
+	app, err := application.New(nil, logger.N)
+	require.NoError(t, err)
+
+	entry := app.World().Create()
+	transform.BoundsComponent.Get(entry).SetRect(geom.Rect{Width: 10, Height: 10})
+
+	at := func(app *application.Application, x, y float64) bool {
+		hits := app.World().Query(geom.Rect{X: x, Y: y, Width: 10, Height: 10}, nil)
+		return len(hits) == 1 && hits[0].Entity() == entry.Entity()
+	}
+	moveTo := func(x, y float64) {
+		transform.TransformComponent.Get(entry).SetPosition(x, y)
+	}
+
+	var seen []bool
+	step := 0
+	options := DefaultRunOptions()
+	WithUpdate(func(*application.Application, float64) error {
+		moveTo(100, 100)
+		return nil
+	})(options)
+	WithFixedUpdate(func(app *application.Application, _ float64) error {
+		step++
+		if step == 1 {
+			seen = append(seen, at(app, 100, 100))
+			moveTo(200, 200)
+			return nil
+		}
+		seen = append(seen, at(app, 200, 200))
+		moveTo(300, 300)
+		return nil
+	})(options)
+	WithLateUpdate(func(app *application.Application, _ float64) error {
+		seen = append(seen, at(app, 300, 300))
+		return nil
+	})(options)
+
+	c, ft := newFakeClock(10)
+	sh := newShell(app, options, c)
+	c.tick()
+	ft.advance(200 * time.Millisecond)
+
+	require.NoError(t, sh.Update())
+	require.Equal(t, 2, step)
+	require.Equal(t, []bool{true, true, true}, seen)
 }

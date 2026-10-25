@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/yohamta/donburi"
+	"github.com/yohamta/donburi/filter"
 
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/hashgrid"
@@ -15,13 +16,22 @@ import (
 type indexing struct {
 	key       hashgrid.Key
 	partition int
+	// Versions of the transform and bounds when the entity was last indexed.
+	transformVersion uint64
+	boundsVersion    uint64
 }
 
 var (
 	indexingComponent = donburi.NewComponentType[indexing]()
 
-	// DontPartition keeps an entity out of the spatial partitions.
+	// DontPartition keeps an entity out of the spatial partitions. Sync skips it,
+	// so call World.Update after adding it to an already indexed entity.
 	DontPartition = donburi.NewTag("don't partition")
+
+	syncQuery = donburi.NewQuery(filter.And(
+		filter.Contains(indexingComponent),
+		filter.Not(filter.Contains(DontPartition)),
+	))
 )
 
 func getIndexing(entry *donburi.Entry) (*indexing, bool) {
@@ -68,10 +78,27 @@ func (p *partitions) add(entry *donburi.Entry) error {
 	if entry.HasComponent(DontPartition) {
 		return p.delete(idx)
 	}
-	return p.reindex(entry, idx, p.getBounds(entry))
+	if err := p.reindex(entry, idx, p.getBounds(entry)); err != nil {
+		return err
+	}
+	idx.transformVersion, idx.boundsVersion = versions(entry)
+	return nil
 }
 
 func (p *partitions) update(entry *donburi.Entry) error {
+	return p.add(entry)
+}
+
+// sync indexes entry if it was never indexed or its transform or bounds changed since.
+func (p *partitions) sync(entry *donburi.Entry) error {
+	idx, ok := getIndexing(entry)
+	if !ok {
+		return nil
+	}
+	tv, bv := versions(entry)
+	if idx.partition >= 0 && idx.transformVersion == tv && idx.boundsVersion == bv {
+		return nil
+	}
 	return p.add(entry)
 }
 
@@ -150,6 +177,16 @@ func (p *partitions) getBounds(entry *donburi.Entry) geom.Rect {
 	}
 
 	return b.WorldRect(t)
+}
+
+func versions(entry *donburi.Entry) (transformVersion, boundsVersion uint64) {
+	if t, ok := transform.GetTransform(entry); ok {
+		transformVersion = t.Version()
+	}
+	if b, ok := transform.GetBounds(entry); ok {
+		boundsVersion = b.Version()
+	}
+	return transformVersion, boundsVersion
 }
 
 func (p *partitions) nearestFit(bounds geom.Rect) int {

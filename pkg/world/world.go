@@ -165,6 +165,18 @@ func (w *World) Valid(entry *donburi.Entry) bool {
 	return w.ecs.Valid(entry.Entity())
 }
 
+// Sync indexes new entities and re-indexes changed ones. The engine runs it each
+// update; call it to query positions changed earlier in the same phase.
+func (w *World) Sync() error {
+	var errList []error
+	syncQuery.Each(w.ecs, func(entry *donburi.Entry) {
+		if err := w.partitions.sync(entry); err != nil {
+			errList = append(errList, fmt.Errorf("entity %v: %w", entry.Entity(), err))
+		}
+	})
+	return errors.Join(errList...)
+}
+
 // Query appends the entities in region to dst. Pass dst[:0] to reuse a buffer.
 func (w *World) Query(region geom.Rect, dst []*donburi.Entry) []*donburi.Entry {
 	w.partitions.rangeOver(region, func(e donburi.Entity) bool {

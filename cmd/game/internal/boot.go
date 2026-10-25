@@ -181,5 +181,5 @@ func makeTestScene(app *application.Application, p *plugins.Plugins) error {
 	anim.SetLibrary(libraryID)
 	anim.SetAnimation("Idle")
 
-	return w.Add(entry)
+	return nil
 }

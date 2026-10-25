@@ -7,7 +7,6 @@ import (
 	"github.com/yohamta/donburi"
 
 	"github.com/adm87/finch/pkg/transform"
-	"github.com/adm87/finch/pkg/world"
 	"github.com/adm87/finch/plugins/aseprite"
 )
 
@@ -15,7 +14,7 @@ const (
 	playerMoveSpeed = 100.0
 )
 
-func UpdatePlayer(dt float64, entry *donburi.Entry, w *world.World) error {
+func UpdatePlayer(dt float64, entry *donburi.Entry) {
 	t := transform.TransformComponent.Get(entry)
 
 	// Movement
@@ -57,9 +56,5 @@ func UpdatePlayer(dt float64, entry *donburi.Entry, w *world.World) error {
 		x += dx * playerMoveSpeed * dt
 		y += dy * playerMoveSpeed * dt
 		t.SetPosition(x, y)
-
-		return w.Update(entry)
 	}
-
-	return nil
 }

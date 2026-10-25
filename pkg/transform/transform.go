@@ -11,13 +11,16 @@ type Transform struct {
 	sx, sy   float64
 	rotation float64
 	geoM     ebiten.GeoM
-	isDirty  bool
+	// geoMVersion is the version geoM was built for.
+	geoMVersion uint64
+	version     uint64
 }
 
 var TransformComponent = donburi.NewComponentType[Transform](Transform{
-	sx:      1,
-	sy:      1,
-	isDirty: true,
+	sx: 1,
+	sy: 1,
+	// Starting at 1 leaves the cached geoM, built for version 0, out of date.
+	version: 1,
 })
 
 func GetTransform(entry *donburi.Entry) (*Transform, bool) {
@@ -38,7 +41,7 @@ func (t *Transform) SetPosition(x, y float64) {
 	}
 	t.x = x
 	t.y = y
-	t.isDirty = true
+	t.version++
 }
 
 func (t *Transform) Origin() (float64, float64) {
@@ -51,7 +54,7 @@ func (t *Transform) SetOrigin(ox, oy float64) {
 	}
 	t.ox = ox
 	t.oy = oy
-	t.isDirty = true
+	t.version++
 }
 
 func (t *Transform) Scale() (float64, float64) {
@@ -64,7 +67,7 @@ func (t *Transform) SetScale(sx, sy float64) {
 	}
 	t.sx = sx
 	t.sy = sy
-	t.isDirty = true
+	t.version++
 }
 
 func (t *Transform) Rotation() float64 {
@@ -76,17 +79,22 @@ func (t *Transform) SetRotation(rotation float64) {
 		return
 	}
 	t.rotation = rotation
-	t.isDirty = true
+	t.version++
+}
+
+// Version changes whenever the position, origin, scale or rotation changes.
+func (t *Transform) Version() uint64 {
+	return t.version
 }
 
 func (t *Transform) GeoM() ebiten.GeoM {
-	if t.isDirty {
+	if t.geoMVersion != t.version {
 		t.geoM.Reset()
 		t.geoM.Translate(-t.ox, -t.oy)
 		t.geoM.Scale(t.sx, t.sy)
 		t.geoM.Rotate(t.rotation)
 		t.geoM.Translate(t.x, t.y)
-		t.isDirty = false
+		t.geoMVersion = t.version
 	}
 	return t.geoM
 }

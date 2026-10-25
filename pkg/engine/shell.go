@@ -40,19 +40,27 @@ func (sh *shell) Update() error {
 	sh.clock.tick()
 
 	dt := sh.clock.delta.Seconds()
-	if err := sh.runSystems(sh.options.Update, dt); err != nil {
+	if err := sh.runPhase(sh.options.Update, dt); err != nil {
 		return err
 	}
 
 	dt = sh.clock.fixedDelta.Seconds()
 	for range sh.clock.fixedSteps {
-		if err := sh.runSystems(sh.options.FixedUpdate, dt); err != nil {
+		if err := sh.runPhase(sh.options.FixedUpdate, dt); err != nil {
 			return err
 		}
 	}
 
 	dt = sh.clock.delta.Seconds()
-	return sh.runSystems(sh.options.LateUpdate, dt)
+	return sh.runPhase(sh.options.LateUpdate, dt)
+}
+
+// runPhase runs systems, then syncs the world so the next phase sees their changes.
+func (sh *shell) runPhase(systems []System, dt float64) error {
+	if err := sh.runSystems(systems, dt); err != nil {
+		return err
+	}
+	return sh.app.World().Sync()
 }
 
 func (sh *shell) runSystems(systems []System, dt float64) error {

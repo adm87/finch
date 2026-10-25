@@ -105,3 +105,60 @@ func TestBoundsWorldRect(t *testing.T) {
 		})
 	}
 }
+
+func TestVersionsChangeOnlyWhenValuesChange(t *testing.T) {
+	tr, b := newEntity(t)
+
+	v := tr.Version()
+	tr.SetPosition(0, 0)
+	tr.SetScale(1, 1)
+	tr.SetRotation(0)
+	tr.SetOrigin(0, 0)
+	require.Equal(t, v, tr.Version())
+
+	tr.SetPosition(1, 0)
+	require.Greater(t, tr.Version(), v)
+	v = tr.Version()
+	tr.SetScale(-1, 1)
+	tr.SetRotation(1)
+	tr.SetOrigin(2, 2)
+	require.Equal(t, v+3, tr.Version())
+
+	bv := b.Version()
+	b.SetRect(b.Rect())
+	require.Equal(t, bv, b.Version())
+	b.SetRect(geom.Rect{Width: 5, Height: 5})
+	require.Greater(t, b.Version(), bv)
+}
+
+func TestGeoMUpdatesAfterEachSetter(t *testing.T) {
+	tr, _ := newEntity(t)
+	tr.SetPosition(10, 0)
+
+	apply := func(x, y float64) (float64, float64) {
+		geoM := tr.GeoM()
+		return geoM.Apply(x, y)
+	}
+
+	x, y := apply(0, 0)
+	requirePoint(t, 10, 0, x, y)
+
+	tr.SetPosition(20, 5)
+	x, y = apply(0, 0)
+	requirePoint(t, 20, 5, x, y)
+
+	tr.SetScale(2, 3)
+	x, y = apply(1, 1)
+	requirePoint(t, 22, 8, x, y)
+
+	tr.SetOrigin(1, 1)
+	x, y = apply(1, 1)
+	requirePoint(t, 20, 5, x, y)
+
+	tr.SetRotation(math.Pi)
+	x, y = apply(2, 1)
+	requirePoint(t, 18, 5, x, y)
+
+	first := tr.GeoM()
+	require.Equal(t, first, tr.GeoM())
+}

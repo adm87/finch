@@ -7,7 +7,8 @@ import (
 )
 
 type Bounds struct {
-	rect geom.Rect
+	rect    geom.Rect
+	version uint64
 }
 
 var BoundsComponent = donburi.NewComponentType[Bounds]()
@@ -25,7 +26,16 @@ func (b *Bounds) Rect() geom.Rect {
 }
 
 func (b *Bounds) SetRect(rect geom.Rect) {
+	if b.rect == rect {
+		return
+	}
 	b.rect = rect
+	b.version++
+}
+
+// Version changes whenever the rect changes.
+func (b *Bounds) Version() uint64 {
+	return b.version
 }
 
 func (b *Bounds) WorldRect(t *Transform) geom.Rect {
