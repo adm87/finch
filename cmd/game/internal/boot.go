@@ -52,7 +52,7 @@ func boot(l logger.Logger) error {
 	return run(app, p, l)
 }
 
-// loadGameConfig skips the asset system because the config sizes the application that owns it.
+// loadGameConfig reads the file directly. The asset system lives in the app, which isn't built yet.
 func loadGameConfig() (*config.GameConfig, error) {
 	fsys, err := content.GetFileSystem(content.EmbeddedFS)
 	if err != nil {
@@ -112,8 +112,8 @@ func run(app *application.Application, p *plugins.Plugins, l logger.Logger) erro
 	}
 	opts := append(gameSystems(p),
 		engine.WithOverlayDrawers(
-			engine.DrawerFunc(debug.OverlayPartitions),
-			&debug.EntityBounds{},
+			&debug.Partitions{World: app.World()},
+			engine.DrawerFunc(debug.OverlayEntityBounds),
 			engine.DrawerFunc(debug.OverlayFPS),
 			engine.DrawerFunc(debug.OverlayZeroZero),
 		),
@@ -152,7 +152,7 @@ func makeTestScene(app *application.Application, p *plugins.Plugins) error {
 	width := float64(frame.Size.X)
 	height := float64(frame.Size.Y)
 
-	// Anchor at the feet: the bottom center of the first frame's visible pixels.
+	// Anchor at the character's feet in the first frame.
 	visible := frame.Image.Bounds().Size()
 	ax := (float64(frame.Offset.X) + float64(visible.X)/2) / width
 	ay := float64(frame.Offset.Y+visible.Y) / height

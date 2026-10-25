@@ -23,6 +23,10 @@ func (v *View) Camera() *donburi.Entry {
 	return v.camera
 }
 
+func (v *View) HasCamera() bool {
+	return v.camera != nil
+}
+
 func (v *View) SetCamera(camera *donburi.Entry) {
 	v.camera = camera
 

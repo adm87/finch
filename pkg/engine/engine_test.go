@@ -13,6 +13,7 @@ import (
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/logger"
 	"github.com/adm87/finch/pkg/transform"
+	"github.com/adm87/finch/pkg/world"
 )
 
 type fakeTime struct{ t time.Time }
@@ -113,18 +114,18 @@ func TestDrawersDrawInOrderAndReportEveryError(t *testing.T) {
 	var calls []string
 	errA, errB := errors.New("a failed"), errors.New("b failed")
 	drawer := func(name string, err error) Drawer {
-		return DrawerFunc(func(*ebiten.Image, *application.Application) error {
+		return DrawerFunc(func(*ebiten.Image, *DrawContext) error {
 			calls = append(calls, name)
 			return err
 		})
 	}
 
-	err := Drawers{drawer("a", errA), drawer("b", nil), drawer("c", errB)}.Draw(nil, nil)
+	err := Drawers{drawer("a", errA), drawer("b", nil), drawer("c", errB)}.Draw(nil, &DrawContext{})
 
 	require.Equal(t, []string{"a", "b", "c"}, calls)
 	require.ErrorIs(t, err, errA)
 	require.ErrorIs(t, err, errB)
-	require.NoError(t, Drawers(nil).Draw(nil, nil))
+	require.NoError(t, Drawers(nil).Draw(nil, &DrawContext{}))
 }
 
 func TestShellDefaultsWorldDrawersWithoutChangingOptions(t *testing.T) {
@@ -139,14 +140,14 @@ func TestShellDefaultsWorldDrawersWithoutChangingOptions(t *testing.T) {
 	require.Empty(t, options.WorldDrawers)
 
 	drewCustom := false
-	custom := DrawerFunc(func(*ebiten.Image, *application.Application) error {
+	custom := DrawerFunc(func(*ebiten.Image, *DrawContext) error {
 		drewCustom = true
 		return nil
 	})
 	WithWorldDrawers(custom)(options)
 	sh = newShell(app, options, c)
 
-	require.NoError(t, sh.worldDrawers.Draw(nil, app))
+	require.NoError(t, sh.worldDrawers.Draw(nil, &DrawContext{}))
 	require.True(t, drewCustom)
 	require.Len(t, sh.worldDrawers, 1)
 }
@@ -223,4 +224,71 @@ func TestShellSyncsWorldAfterEveryPhase(t *testing.T) {
 	require.NoError(t, sh.Update())
 	require.Equal(t, 2, step)
 	require.Equal(t, []bool{true, true, true}, seen)
+}
+
+func TestShellGivesOverlaysTheWindowMatrix(t *testing.T) {
+	cfg := *application.DefaultConfig()
+	cfg.Screen.Width, cfg.Screen.Height = 320, 180
+	app, err := application.New(&cfg, logger.N)
+	require.NoError(t, err)
+
+	app.Screen().Layout(400, 180)
+	safeArea := app.Screen().SafeArea()
+	require.NotZero(t, safeArea.Y)
+
+	camera := app.World().Create(world.DontPartition)
+	transform.TransformComponent.Get(camera).SetPosition(50, -20)
+	app.View().SetCamera(camera)
+
+	var worldMatrix, overlayMatrix ebiten.GeoM
+	options := DefaultRunOptions()
+	WithWorldDrawers(DrawerFunc(func(_ *ebiten.Image, ctx *DrawContext) error {
+		worldMatrix = ctx.Matrix
+		return nil
+	}))(options)
+	WithOverlayDrawers(DrawerFunc(func(_ *ebiten.Image, ctx *DrawContext) error {
+		overlayMatrix = ctx.Matrix
+		return nil
+	}))(options)
+
+	c, _ := newFakeClock(60)
+	newShell(app, options, c).Draw(ebiten.NewImage(400, 180))
+
+	bx, by := worldMatrix.Apply(10, 20)
+	wx, wy := overlayMatrix.Apply(10, 20)
+	require.InDelta(t, bx-safeArea.X, wx, 1e-9)
+	require.InDelta(t, by-safeArea.Y, wy, 1e-9)
+}
+
+func TestShellWithoutCameraStillRunsOverlays(t *testing.T) {
+	app, err := application.New(nil, logger.N)
+	require.NoError(t, err)
+	require.False(t, app.View().HasCamera())
+
+	entry := app.World().Create()
+	transform.BoundsComponent.Get(entry).SetRect(geom.Rect{Width: 10, Height: 10})
+	require.NoError(t, app.World().Sync())
+
+	drewWorld, drewOverlay := false, false
+	var overlayEntries []*donburi.Entry
+	var overlayRect geom.Rect
+
+	options := DefaultRunOptions()
+	WithWorldDrawers(DrawerFunc(func(*ebiten.Image, *DrawContext) error {
+		drewWorld = true
+		return nil
+	}))(options)
+	WithOverlayDrawers(DrawerFunc(func(_ *ebiten.Image, ctx *DrawContext) error {
+		drewOverlay = true
+		overlayEntries, overlayRect = ctx.Entries, ctx.View
+		return nil
+	}))(options)
+
+	c, _ := newFakeClock(60)
+	newShell(app, options, c).Draw(ebiten.NewImage(800, 600))
+
+	require.False(t, drewWorld)
+	require.True(t, drewOverlay)
+	require.Empty(t, overlayEntries)
+	require.Zero(t, overlayRect.Area())
 }

@@ -22,7 +22,7 @@ type Application struct {
 	logger         logger.Logger
 }
 
-// New uses DefaultConfig when config is nil and a no-op logger when log is nil.
+// New falls back to DefaultConfig and a no-op logger when given nil.
 func New(config *Config, log logger.Logger) (*Application, error) {
 	cfg := *DefaultConfig()
 	if config != nil {
@@ -46,7 +46,7 @@ func New(config *Config, log logger.Logger) (*Application, error) {
 	view := display.NewViewport(screen)
 
 	world := world.NewWorld()
-	renderPipeline := rendering.NewPipeline(view, world)
+	renderPipeline := rendering.NewPipeline()
 
 	renderers, err := newRenderers(renderPipeline, cache)
 	if err != nil {
@@ -102,7 +102,7 @@ func (a *Application) World() *world.World {
 	return a.world
 }
 
-// RegisterFileSystems stops at the first error; file systems before it stay registered.
+// RegisterFileSystems stops at the first error. Anything registered before it stays.
 func (a *Application) RegisterFileSystems(fileSystems map[assets.FileSystem]fs.FS) error {
 	for name, fsys := range fileSystems {
 		if err := a.assets.RegisterFileSystem(name, fsys); err != nil {

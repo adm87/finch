@@ -5,9 +5,8 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
-	"github.com/yohamta/donburi"
 
-	"github.com/adm87/finch/pkg/application"
+	"github.com/adm87/finch/pkg/engine"
 	"github.com/adm87/finch/pkg/transform"
 )
 
@@ -18,35 +17,24 @@ var (
 
 const originMarkerSize = 3
 
-// EntityBounds outlines the bounds of each entity in view and marks its origin.
-type EntityBounds struct {
-	entries []*donburi.Entry
-}
-
-func (o *EntityBounds) Draw(target *ebiten.Image, app *application.Application) error {
-	region, viewGeoM := app.View().Viewport()
-	if region.Area() == 0 {
-		return nil
-	}
-
-	toScreen := worldToScreen(app.Screen(), viewGeoM)
-	o.entries = app.World().Query(region, o.entries[:0])
-
-	for _, entry := range o.entries {
+// OverlayEntityBounds outlines each entity's bounds and marks its origin.
+func OverlayEntityBounds(target *ebiten.Image, ctx *engine.DrawContext) error {
+	for _, entry := range ctx.Entries {
 		t, tOk := transform.GetTransform(entry)
 		b, bOk := transform.GetBounds(entry)
 		if !tOk || !bOk {
 			continue
 		}
 
-		// The world query is a broad phase; keep only bounds that really overlap the view.
+		// The entries are a rough match, so skip anything outside the view.
 		rect := b.WorldRect(t)
-		if !rect.Intersects(region) {
+		if !rect.Intersects(ctx.View) {
 			continue
 		}
-		strokeWorldRect(target, toScreen, rect, 1, entityBoundsColor)
+		strokeWorldRect(target, ctx.Matrix, rect, 1, entityBoundsColor)
 
-		x, y := toScreen(t.Position())
+		px, py := t.Position()
+		x, y := applyFloat32(ctx.Matrix, px, py)
 		vector.StrokeLine(target, x-originMarkerSize, y, x+originMarkerSize, y, 1, entityOriginColor, false)
 		vector.StrokeLine(target, x, y-originMarkerSize, x, y+originMarkerSize, 1, entityOriginColor, false)
 	}

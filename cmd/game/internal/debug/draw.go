@@ -6,30 +6,22 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
-	"github.com/adm87/finch/pkg/display"
 	"github.com/adm87/finch/pkg/geom"
 )
 
-type screenPoint func(x, y float64) (float32, float32)
-
-// worldToScreen maps world coordinates to window coordinates, like
-// View.WorldToScreen, using a view matrix read once per frame.
-func worldToScreen(screen *display.Screen, viewGeoM ebiten.GeoM) screenPoint {
-	return func(x, y float64) (float32, float32) {
-		sx, sy := screen.SafeAreaToScreen(viewGeoM.Apply(x, y))
-		return float32(sx), float32(sy)
-	}
+func applyFloat32(m ebiten.GeoM, x, y float64) (float32, float32) {
+	sx, sy := m.Apply(x, y)
+	return float32(sx), float32(sy)
 }
 
-// strokeWorldRect outlines rect through toScreen, so it stays correct under
-// camera rotation and zoom.
-func strokeWorldRect(target *ebiten.Image, toScreen screenPoint, rect geom.Rect, width float32, clr color.Color) {
+// strokeWorldRect outlines a world-space rect. It still lines up when the camera rotates.
+func strokeWorldRect(target *ebiten.Image, viewMatrix ebiten.GeoM, rect geom.Rect, width float32, clr color.Color) {
 	minX, minY := rect.Min()
 	maxX, maxY := rect.Max()
-	x0, y0 := toScreen(minX, minY)
-	x1, y1 := toScreen(maxX, minY)
-	x2, y2 := toScreen(maxX, maxY)
-	x3, y3 := toScreen(minX, maxY)
+	x0, y0 := applyFloat32(viewMatrix, minX, minY)
+	x1, y1 := applyFloat32(viewMatrix, maxX, minY)
+	x2, y2 := applyFloat32(viewMatrix, maxX, maxY)
+	x3, y3 := applyFloat32(viewMatrix, minX, maxY)
 
 	vector.StrokeLine(target, x0, y0, x1, y1, width, clr, false)
 	vector.StrokeLine(target, x1, y1, x2, y2, width, clr, false)

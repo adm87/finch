@@ -6,10 +6,10 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 
-	"github.com/adm87/finch/pkg/application"
+	"github.com/adm87/finch/pkg/engine"
 )
 
-func OverlayFPS(target *ebiten.Image, _ *application.Application) error {
+func OverlayFPS(target *ebiten.Image, _ *engine.DrawContext) error {
 	fps := fmt.Sprintf("FPS: %.2f", ebiten.ActualFPS())
 	ebitenutil.DebugPrintAt(target, fps, 10, 10)
 	return nil

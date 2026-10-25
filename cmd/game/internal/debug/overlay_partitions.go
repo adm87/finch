@@ -5,7 +5,8 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
-	"github.com/adm87/finch/pkg/application"
+	"github.com/adm87/finch/pkg/engine"
+	"github.com/adm87/finch/pkg/world"
 )
 
 var partitionColors = []color.RGBA{
@@ -14,18 +15,18 @@ var partitionColors = []color.RGBA{
 	{R: 90, G: 150, B: 255, A: 200},
 }
 
-// OverlayPartitions outlines the occupied partition cells in view. Larger cells
-// get thicker lines so overlapping partitions stay distinguishable.
-func OverlayPartitions(target *ebiten.Image, app *application.Application) error {
-	region, viewGeoM := app.View().Viewport()
-	if region.Area() == 0 {
+// Partitions outlines the occupied partition cells. Bigger cells get thicker lines.
+type Partitions struct {
+	World *world.World
+}
+
+func (o *Partitions) Draw(target *ebiten.Image, ctx *engine.DrawContext) error {
+	if ctx.View.Area() == 0 {
 		return nil
 	}
-
-	toScreen := worldToScreen(app.Screen(), viewGeoM)
-	for cell := range app.World().PartitionCells(region) {
+	for cell := range o.World.PartitionCells(ctx.View) {
 		clr := partitionColors[cell.Partition%len(partitionColors)]
-		strokeWorldRect(target, toScreen, cell.Bounds, float32(1+cell.Partition), clr)
+		strokeWorldRect(target, ctx.Matrix, cell.Bounds, float32(1+cell.Partition), clr)
 	}
 	return nil
 }

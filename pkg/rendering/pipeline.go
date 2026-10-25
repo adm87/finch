@@ -13,26 +13,14 @@ import (
 	"github.com/adm87/finch/pkg/transform"
 )
 
-type View interface {
-	Viewport() (geom.Rect, ebiten.GeoM)
-}
-
-type World interface {
-	RangeOver(region geom.Rect, fn func(*donburi.Entry) bool)
-}
-
 // Pipeline draws the visible entities through their adapters, sorted by layer and depth.
 type Pipeline struct {
-	view      View
-	world     World
 	renderers *slotmap.SlotMap[Adapter]
 	queue     *Queue
 }
 
-func NewPipeline(viewport View, world World) *Pipeline {
+func NewPipeline() *Pipeline {
 	return &Pipeline{
-		view:      viewport,
-		world:     world,
 		renderers: slotmap.New[Adapter](64),
 		queue:     NewQueue(),
 	}
@@ -47,19 +35,10 @@ func (rp *Pipeline) RegisterRenderer(adapter Adapter) (AdapterID, error) {
 	return AdapterID(k.Pack()), nil
 }
 
-func (rp *Pipeline) Draw(target *ebiten.Image) error {
+func (rp *Pipeline) Draw(target *ebiten.Image, entries []*donburi.Entry, viewRect geom.Rect, viewMatrix ebiten.GeoM) error {
 	rp.queue.Clear()
 
-	if rp.view == nil {
-		return nil
-	}
-
-	rect, geoM := rp.view.Viewport()
-	if rect.Area() == 0 {
-		return nil
-	}
-
-	rp.buildRenderQueue(rect)
+	rp.buildRenderQueue(entries, viewRect)
 
 	var errList []error
 
@@ -81,7 +60,7 @@ func (rp *Pipeline) Draw(target *ebiten.Image) error {
 			continue
 		}
 
-		adapter.Render(target, rc, rect, geoM)
+		adapter.Render(target, rc, viewRect, viewMatrix)
 		rc.Clear()
 	}
 
@@ -92,30 +71,32 @@ func (rp *Pipeline) Draw(target *ebiten.Image) error {
 	return nil
 }
 
-func (rp *Pipeline) buildRenderQueue(region geom.Rect) {
-	rp.world.RangeOver(region, func(entry *donburi.Entry) bool {
+func (rp *Pipeline) buildRenderQueue(entries []*donburi.Entry, viewRect geom.Rect) {
+	for i := range entries {
+		entry := entries[i]
+
 		if !entry.HasComponent(RendererComponent) {
-			return true
+			continue
 		}
 
 		r := RendererComponent.Get(entry)
 		if !r.Visible() {
-			return true
+			continue
 		}
 
 		t, tOk := transform.GetTransform(entry)
 		b, bOk := transform.GetBounds(entry)
 
 		if !tOk || !bOk {
-			return true
+			continue
 		}
 
 		if b.Rect().Area() == 0 {
-			return true
+			continue
 		}
 
-		if !b.WorldRect(t).Intersects(region) {
-			return true
+		if !b.WorldRect(t).Intersects(viewRect) {
+			continue
 		}
 
 		rp.queue.Enqueue(Candidate{
@@ -124,6 +105,5 @@ func (rp *Pipeline) buildRenderQueue(region geom.Rect) {
 			Transform: t,
 			Bounds:    b,
 		})
-		return true
-	})
+	}
 }
