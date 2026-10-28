@@ -48,9 +48,8 @@ func (mi MapInfo) visibleTiles(view geom.Rect) image.Rectangle {
 	)
 }
 
-// LayerDepth is the depth of the named layer, of any kind, the same way tile
-// layers get theirs. Use it to draw entities between layers, such as at an
-// empty "player" object layer.
+// LayerDepth finds the depth of any named layer, such as an empty "player"
+// object layer to draw the player at.
 func (mi MapInfo) LayerDepth(name string) (int32, bool) {
 	var index int32
 	for layer := range mi.Map.Layers.All() {

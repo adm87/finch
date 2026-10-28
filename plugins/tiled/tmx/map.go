@@ -111,7 +111,7 @@ func (m *Map) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	return d.DecodeElement((*plain)(m), &start)
 }
 
-func (m Map) Validate() error {
+func (m *Map) Validate() error {
 	var errList []error
 	if !m.Orientation.IsValid() {
 		errList = append(errList, errs.Argument("orientation", fmt.Sprintf("unknown orientation %q", m.Orientation)))

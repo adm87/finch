@@ -194,7 +194,10 @@ func (l *mapLoader) require(refs ...assets.Asset) error {
 }
 
 // parseAsset loads asset if needed and parses its bytes from the data cache.
-func parseAsset[T tmx.Validator[T]](l *mapLoader, asset assets.Asset) (*T, error) {
+func parseAsset[T any, PT interface {
+	*T
+	tmx.Validator
+}](l *mapLoader, asset assets.Asset) (*T, error) {
 	if err := l.require(asset); err != nil {
 		return nil, err
 	}
@@ -206,7 +209,7 @@ func parseAsset[T tmx.Validator[T]](l *mapLoader, asset assets.Asset) (*T, error
 	if err != nil {
 		return nil, fmt.Errorf("%q: %w", asset, err)
 	}
-	value, err := tmx.Parse[T](raw)
+	value, err := tmx.Parse[T, PT](raw)
 	if err != nil {
 		return nil, errs.Format(asset.String(), "invalid tiled file").Wrap(err)
 	}
@@ -274,7 +277,7 @@ func (s layerState) with(b *tmx.LayerBase) layerState {
 	s.visible = s.visible && b.Visible
 	s.color.ScaleAlpha(float32(b.Opacity))
 	if b.TintColor != nil {
-		s.color.ScaleWithColor(*b.TintColor)
+		s.color.ScaleWithColor(b.TintColor)
 	}
 	return s
 }

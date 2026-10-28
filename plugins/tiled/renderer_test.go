@@ -11,6 +11,7 @@ import (
 	"github.com/adm87/finch/pkg/rendering"
 	"github.com/adm87/finch/pkg/transform"
 	"github.com/adm87/finch/plugins/tiled"
+	"github.com/adm87/finch/plugins/tiled/tmx"
 )
 
 func TestLayersFoldInTheirGroups(t *testing.T) {
@@ -88,4 +89,44 @@ func TestRendererSkipsEntitiesWithoutAMap(t *testing.T) {
 	renderer := tiled.NewTileMapRenderer(maps, images.NewCache())
 	jobs := renderer.Jobs(&rendering.Candidate{Entry: e, Renderer: &rendering.Renderer{}, Transform: tf}, nil)
 	require.Empty(t, jobs)
+}
+
+func TestInfiniteMapsKeepTheirChunks(t *testing.T) {
+	maps, _, _ := newMaps(t)
+	handle, err := maps.CreateMap("infinite", tiled.LoadModeDynamic)
+	require.NoError(t, err)
+	info, err := maps.Map(handle)
+	require.NoError(t, err)
+
+	require.Len(t, info.Layers, 1)
+	layer := info.Layers[0]
+	require.Nil(t, layer.GIDs)
+	require.Equal(t, []tiled.ChunkInfo{
+		{GIDs: []tmx.GID{1, 0, 0, 1}, X: -6, Y: -6, Width: 2, Height: 2},
+		{GIDs: []tmx.GID{2, 2, 0, 2}, X: -4, Y: -3, Width: 2, Height: 2},
+	}, layer.Chunks)
+
+	// Every chunk is up and left of the origin, so the bounds mustn't reach 0,0.
+	want := geom.Rect{X: -96, Y: -96, Width: 64, Height: 80}
+	require.Equal(t, want, layer.Bounds)
+	require.Equal(t, want, info.Bounds())
+}
+
+func TestInfiniteMapJobsCoverTheirChunks(t *testing.T) {
+	maps, _, _ := newMaps(t)
+	handle, err := maps.CreateMap("infinite", tiled.LoadModeDynamic)
+	require.NoError(t, err)
+
+	w := donburi.NewWorld()
+	e := w.Entry(w.Create(tiled.TileMapComponent, transform.TransformComponent))
+	tm, _ := tiled.GetTileMap(e)
+	tm.SetHandle(handle)
+	tf, _ := transform.GetTransform(e)
+	tf.SetPosition(100, 100)
+
+	renderer := tiled.NewTileMapRenderer(maps, images.NewCache())
+	jobs := renderer.Jobs(&rendering.Candidate{Entry: e, Renderer: &rendering.Renderer{}, Transform: tf}, nil)
+
+	require.Len(t, jobs, 1)
+	require.Equal(t, geom.Rect{X: 4, Y: 4, Width: 64, Height: 80}, jobs[0].Bounds)
 }

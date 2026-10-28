@@ -65,9 +65,9 @@ func (a *Atlas) fitTagsToFrames() {
 type Frames []Frame
 
 // FrameRects returns each frame's rect in the sheet and its place on the untrimmed canvas.
-func (f Frames) FrameRects() []images.FrameRect {
-	rects := make([]images.FrameRect, len(f))
-	for i, frame := range f {
+func (f *Frames) FrameRects() []images.FrameRect {
+	rects := make([]images.FrameRect, len(*f))
+	for i, frame := range *f {
 		rects[i] = images.FrameRect{
 			Rect:   frame.FrameRect.ToImageRectangle(),
 			Offset: image.Pt(int(frame.SpriteSourceSize.X), int(frame.SpriteSourceSize.Y)),
@@ -77,18 +77,18 @@ func (f Frames) FrameRects() []images.FrameRect {
 	return rects
 }
 
-func (f Frames) Slice(from, to int) Frames {
+func (f *Frames) Slice(from, to int) Frames {
 	if from < 0 {
 		from = 0
 	}
-	if to > len(f) {
-		to = len(f)
+	if to > len(*f) {
+		to = len(*f)
 	}
-	return f[from:to]
+	return (*f)[from:to]
 }
 
-func (f Frames) Len() int {
-	return len(f)
+func (f *Frames) Len() int {
+	return len(*f)
 }
 
 // UnmarshalJSON decodes both the Array and Hash export layouts.

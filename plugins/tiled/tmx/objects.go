@@ -55,14 +55,14 @@ func (o *Object) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 }
 
 // ClassName is the class, whichever attribute Tiled saved it in.
-func (o Object) ClassName() string {
+func (o *Object) ClassName() string {
 	if o.Class != "" {
 		return o.Class
 	}
 	return o.Type
 }
 
-func (o Object) Shape() ObjectShape {
+func (o *Object) Shape() ObjectShape {
 	switch {
 	case o.Ellipse != nil:
 		return ShapeEllipse
@@ -83,7 +83,7 @@ func (o Object) Shape() ObjectShape {
 	}
 }
 
-func (o Object) Validate() error {
+func (o *Object) Validate() error {
 	var errList []error
 	if o.ID < 0 {
 		errList = append(errList, errs.ArgumentOutOfRange("id", o.ID, errMustNotBeNeg))
@@ -205,7 +205,7 @@ func (t *Text) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	return d.DecodeElement((*plain)(t), &start)
 }
 
-func (t Text) Validate() error {
+func (t *Text) Validate() error {
 	var errList []error
 	if !t.HAlign.IsValid() {
 		errList = append(errList, errs.Argument("halign", fmt.Sprintf("unknown alignment %q", t.HAlign)))

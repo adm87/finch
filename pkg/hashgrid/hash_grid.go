@@ -190,9 +190,8 @@ func (hg *HashGrid[T]) Update(key Key, region Region) error {
 	return nil
 }
 
-// Query appends to dst every entry whose padded cell range overlaps the cells
-// covered by region. This is a broad phase: callers must test exact bounds.
-// Pass dst[:0] to reuse a buffer. Safe to mutate the grid afterward.
+// Query appends every entry in the cells region touches. It's a rough match,
+// so check exact bounds yourself. Pass dst[:0] to reuse a buffer.
 func (hg *HashGrid[T]) Query(region Region, dst []T) []T {
 	minX, minY := region.Min()
 	maxX, maxY := region.Max()
@@ -208,8 +207,8 @@ func (hg *HashGrid[T]) Query(region Region, dst []T) []T {
 	return dst
 }
 
-// Range returns an iterator over all entries that intersect the given region.
-// Insert, Update and Delete panic during iteration; use Query to collect first.
+// Range iterates the entries that intersect region. Insert, Update and Delete
+// panic while it runs, so use Query if you need to change the grid.
 func (hg *HashGrid[T]) Range(region Region) iter.Seq2[Key, T] {
 	minX, minY := region.Min()
 	maxX, maxY := region.Max()

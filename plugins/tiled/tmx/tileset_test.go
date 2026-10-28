@@ -85,8 +85,8 @@ func TestTilesetRejectsOtherRoots(t *testing.T) {
 }
 
 func TestMapTilesetValidate(t *testing.T) {
-	require.NoError(t, tmx.MapTileset{FirstGID: 1, Source: "a.tsx"}.Validate())
-	require.ErrorIs(t, tmx.MapTileset{Source: "a.tsx"}.Validate(), errs.ErrArgumentOutOfRange)
+	require.NoError(t, (&tmx.MapTileset{FirstGID: 1, Source: "a.tsx"}).Validate())
+	require.ErrorIs(t, (&tmx.MapTileset{Source: "a.tsx"}).Validate(), errs.ErrArgumentOutOfRange)
 
 	// An embedded tileset is checked too.
 	bad := tmx.MapTileset{FirstGID: 1, Embedded: &tmx.Tileset{ObjectAlignment: "middle"}}

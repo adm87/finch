@@ -78,14 +78,14 @@ func (ls *Layers) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 }
 
 // All walks every layer, going into groups after the group itself.
-func (ls Layers) All() iter.Seq[Layer] {
+func (ls *Layers) All() iter.Seq[Layer] {
 	return func(yield func(Layer) bool) {
 		ls.walk(yield)
 	}
 }
 
-func (ls Layers) walk(yield func(Layer) bool) bool {
-	for _, l := range ls {
+func (ls *Layers) walk(yield func(Layer) bool) bool {
+	for _, l := range *ls {
 		if !yield(l) {
 			return false
 		}
@@ -96,9 +96,9 @@ func (ls Layers) walk(yield func(Layer) bool) bool {
 	return true
 }
 
-func (ls Layers) Validate() error {
+func (ls *Layers) Validate() error {
 	var errList []error
-	for i, l := range ls {
+	for i, l := range *ls {
 		errList = append(errList, prefixed(fmt.Sprintf("layer[%d]", i), l.Validate()))
 	}
 	return errors.Join(errList...)
@@ -177,7 +177,7 @@ func (l *TileLayer) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	return d.DecodeElement((*plain)(l), &start)
 }
 
-func (l TileLayer) Validate() error {
+func (l *TileLayer) Validate() error {
 	errList := []error{l.validate()}
 	if !l.Mode.IsValid() {
 		errList = append(errList, errs.Argument("mode", fmt.Sprintf("unknown blend mode %q", l.Mode)))
@@ -215,7 +215,7 @@ func (g *ObjectGroup) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error
 	return d.DecodeElement((*plain)(g), &start)
 }
 
-func (g ObjectGroup) Validate() error {
+func (g *ObjectGroup) Validate() error {
 	errList := []error{g.validate()}
 	if !g.DrawOrder.IsValid() {
 		errList = append(errList, errs.Argument("draworder", fmt.Sprintf("unknown draw order %q", g.DrawOrder)))
@@ -240,7 +240,7 @@ func (l *ImageLayer) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error 
 }
 
 // Validate allows a missing image, since Tiled saves empty image layers.
-func (l ImageLayer) Validate() error {
+func (l *ImageLayer) Validate() error {
 	errList := []error{l.validate()}
 	if l.Image != nil {
 		errList = append(errList, prefixed("image", l.Image.Validate()))
@@ -259,6 +259,6 @@ func (g *Group) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	return d.DecodeElement((*plain)(g), &start)
 }
 
-func (g Group) Validate() error {
+func (g *Group) Validate() error {
 	return errors.Join(g.validate(), g.Layers.Validate())
 }

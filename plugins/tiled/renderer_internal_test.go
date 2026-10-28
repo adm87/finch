@@ -61,3 +61,58 @@ func TestLayerViewUndoesTheLayerTransform(t *testing.T) {
 	flat.Scale(0, 0)
 	require.Equal(t, geom.Rect{}, layerView(flat, geom.Rect{Width: 1, Height: 1}))
 }
+
+type cell struct {
+	gid  tmx.GID
+	x, y int
+}
+
+func visibleCellsOf(layer *LayerInfo, visible image.Rectangle) []cell {
+	var got []cell
+	eachVisibleCell(layer, visible, func(p image.Point, gid tmx.GID) bool {
+		got = append(got, cell{gid: gid, x: p.X, y: p.Y})
+		return true
+	})
+	return got
+}
+
+func TestEachVisibleCellOfAFiniteLayer(t *testing.T) {
+	layer := &LayerInfo{
+		Layer: &tmx.TileLayer{Width: 3, Height: 2},
+		GIDs:  []tmx.GID{1, 2, 3, 4, 0, 6},
+	}
+
+	require.Equal(t, []cell{{1, 0, 0}, {2, 1, 0}, {3, 2, 0}, {4, 0, 1}, {6, 2, 1}},
+		visibleCellsOf(layer, image.Rect(-5, -5, 10, 10)), "empty cells are skipped")
+	require.Equal(t, []cell{{2, 1, 0}, {3, 2, 0}, {6, 2, 1}},
+		visibleCellsOf(layer, image.Rect(1, 0, 3, 2)))
+	require.Empty(t, visibleCellsOf(layer, image.Rect(5, 5, 8, 8)))
+}
+
+func TestEachVisibleCellOfChunks(t *testing.T) {
+	layer := &LayerInfo{Chunks: []ChunkInfo{
+		{GIDs: []tmx.GID{1, 0, 0, 1}, X: -2, Y: 0, Width: 2, Height: 2},
+		{GIDs: []tmx.GID{2, 2, 0, 2}, X: 0, Y: -2, Width: 2, Height: 2},
+	}}
+
+	require.Equal(t, []cell{{1, -2, 0}, {1, -1, 1}, {2, 0, -2}, {2, 1, -2}, {2, 1, -1}},
+		visibleCellsOf(layer, image.Rect(-10, -10, 10, 10)))
+
+	// Only the right column of the first chunk and the bottom row of the second.
+	require.Equal(t, []cell{{1, -1, 1}, {2, 1, -1}},
+		visibleCellsOf(layer, image.Rect(-1, -1, 2, 2)))
+}
+
+func TestEachVisibleCellStopsWhenAsked(t *testing.T) {
+	layer := &LayerInfo{Chunks: []ChunkInfo{
+		{GIDs: []tmx.GID{1, 1}, Width: 2, Height: 1},
+		{GIDs: []tmx.GID{2, 2}, Y: 1, Width: 2, Height: 1},
+	}}
+
+	calls := 0
+	eachVisibleCell(layer, image.Rect(0, 0, 2, 2), func(image.Point, tmx.GID) bool {
+		calls++
+		return false
+	})
+	require.Equal(t, 1, calls)
+}

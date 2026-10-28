@@ -87,7 +87,7 @@ func (mt *MapTileset) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error
 	return d.DecodeElement(mt.Embedded, &start)
 }
 
-func (mt MapTileset) Validate() error {
+func (mt *MapTileset) Validate() error {
 	var errList []error
 	if mt.FirstGID <= 0 {
 		errList = append(errList, errs.ArgumentOutOfRange("firstgid", mt.FirstGID, errMustBePositive))
@@ -131,7 +131,7 @@ func (ts *Tileset) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 }
 
 // Tile finds a tile's extra data by its local ID. Tiles without any aren't listed.
-func (ts Tileset) Tile(id int) (Tile, bool) {
+func (ts *Tileset) Tile(id int) (Tile, bool) {
 	for _, t := range ts.Tiles {
 		if t.ID == id {
 			return t, true
@@ -140,7 +140,7 @@ func (ts Tileset) Tile(id int) (Tile, bool) {
 	return Tile{}, false
 }
 
-func (ts Tileset) Validate() error {
+func (ts *Tileset) Validate() error {
 	var errList []error
 	if !ts.ObjectAlignment.IsValid() {
 		errList = append(errList, errs.Argument("objectalignment", fmt.Sprintf("unknown alignment %q", ts.ObjectAlignment)))

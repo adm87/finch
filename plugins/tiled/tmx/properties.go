@@ -33,8 +33,8 @@ func (c *Color) UnmarshalText(text []byte) error {
 	return nil
 }
 
-func (c Color) RGBA() (r, g, b, a uint32) {
-	return color.NRGBA(c).RGBA()
+func (c *Color) RGBA() (r, g, b, a uint32) {
+	return color.NRGBA(*c).RGBA()
 }
 
 type PropertyType string
@@ -87,28 +87,28 @@ func (p *Property) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	return nil
 }
 
-func (p Property) Int() (int, error) {
+func (p *Property) Int() (int, error) {
 	if p.Value == "" {
 		return 0, nil
 	}
 	return strconv.Atoi(p.Value)
 }
 
-func (p Property) Float() (float64, error) {
+func (p *Property) Float() (float64, error) {
 	if p.Value == "" {
 		return 0, nil
 	}
 	return strconv.ParseFloat(p.Value, 64)
 }
 
-func (p Property) Bool() (bool, error) {
+func (p *Property) Bool() (bool, error) {
 	if p.Value == "" {
 		return false, nil
 	}
 	return strconv.ParseBool(p.Value)
 }
 
-func (p Property) Color() (Color, error) {
+func (p *Property) Color() (Color, error) {
 	var c Color
 	if p.Value == "" {
 		return c, nil
@@ -118,11 +118,11 @@ func (p Property) Color() (Color, error) {
 }
 
 // ObjectID is the referenced object's ID, or 0 for none.
-func (p Property) ObjectID() (int, error) {
+func (p *Property) ObjectID() (int, error) {
 	return p.Int()
 }
 
-func (p Property) Validate() error {
+func (p *Property) Validate() error {
 	var err error
 	switch p.Type {
 	case PropertyString, PropertyFile:

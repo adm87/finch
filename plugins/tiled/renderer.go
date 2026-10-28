@@ -65,25 +65,41 @@ func (tm *TileMapRenderer) Render(target *ebiten.Image, job *rendering.Job, view
 	visible := info.visibleTiles(layerView(toWorld, viewRect))
 	tm.opts.ColorScale = layer.Color
 
+	eachVisibleCell(layer, visible, func(cell image.Point, gid tmx.GID) bool {
+		tm.drawTile(target, &info, gid, cell.X, cell.Y, toTarget)
+		return true
+	})
+}
+
+// eachVisibleCell calls yield for each non-empty cell in visible, until it
+// returns false. It takes a callback since an iterator would allocate.
+func eachVisibleCell(layer *LayerInfo, visible image.Rectangle, yield func(image.Point, tmx.GID) bool) {
 	if layer.Chunks == nil {
-		width := layer.Layer.Width
-		visible = visible.Intersect(image.Rect(0, 0, width, layer.Layer.Height))
-		for y := visible.Min.Y; y < visible.Max.Y; y++ {
-			for x := visible.Min.X; x < visible.Max.X; x++ {
-				tm.drawTile(target, &info, layer.GIDs[y*width+x], x, y, toTarget)
-			}
-		}
+		chunkCells(layer.GIDs, image.Rect(0, 0, layer.Layer.Width, layer.Layer.Height), visible, yield)
 		return
 	}
-
 	for _, c := range layer.Chunks {
-		area := visible.Intersect(image.Rect(c.X, c.Y, c.X+c.Width, c.Y+c.Height))
-		for y := area.Min.Y; y < area.Max.Y; y++ {
-			for x := area.Min.X; x < area.Max.X; x++ {
-				tm.drawTile(target, &info, c.GIDs[(y-c.Y)*c.Width+(x-c.X)], x, y, toTarget)
+		if !chunkCells(c.GIDs, image.Rect(c.X, c.Y, c.X+c.Width, c.Y+c.Height), visible, yield) {
+			return
+		}
+	}
+}
+
+func chunkCells(gids []tmx.GID, chunk, visible image.Rectangle, yield func(image.Point, tmx.GID) bool) bool {
+	area := visible.Intersect(chunk)
+	for y := area.Min.Y; y < area.Max.Y; y++ {
+		row := (y - chunk.Min.Y) * chunk.Dx()
+		for x := area.Min.X; x < area.Max.X; x++ {
+			gid := gids[row+x-chunk.Min.X]
+			if gid.ID() == 0 {
+				continue
+			}
+			if !yield(image.Pt(x, y), gid) {
+				return false
 			}
 		}
 	}
+	return true
 }
 
 func (tm *TileMapRenderer) mapInfo(entry *donburi.Entry) (MapInfo, bool) {

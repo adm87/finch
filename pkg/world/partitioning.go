@@ -135,8 +135,8 @@ func (p *partitions) reindex(entry *donburi.Entry, idx *indexing, bounds geom.Re
 		return err
 	}
 
-	// TODO(adm87): Cross-partition moves currently delete then insert. If insert fails,
-	// the object can be dropped from indexing; revisit once hashgrid supports safer migration.
+	// TODO(adm87): Moving between partitions deletes then inserts, so a failed
+	// insert drops the entity from indexing. Revisit once hashgrid can move safely.
 	return p.insertInto(partition, entry, idx, bounds)
 }
 

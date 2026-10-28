@@ -55,10 +55,10 @@ func TestDecodesTheMap(t *testing.T) {
 
 func TestDecodesProperties(t *testing.T) {
 	props := decodeFile[tmx.Map](t, testdata, "full.tmx").Properties
-	get := func(name string) tmx.Property {
+	get := func(name string) *tmx.Property {
 		p, ok := props.Get(name)
 		require.True(t, ok, name)
-		return p
+		return &p
 	}
 
 	require.Equal(t, tmx.PropertyString, get("music").Type)

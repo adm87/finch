@@ -76,6 +76,15 @@ var mapFS = fstest.MapFS{
   <properties><property name="depth" type="int" value="-3"/></properties>
  </objectgroup>
 </map>`)},
+	"infinite/map.tmx": {Data: []byte(`<map orientation="orthogonal" width="4" height="4" tilewidth="16" tileheight="16" infinite="1">
+ <tileset firstgid="1" source="../tilesets/terrain.tsx"/>
+ <layer id="1" name="ground" width="4" height="4">
+  <data encoding="csv">
+   <chunk x="-6" y="-6" width="2" height="2">1,0,0,1</chunk>
+   <chunk x="-4" y="-3" width="2" height="2">2,2,0,2</chunk>
+  </data>
+ </layer>
+</map>`)},
 }
 
 var mapFiles = []assets.Asset{
@@ -94,9 +103,10 @@ func newMaps(t *testing.T) (*tiled.Maps, *assets.Assets, *images.Cache) {
 	require.NoError(t, as.RegisterImporter(blankImporter{cache: ic}, []string{"png"}))
 
 	cfg := &tiled.Config{Maps: map[string]tiled.MapConfig{
-		"level":   {FileSystem: "test", TMX: "maps/level.tmx"},
-		"broken":  {FileSystem: "test", TMX: "broken/level.tmx"},
-		"layered": {FileSystem: "test", TMX: "layered/map.tmx"},
+		"level":    {FileSystem: "test", TMX: "maps/level.tmx"},
+		"broken":   {FileSystem: "test", TMX: "broken/level.tmx"},
+		"layered":  {FileSystem: "test", TMX: "layered/map.tmx"},
+		"infinite": {FileSystem: "test", TMX: "infinite/map.tmx"},
 	}}
 	return tiled.NewMaps(as, dc, ic, cfg, logger.NewLogger(io.Discard, logger.Options{})), as, ic
 }

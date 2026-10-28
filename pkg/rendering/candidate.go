@@ -15,8 +15,7 @@ type Candidate struct {
 	Bounds    geom.Rect // world space
 }
 
-// Job returns a single rendering job for this candidate.
-// Adapters may return multiple jobs for a candidate, but this is a convenience method for the common case of 'one job per candidate'.
+// Job is the candidate drawn once, which is all most adapters need.
 func (rc *Candidate) Job() Job {
 	return Job{
 		Entry:     rc.Entry,
