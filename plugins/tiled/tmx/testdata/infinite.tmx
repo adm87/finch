@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" orientation="orthogonal" renderorder="left-up" width="30" height="20" tilewidth="16" tileheight="16" infinite="1">
+ <layer id="1" name="ground" width="30" height="20">
+  <data encoding="csv">
+   <chunk x="-16" y="0" width="2" height="2">
+1,2,
+3,4
+</chunk>
+   <chunk x="0" y="0" width="2" height="2">
+5,6,
+7,8
+</chunk>
+  </data>
+ </layer>
+</map>

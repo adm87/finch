@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.12.2" class="level" orientation="hexagonal" width="2" height="2" tilewidth="16" tileheight="14" hexsidelength="7" staggeraxis="y" staggerindex="odd" parallaxoriginx="4" parallaxoriginy="5" backgroundcolor="#80112233" nextlayerid="9" nextobjectid="12">
+ <editorsettings>
+  <chunksize width="32"/>
+  <export target="out.json" format="json"/>
+ </editorsettings>
+ <properties>
+  <property name="music" value="calm"/>
+  <property name="speed" type="float" value="1.5"/>
+  <property name="lives" type="int" value="3"/>
+  <property name="hard" type="bool" value="true"/>
+  <property name="tint" type="color" value="#ff00ff00"/>
+  <property name="next" type="file" value="next.tmx"/>
+  <property name="door" type="object" value="7"/>
+  <property name="intro">line one
+line two</property>
+  <property name="spawn" type="class" propertytype="Spawn">
+   <properties>
+    <property name="count" type="int" value="2"/>
+   </properties>
+  </property>
+ </properties>
+ <tileset firstgid="1" source="tilesets/terrain.tsx"/>
+ <tileset firstgid="49" name="inline" tilewidth="16" tileheight="14" spacing="1" margin="2" tilecount="4" columns="2" objectalignment="center" tilerendersize="grid" fillmode="preserve-aspect-fit">
+  <image source="inline.png" trans="ff00ff" width="35" height="31"/>
+  <tileoffset x="2" y="-3"/>
+  <grid orientation="isometric" width="16" height="8"/>
+  <transformations hflip="1" vflip="0" rotate="1" preferuntransformed="1"/>
+  <wangsets>
+   <wangset name="ground" type="corner" tile="-1">
+    <wangcolor name="grass" color="#00ff00" tile="0" probability="0.5"/>
+    <wangcolor name="dirt" color="#884400" tile="1"/>
+    <wangtile tileid="0" wangid="0,1,0,1,0,2,0,2"/>
+    <wangtile tileid="1" wangid="0x00010002"/>
+   </wangset>
+  </wangsets>
+  <tile id="1" type="water" probability="0.25">
+   <properties>
+    <property name="deep" type="bool" value="true"/>
+   </properties>
+   <objectgroup draworder="index">
+    <object id="1" x="0" y="0" width="16" height="14"/>
+   </objectgroup>
+   <animation>
+    <frame tileid="1" duration="100"/>
+    <frame tileid="2" duration="150"/>
+   </animation>
+  </tile>
+ </tileset>
+ <layer id="1" name="csv" class="ground" width="2" height="2" opacity="0.5" visible="0" tintcolor="#ff0000" offsetx="1.5" offsety="-2" parallaxx="0.5" parallaxy="2" mode="multiply">
+  <properties>
+   <property name="solid" type="bool" value="true"/>
+  </properties>
+  <data encoding="csv">
+1,2147483650,
+1073741827,0
+</data>
+ </layer>
+ <group id="2" name="encoded" opacity="0.75">
+  <layer id="3" name="raw" width="2" height="2">
+   <data encoding="base64">AQAAAAIAAIADAABAAAAAAA==</data>
+  </layer>
+  <layer id="4" name="zlib" width="2" height="2">
+   <data encoding="base64" compression="zlib">eJxjZGBgYGJgaGBmYHAAMhkABhAAxw==</data>
+  </layer>
+  <group id="5" name="nested">
+   <layer id="6" name="gzip" width="2" height="2">
+    <data encoding="base64" compression="gzip">H4sIAAAAAAAC/2NkYGBgYmBoYGZgcAAyGQC+G8EeEAAAAA==</data>
+   </layer>
+  </group>
+ </group>
+ <layer id="7" name="xml" width="2" height="2">
+  <data>
+   <tile gid="1"/>
+   <tile gid="2147483650"/>
+   <tile gid="1073741827"/>
+   <tile/>
+  </data>
+ </layer>
+ <objectgroup id="8" name="things" color="#00ff00" draworder="index" opacity="0.9">
+  <object id="1" name="box" class="crate" x="1.5" y="2.5" width="10" height="20" rotation="45"/>
+  <object id="2" name="oval" type="enemy" x="0" y="0" width="8" height="4"><ellipse/></object>
+  <object id="3" x="0" y="0" width="8" height="4"><capsule/></object>
+  <object id="4" x="3" y="4"><point/></object>
+  <object id="5" x="0" y="0"><polygon points="0,0 16,0 8,-12.5"/></object>
+  <object id="6" x="0" y="0"><polyline points="0,0 4,4"/></object>
+  <object id="7" x="0" y="0" width="64" height="16">
+   <text fontfamily="Mono" pixelsize="12" wrap="1" color="#ff112233" bold="1" italic="1" underline="1" strikeout="1" kerning="0" halign="center" valign="bottom">Hello</text>
+  </object>
+  <object id="8" gid="2147483698" x="0" y="16" width="16" height="14" opacity="0.5" visible="0"/>
+  <object id="9" template="crate.tx" x="32" y="32">
+   <properties>
+    <property name="hp" type="int" value="5"/>
+   </properties>
+  </object>
+ </objectgroup>
+ <imagelayer id="10" name="sky" repeatx="1" repeaty="1">
+  <image source="sky.png" width="320" height="180"/>
+ </imagelayer>
+ <imagelayer id="11" name="empty"/>
+</map>

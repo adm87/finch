@@ -16,12 +16,11 @@ type Config struct {
 }
 
 type WindowConfig struct {
-	Width      int  `yaml:"width"`
-	Height     int  `yaml:"height"`
-	Fullscreen bool `yaml:"fullscreen"`
-	Resizable  bool `yaml:"resizable"`
-	// ResolutionScale is the window's resolution relative to the display.
-	ResolutionScale float64 `yaml:"resolution_scale"`
+	Width           int     `yaml:"width"`
+	Height          int     `yaml:"height"`
+	Fullscreen      bool    `yaml:"fullscreen"`
+	Resizable       bool    `yaml:"resizable"`
+	ResolutionScale float64 `yaml:"resolution_scale"` // relative to the display
 }
 
 func DefaultConfig() *Config {

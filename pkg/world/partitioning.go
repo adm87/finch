@@ -14,10 +14,9 @@ import (
 )
 
 type indexing struct {
-	key       hashgrid.Key
-	partition int
-	// Versions of the transform and bounds when the entity was last indexed.
-	transformVersion uint64
+	key              hashgrid.Key
+	partition        int
+	transformVersion uint64 // versions when last indexed
 	boundsVersion    uint64
 }
 

@@ -24,14 +24,7 @@ func (p *Plugin) Libraries() *Libraries {
 }
 
 func (p *Plugin) Init(app *application.Application) error {
-	as := app.Assets()
 	cache := app.Cache()
-
-	libraries, err := NewLibraries(as, app.Logger(), cache.Data(), cache.Images(), p.config)
-	if err != nil {
-		return err
-	}
-
-	p.libraries = libraries
+	p.libraries = NewLibraries(app.Assets(), app.Logger(), cache.Data(), cache.Images(), p.config)
 	return nil
 }

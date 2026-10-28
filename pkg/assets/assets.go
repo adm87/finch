@@ -46,7 +46,6 @@ func (a *Assets) Handle(asset Asset) (Handle, error) {
 	if !exists {
 		return 0, errs.NotFound("asset", asset.String())
 	}
-
 	return handle, nil
 }
 
@@ -55,7 +54,6 @@ func (a *Assets) FileSystem(name FileSystem) (fs.FS, error) {
 	if !exists {
 		return nil, errs.NotFound("file system", string(name))
 	}
-
 	return fsys, nil
 }
 

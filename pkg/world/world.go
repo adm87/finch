@@ -180,9 +180,8 @@ func (w *World) Sync() error {
 
 // PartitionCell is an occupied cell of one of the world's spatial partitions.
 type PartitionCell struct {
-	Bounds geom.Rect
-	// Partition is 0 for the partition with the smallest cells.
-	Partition int
+	Bounds    geom.Rect
+	Partition int // 0 has the smallest cells
 	Entities  int
 }
 

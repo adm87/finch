@@ -21,7 +21,10 @@ import (
 	"github.com/adm87/finch/plugins/tiled"
 )
 
-const playerLibrary = "captain"
+const (
+	playerLibrary = "captain"
+	gym04         = "gym04"
+)
 
 func Boot() error {
 	l := logger.NewLogger(os.Stdout, loggerOptions).Named("finch")
@@ -120,6 +123,18 @@ func makeTestScene(app *application.Application) error {
 	c := camera.NewMain(w)
 	camera.SetZoom(c, 2)
 	app.View().SetCamera(c)
+
+	tld, err := application.GetPlugin[*tiled.Plugin](app, "tiled")
+	if err != nil {
+		return fmt.Errorf("get tiled plugin: %w", err)
+	}
+	maps := tld.Maps()
+
+	mapHandle, err := maps.CreateMap(gym04, tiled.LoadModeDynamic)
+	if err != nil {
+		return fmt.Errorf("create map: %w", err)
+	}
+	_ = mapHandle
 
 	ase, err := application.GetPlugin[*aseprite.Plugin](app, "aseprite")
 	if err != nil {

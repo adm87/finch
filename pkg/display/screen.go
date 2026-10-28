@@ -11,10 +11,9 @@ import (
 // Screen is the buffer the game draws into. It's scaled to fill the window,
 // cropping whatever edges don't fit.
 type Screen struct {
-	buffer  *ebiten.Image
-	options *ebiten.DrawImageOptions
-	// safeArea is the visible part of the buffer.
-	safeArea        geom.Rect
+	buffer          *ebiten.Image
+	options         *ebiten.DrawImageOptions
+	safeArea        geom.Rect // visible part of the buffer
 	scale           float64
 	deviceScale     float64
 	resolutionScale float64

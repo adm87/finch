@@ -11,7 +11,7 @@ const LoopForever = -1
 type Animator struct {
 	animation string
 	playing   string
-	library   LibraryID
+	library   Handle
 	loops     int
 	position  int
 	frame     int
@@ -41,11 +41,11 @@ func (a *Animator) SetAnimation(animation string) {
 	a.animation = animation
 }
 
-func (a *Animator) Library() LibraryID {
+func (a *Animator) Library() Handle {
 	return a.library
 }
 
-func (a *Animator) SetLibrary(library LibraryID) {
+func (a *Animator) SetLibrary(library Handle) {
 	a.library = library
 	a.playing = ""
 }

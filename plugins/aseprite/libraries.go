@@ -36,8 +36,8 @@ const (
 	UnloadModeIfOwned
 )
 
-// LibraryID uniquely identifies an Aseprite library.
-type LibraryID uint64
+// Handle uniquely identifies an Aseprite library.
+type Handle uint64
 
 // LibraryInfo is a decoded library and the handles of its content.
 type LibraryInfo struct {
@@ -54,31 +54,10 @@ type Libraries struct {
 	ic         *images.Cache
 	libraries  *slotmap.SlotMap[LibraryInfo]
 	config     *Config
-	libsByName map[string]LibraryID
+	libsByName map[string]Handle
 }
 
-func NewLibraries(as *assets.Assets, log logger.Logger, dc *data.Cache, ic *images.Cache, config *Config) (*Libraries, error) {
-	var errList []error
-	if as == nil {
-		errList = append(errList, errs.ArgumentNil("as"))
-	}
-	if dc == nil {
-		errList = append(errList, errs.ArgumentNil("dc"))
-	}
-	if ic == nil {
-		errList = append(errList, errs.ArgumentNil("ic"))
-	}
-	if config == nil {
-		errList = append(errList, errs.ArgumentNil("config"))
-	} else {
-		errList = append(errList, config.Validate())
-	}
-	if err := errors.Join(errList...); err != nil {
-		return nil, err
-	}
-	if log == nil {
-		log = logger.N
-	}
+func NewLibraries(as *assets.Assets, log logger.Logger, dc *data.Cache, ic *images.Cache, config *Config) *Libraries {
 	return &Libraries{
 		logger:     log.Named("aseprite"),
 		as:         as,
@@ -86,11 +65,11 @@ func NewLibraries(as *assets.Assets, log logger.Logger, dc *data.Cache, ic *imag
 		ic:         ic,
 		config:     config,
 		libraries:  slotmap.New[LibraryInfo](128),
-		libsByName: make(map[string]LibraryID),
-	}, nil
+		libsByName: make(map[string]Handle),
+	}
 }
 
-func (l *Libraries) CreateLibrary(name string, mode LoadMode) (LibraryID, error) {
+func (l *Libraries) CreateLibrary(name string, mode LoadMode) (Handle, error) {
 	if id, exists := l.libsByName[name]; exists {
 		return id, nil
 	}
@@ -101,7 +80,7 @@ func (l *Libraries) CreateLibrary(name string, mode LoadMode) (LibraryID, error)
 	}
 
 	loaded, err := l.isLibraryLoaded(library)
-	if err != nil {
+	if err != nil && !errs.IsNotFound(err) {
 		return 0, fmt.Errorf("check library %q: %w", name, err)
 	}
 
@@ -129,7 +108,7 @@ func (l *Libraries) CreateLibrary(name string, mode LoadMode) (LibraryID, error)
 		return 0, fmt.Errorf("slice image %q: %w", library.Image.String(), err)
 	}
 
-	id := LibraryID(l.libraries.Insert(info).Pack())
+	id := Handle(l.libraries.Insert(info).Pack())
 	l.libsByName[name] = id
 
 	return id, nil
@@ -161,7 +140,7 @@ func (l *Libraries) ClearLibrary(name string, mode UnloadMode) error {
 	return nil
 }
 
-func (l *Libraries) Library(id LibraryID) (LibraryInfo, error) {
+func (l *Libraries) Library(id Handle) (LibraryInfo, error) {
 	info, err := l.libraries.Get(slotmap.Unpack(uint64(id)))
 	if err != nil {
 		return LibraryInfo{}, errs.NotFound(libraryKind, strconv.FormatUint(uint64(id), 10)).Wrap(err)
@@ -171,7 +150,7 @@ func (l *Libraries) Library(id LibraryID) (LibraryInfo, error) {
 
 func (l *Libraries) getLibraryConfig(name string) (*LibraryConfig, error) {
 	if name == "" {
-		return nil, errs.Argument("name", "library name cannot be empty")
+		return nil, errs.Argument("name", "cannot be empty")
 	}
 	library, exists := l.config.Libraries[name]
 	if !exists {
@@ -218,11 +197,7 @@ func (l *Libraries) decodeLibrary(library *LibraryConfig) (LibraryInfo, error) {
 
 func (l *Libraries) isLibraryLoaded(cfg *LibraryConfig) (bool, error) {
 	for _, r := range cfg.Assets() {
-		_, err := l.as.Handle(r)
-		if errs.IsNotFound(err) {
-			return false, nil
-		}
-		if err != nil {
+		if _, err := l.as.Handle(r); err != nil {
 			return false, err
 		}
 	}

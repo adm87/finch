@@ -1,11 +1,14 @@
 package tiled_test
 
 import (
+	"io"
 	"testing"
 
 	"github.com/go-openapi/testify/require"
 
+	"github.com/adm87/finch/pkg/application"
 	"github.com/adm87/finch/pkg/errs"
+	"github.com/adm87/finch/pkg/logger"
 	"github.com/adm87/finch/plugins/tiled"
 )
 
@@ -24,5 +27,13 @@ func TestConfigValidate(t *testing.T) {
 
 func TestPluginInitChecksTheConfig(t *testing.T) {
 	require.ErrorIs(t, tiled.NewPlugin(nil).Init(nil), errs.ErrArgumentNil)
-	require.NoError(t, tiled.NewPlugin(&tiled.Config{}).Init(nil))
+
+	bad := &tiled.Config{Maps: map[string]tiled.MapConfig{"gym04": {}}}
+	require.ErrorIs(t, tiled.NewPlugin(bad).Init(nil), errs.ErrArgument)
+
+	app, err := application.New(application.DefaultConfig(), logger.NewLogger(io.Discard, logger.Options{}))
+	require.NoError(t, err)
+	plugin := tiled.NewPlugin(&tiled.Config{})
+	require.NoError(t, plugin.Init(app))
+	require.NotNil(t, plugin.Maps())
 }
