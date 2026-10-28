@@ -77,26 +77,6 @@ func loadBundles(bundles []assets.AssetBundle) engine.Startup {
 	}
 }
 
-func run(app *application.Application, cfg *config.GameConfig, l logger.Logger) error {
-	app.World().Create(debug.DebugComponent, world.DontPartition)
-
-	opts := append(gameSystems(app),
-		engine.WithStartup(
-			loadBundles(cfg.Bundles),
-			makeTestScene,
-		),
-		engine.WithOverlayDrawers(
-			debug.OverlayPartitions(app.World()),
-			debug.OverlayEntityBounds(app.World()),
-			debug.OverlayFPS(app.World()),
-			debug.OverlayZeroZero(app.World()),
-		),
-		engine.WithLogger(l),
-	)
-
-	return engine.Run(app, &cfg.Engine, opts...)
-}
-
 // registerPlugins loads each plugin's config from fsys and registers it.
 func registerPlugins(app *application.Application, fsys fs.FS) error {
 	var aseCfg aseprite.Config
@@ -117,6 +97,26 @@ func registerPlugins(app *application.Application, fsys fs.FS) error {
 	return nil
 }
 
+func run(app *application.Application, cfg *config.GameConfig, l logger.Logger) error {
+	app.World().Create(debug.DebugComponent, world.DontPartition)
+
+	opts := append(gameSystems(app),
+		engine.WithStartup(
+			loadBundles(cfg.Bundles),
+			makeTestScene,
+		),
+		engine.WithOverlayDrawers(
+			debug.OverlayPartitions(app.World()),
+			debug.OverlayEntityBounds(app.World()),
+			debug.OverlayFPS(app.World()),
+			debug.OverlayZeroZero(app.World()),
+		),
+		engine.WithLogger(l),
+	)
+
+	return engine.Run(app, &cfg.Engine, opts...)
+}
+
 func makeTestScene(app *application.Application) error {
 	w := app.World()
 
@@ -134,7 +134,17 @@ func makeTestScene(app *application.Application) error {
 	if err != nil {
 		return fmt.Errorf("create map: %w", err)
 	}
-	_ = mapHandle
+	if _, err = tld.AddToWorld(mapHandle, w); err != nil {
+		return fmt.Errorf("add map to world: %w", err)
+	}
+	mapInfo, err := maps.Map(mapHandle)
+	if err != nil {
+		return fmt.Errorf("map %q: %w", gym04, err)
+	}
+	playerDepth, ok := mapInfo.LayerDepth("player")
+	if !ok {
+		return fmt.Errorf("map %q has no player layer", gym04)
+	}
 
 	ase, err := application.GetPlugin[*aseprite.Plugin](app, "aseprite")
 	if err != nil {
@@ -172,7 +182,9 @@ func makeTestScene(app *application.Application) error {
 		player.Player,
 	)
 
-	rendering.RendererComponent.Get(entry).SetID(app.Renderers().Image)
+	r := rendering.RendererComponent.Get(entry)
+	r.SetRendererID(app.Renderers().Image)
+	r.SetDepth(playerDepth)
 
 	img := images.ImageComponent.Get(entry)
 	img.SetHandle(library.ImageHandle)

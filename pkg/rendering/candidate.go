@@ -3,27 +3,26 @@ package rendering
 import (
 	"github.com/yohamta/donburi"
 
+	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/transform"
 )
 
+// Candidate is a visible entity waiting for its adapter to turn it into jobs.
 type Candidate struct {
 	Entry     *donburi.Entry
 	Renderer  *Renderer
 	Transform *transform.Transform
-	Bounds    *transform.Bounds
+	Bounds    geom.Rect // world space
 }
 
-func (rc *Candidate) IsValid() bool {
-	return rc != nil &&
-		rc.Entry != nil &&
-		rc.Renderer != nil &&
-		rc.Transform != nil &&
-		rc.Bounds != nil
-}
-
-func (rc *Candidate) Clear() {
-	rc.Entry = nil
-	rc.Renderer = nil
-	rc.Transform = nil
-	rc.Bounds = nil
+// Job returns a single rendering job for this candidate.
+// Adapters may return multiple jobs for a candidate, but this is a convenience method for the common case of 'one job per candidate'.
+func (rc *Candidate) Job() Job {
+	return Job{
+		Entry:     rc.Entry,
+		Transform: rc.Transform,
+		Bounds:    rc.Bounds,
+		Layer:     rc.Renderer.Layer(),
+		Depth:     rc.Renderer.Depth(),
+	}
 }

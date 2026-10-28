@@ -17,12 +17,12 @@
    eJxjYBg8wBOIvaBsLzxylAAAetQBcQ==
   </data>
  </layer>
+ <objectgroup id="5" name="player"/>
  <layer id="4" name="trees" width="10" height="6" locked="1">
   <data encoding="base64" compression="zlib">
    eJxjYBg44AzELkDsSkAMBIyw6DcEYmMkvjUQ2xCwEwDU0AKm
   </data>
  </layer>
- <objectgroup id="5" name="player"/>
  <objectgroup id="6" name="collision" locked="1">
   <object id="2" x="0" y="0" width="320" height="32"/>
   <object id="3" x="96" y="32" width="96" height="32"/>

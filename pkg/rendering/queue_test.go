@@ -7,20 +7,22 @@ import (
 
 	"github.com/go-openapi/testify/require"
 
+	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/rendering"
 )
 
 func TestSortKeyRoundTrip(t *testing.T) {
 	cases := []struct {
-		layer, depth int16
-		index        int32
+		depth int32
+		layer int16
+		index uint16
 	}{
 		{0, 0, 0},
-		{1, 2, 3},
-		{-1, -1, -1},
-		{math.MinInt16, math.MaxInt16, 0},
-		{math.MaxInt16, math.MinInt16, math.MaxInt32},
-		{-5, 7, math.MinInt32},
+		{2, 1, 3},
+		{-1, -1, math.MaxUint16},
+		{math.MaxInt32, math.MinInt16, 0},
+		{math.MinInt32, math.MaxInt16, math.MaxUint16},
+		{7, -5, 12},
 	}
 
 	for _, tc := range cases {
@@ -33,14 +35,15 @@ func TestSortKeyRoundTrip(t *testing.T) {
 
 func TestSortKeysOrderByLayerThenDepthThenIndex(t *testing.T) {
 	want := []rendering.SortKey{
-		rendering.MakeSortKey(math.MinInt16, math.MaxInt16, math.MaxInt32),
+		rendering.MakeSortKey(math.MinInt16, math.MaxInt32, math.MaxUint16),
 		rendering.MakeSortKey(-1, 0, 0),
+		rendering.MakeSortKey(0, math.MinInt32, 5),
 		rendering.MakeSortKey(0, -1, 5),
-		rendering.MakeSortKey(0, 0, -1),
 		rendering.MakeSortKey(0, 0, 0),
 		rendering.MakeSortKey(0, 0, 1),
 		rendering.MakeSortKey(0, 1, 0),
-		rendering.MakeSortKey(1, math.MinInt16, 0),
+		rendering.MakeSortKey(0, math.MaxInt32, 0),
+		rendering.MakeSortKey(1, math.MinInt32, 0),
 		rendering.MakeSortKey(math.MaxInt16, 0, 0),
 	}
 
@@ -50,46 +53,40 @@ func TestSortKeysOrderByLayerThenDepthThenIndex(t *testing.T) {
 	require.Equal(t, want, got)
 }
 
-func newCandidate(layer, depth int16) rendering.Candidate {
-	r := &rendering.Renderer{}
-	r.SetLayer(layer)
-	r.SetDepth(depth)
-	return rendering.Candidate{Renderer: r}
-}
-
-func TestQueueDrawsInSortedOrder(t *testing.T) {
+func TestQueueYieldsInSortedOrder(t *testing.T) {
 	q := rendering.NewQueue()
-	q.Enqueue(newCandidate(1, 0))
-	q.Enqueue(newCandidate(0, 5))
-	q.Enqueue(newCandidate(0, -2))
-	q.Enqueue(newCandidate(0, 5))
-
-	var got [][2]int16
-	var indexes []int
-	for _, k := range q.SortedKeys() {
-		rc := q.CandidateAt(k.Index())
-		require.NotNil(t, rc)
-		got = append(got, [2]int16{rc.Renderer.Layer(), rc.Renderer.Depth()})
-		indexes = append(indexes, k.Index())
+	for i, job := range []rendering.Job{
+		{Layer: 1, Depth: 0},
+		{Layer: 0, Depth: 5},
+		{Layer: 0, Depth: -2},
+		{Layer: 0, Depth: 5},
+	} {
+		job.Pass = i
+		require.NoError(t, q.Enqueue(job))
 	}
 
-	require.Equal(t, [][2]int16{{0, -2}, {0, 5}, {0, 5}, {1, 0}}, got)
-	require.Equal(t, []int{2, 1, 3, 0}, indexes)
+	var passes []int
+	for job := range q.Sorted() {
+		passes = append(passes, job.Pass)
+	}
+	require.Equal(t, []int{2, 1, 3, 0}, passes)
 }
 
 func TestQueueClear(t *testing.T) {
 	q := rendering.NewQueue()
-	q.Enqueue(newCandidate(0, 0))
+	require.NoError(t, q.Enqueue(rendering.Job{}))
 	q.Clear()
 
-	require.Empty(t, q.SortedKeys())
-	require.Nil(t, q.CandidateAt(0))
+	require.Zero(t, q.Len())
+	for range q.Sorted() {
+		t.Fatal("cleared queue yielded a job")
+	}
 }
 
-func TestCandidateAtOutOfRange(t *testing.T) {
+func TestQueueRejectsMoreThanMaxJobs(t *testing.T) {
 	q := rendering.NewQueue()
-	q.Enqueue(newCandidate(0, 0))
-
-	require.Nil(t, q.CandidateAt(-1))
-	require.Nil(t, q.CandidateAt(1))
+	for range rendering.MaxJobs {
+		require.NoError(t, q.Enqueue(rendering.Job{}))
+	}
+	require.ErrorIs(t, q.Enqueue(rendering.Job{}), errs.ErrInvalidOperation)
 }

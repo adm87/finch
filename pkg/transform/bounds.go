@@ -41,25 +41,5 @@ func (b *Bounds) Version() uint64 {
 }
 
 func (b *Bounds) WorldRect(t *Transform) geom.Rect {
-	rect := b.Rect()
-
-	x1, y1 := rect.Min()
-	x2, y2 := rect.Max()
-
-	geoM := t.GeoM()
-
-	ax, ay := geoM.Apply(x1, y1)
-	bx, by := geoM.Apply(x2, y1)
-	cx, cy := geoM.Apply(x2, y2)
-	dx, dy := geoM.Apply(x1, y2)
-
-	minX, maxX := min(ax, bx, cx, dx), max(ax, bx, cx, dx)
-	minY, maxY := min(ay, by, cy, dy), max(ay, by, cy, dy)
-
-	return geom.Rect{
-		X:      minX,
-		Y:      minY,
-		Width:  maxX - minX,
-		Height: maxY - minY,
-	}
+	return geom.TransformRect(t.GeoM(), b.Rect())
 }

@@ -25,8 +25,21 @@ func (r Rect) Area() float64 {
 	return r.Width * r.Height
 }
 
-// Union returns the smallest rect containing both r and other.
+// Empty reports whether the rect has no area.
+func (r Rect) Empty() bool {
+	return r.Width <= 0 || r.Height <= 0
+}
+
+// Union returns the smallest rect containing both r and other. An empty rect
+// adds nothing, so a zero Rect can start a union.
 func (r Rect) Union(other Rect) Rect {
+	if other.Empty() {
+		return r
+	}
+	if r.Empty() {
+		return other
+	}
+
 	rMinX, rMinY := r.Min()
 	rMaxX, rMaxY := r.Max()
 	oMinX, oMinY := other.Min()

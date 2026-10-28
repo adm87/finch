@@ -61,6 +61,21 @@ var mapFS = fstest.MapFS{
  <tileset firstgid="1" source="missing.tsx"/>
  <layer id="1" name="ground" width="1" height="1"><data encoding="csv">1</data></layer>
 </map>`)},
+	"layered/map.tmx": {Data: []byte(`<map orientation="orthogonal" width="2" height="2" tilewidth="16" tileheight="16">
+ <tileset firstgid="1" source="../tilesets/terrain.tsx"/>
+ <layer id="1" name="ground" width="2" height="2"><data encoding="csv">1,1,1,1</data></layer>
+ <objectgroup id="2" name="player"/>
+ <group id="3" name="above" offsetx="8" offsety="4" opacity="0.5">
+  <layer id="4" name="roofs" width="2" height="2" offsetx="2">
+   <properties><property name="depth" type="int" value="50"/></properties>
+   <data encoding="csv">2,0,0,2</data>
+  </layer>
+  <layer id="5" name="hidden" width="2" height="2" visible="0"><data encoding="csv">1,1,1,1</data></layer>
+ </group>
+ <objectgroup id="6" name="shadow" offsety="1">
+  <properties><property name="depth" type="int" value="-3"/></properties>
+ </objectgroup>
+</map>`)},
 }
 
 var mapFiles = []assets.Asset{
@@ -79,8 +94,9 @@ func newMaps(t *testing.T) (*tiled.Maps, *assets.Assets, *images.Cache) {
 	require.NoError(t, as.RegisterImporter(blankImporter{cache: ic}, []string{"png"}))
 
 	cfg := &tiled.Config{Maps: map[string]tiled.MapConfig{
-		"level":  {FileSystem: "test", TMX: "maps/level.tmx"},
-		"broken": {FileSystem: "test", TMX: "broken/level.tmx"},
+		"level":   {FileSystem: "test", TMX: "maps/level.tmx"},
+		"broken":  {FileSystem: "test", TMX: "broken/level.tmx"},
+		"layered": {FileSystem: "test", TMX: "layered/map.tmx"},
 	}}
 	return tiled.NewMaps(as, dc, ic, cfg, logger.NewLogger(io.Discard, logger.Options{})), as, ic
 }

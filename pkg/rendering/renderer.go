@@ -3,10 +3,10 @@ package rendering
 import "github.com/yohamta/donburi"
 
 type Renderer struct {
-	id      AdapterID
-	layer   int16
-	depth   int16
-	visible bool
+	rendererID AdapterID
+	depth      int32
+	layer      int16
+	visible    bool
 }
 
 var RendererComponent = donburi.NewComponentType[Renderer](Renderer{
@@ -20,12 +20,12 @@ func GetRenderer(entry *donburi.Entry) (*Renderer, bool) {
 	return RendererComponent.Get(entry), true
 }
 
-func (r *Renderer) ID() AdapterID {
-	return r.id
+func (r *Renderer) RendererID() AdapterID {
+	return r.rendererID
 }
 
-func (r *Renderer) SetID(id AdapterID) {
-	r.id = id
+func (r *Renderer) SetRendererID(id AdapterID) {
+	r.rendererID = id
 }
 
 func (r *Renderer) Layer() int16 {
@@ -36,11 +36,11 @@ func (r *Renderer) SetLayer(layer int16) {
 	r.layer = layer
 }
 
-func (r *Renderer) Depth() int16 {
+func (r *Renderer) Depth() int32 {
 	return r.depth
 }
 
-func (r *Renderer) SetDepth(depth int16) {
+func (r *Renderer) SetDepth(depth int32) {
 	r.depth = depth
 }
 

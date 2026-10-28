@@ -25,13 +25,17 @@ func NewRenderer(cache *Cache) *Renderer {
 	}
 }
 
-func (ir *Renderer) Render(target *ebiten.Image, rc *rendering.Candidate, _ geom.Rect, matrix geom.Matrix) {
+func (ir *Renderer) Jobs(candidate *rendering.Candidate, jobs []rendering.Job) []rendering.Job {
+	return append(jobs, candidate.Job())
+}
+
+func (ir *Renderer) Render(target *ebiten.Image, job *rendering.Job, _ geom.Rect, matrix geom.Matrix) {
 	frame := untrimmed(ir.missing)
 	ax, ay := 0.0, 0.0
 
 	ir.drawOptions.ColorScale.Reset()
 
-	if img, iOk := GetImage(rc.Entry); iOk {
+	if img, iOk := GetImage(job.Entry); iOk {
 		ax, ay = img.Anchor()
 
 		ir.drawOptions.ColorScale.ScaleWithColor(img.Color())
@@ -46,7 +50,7 @@ func (ir *Renderer) Render(target *ebiten.Image, rc *rendering.Candidate, _ geom
 		float64(frame.Offset.X)-float64(frame.Size.X)*ax,
 		float64(frame.Offset.Y)-float64(frame.Size.Y)*ay,
 	)
-	ir.drawOptions.GeoM.Concat(rc.Transform.GeoM())
+	ir.drawOptions.GeoM.Concat(job.Transform.GeoM())
 	ir.drawOptions.GeoM.Concat(matrix)
 
 	target.DrawImage(frame.Image, ir.drawOptions)
