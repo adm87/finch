@@ -22,6 +22,7 @@ type shell struct {
 
 func newShell(app *application.Application, cfg Config, options *RunOptions, clock *clock) *shell {
 	app.Screen().SetResolutionScale(cfg.Window.ResolutionScale)
+	app.Screen().SetFilter(ebiten.Filter(cfg.Window.ScreenFilter))
 
 	worldDrawers := options.WorldDrawers
 	if len(worldDrawers) == 0 {

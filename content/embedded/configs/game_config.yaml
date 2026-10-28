@@ -7,13 +7,14 @@ application:
 engine:
   title: "Finch"
   tick_rate: 60
-  clear_color: "#000000FF"
+  clear_color: "#6495EDFF"
   window:
     width: 1280
     height: 720
     fullscreen: false
     resizable: true
     resolution_scale: 0.5
+    screen_filter: 2
 
 # Bundles loaded when the game starts. They stay loaded for the whole session.
 bundles:

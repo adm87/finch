@@ -21,6 +21,7 @@ type WindowConfig struct {
 	Fullscreen      bool    `yaml:"fullscreen"`
 	Resizable       bool    `yaml:"resizable"`
 	ResolutionScale float64 `yaml:"resolution_scale"` // relative to the display
+	ScreenFilter    int     `yaml:"screen_filter"`
 }
 
 func DefaultConfig() *Config {

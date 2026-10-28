@@ -88,6 +88,14 @@ func (s *Screen) SetResolutionScale(scale float64) {
 	s.isDirty = true
 }
 
+func (s *Screen) Filter() ebiten.Filter {
+	return s.options.Filter
+}
+
+func (s *Screen) SetFilter(filter ebiten.Filter) {
+	s.options.Filter = filter
+}
+
 // Layout takes the window size from Ebiten and returns it in window pixels.
 func (s *Screen) Layout(outsideWidth, outsideHeight float64) (float64, float64) {
 	if m := ebiten.Monitor(); m != nil {
