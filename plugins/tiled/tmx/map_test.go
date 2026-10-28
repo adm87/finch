@@ -82,7 +82,7 @@ func TestDecodesProperties(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, tmx.Color{A: 0xff, G: 0xff}, c)
 
-	id, err := get("door").ObjectID()
+	id, err := get("door").Int()
 	require.NoError(t, err)
 	require.Equal(t, 7, id)
 

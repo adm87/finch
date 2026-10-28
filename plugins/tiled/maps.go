@@ -210,7 +210,9 @@ func (l *mapLoader) load(asset assets.Asset) (MapInfo, error) {
 	if err != nil {
 		return MapInfo{}, err
 	}
-	if err := l.require(mapRefs(tm, path.Dir(asset.String()))...); err != nil {
+
+	refs := distinct(mapRefs(tm, path.Dir(asset.String())))
+	if err := l.require(refs...); err != nil {
 		return MapInfo{}, err
 	}
 
@@ -223,8 +225,13 @@ func (l *mapLoader) load(asset assets.Asset) (MapInfo, error) {
 		info.Tilesets = append(info.Tilesets, ts)
 	}
 
-	if err := l.templates(tm); err != nil {
-		return MapInfo{}, err
+	for _, ref := range refs {
+		if ref.Type() != "tx" {
+			continue
+		}
+		if err := l.template(ref); err != nil {
+			return MapInfo{}, err
+		}
 	}
 
 	layers, err := decodeLayers(tm)
@@ -268,33 +275,15 @@ func (l *mapLoader) tileset(asset assets.Asset) (*tmx.Tileset, error) {
 	return ts, nil
 }
 
-// templates loads object templates and their tilesets, so they're ready
-// when objects are spawned.
-func (l *mapLoader) templates(tm *tmx.Map) error {
-	seen := make(map[string]struct{})
-	for layer := range tm.Layers.All() {
-		if layer.Objects == nil {
-			continue
-		}
-		for _, o := range layer.Objects.Objects {
-			if _, ok := seen[o.Template]; ok || o.Template == "" {
-				continue
-			}
-			seen[o.Template] = struct{}{}
-
-			tx, err := parseAsset[tmx.Template](l, assets.Asset(o.Template))
-			if err != nil {
-				return err
-			}
-			refs := templateRefs(tx, path.Dir(o.Template))
-			if err := l.require(refs...); err != nil {
-				return err
-			}
-			for _, ref := range refs {
-				if _, err := l.tileset(ref); err != nil {
-					return err
-				}
-			}
+// template loads a template's tileset, so it's ready when objects are spawned.
+func (l *mapLoader) template(asset assets.Asset) error {
+	tx, err := parseAsset[tmx.Template](l, asset)
+	if err != nil {
+		return err
+	}
+	for _, ref := range templateRefs(tx, path.Dir(asset.String())) {
+		if _, err := l.tileset(ref); err != nil {
+			return err
 		}
 	}
 	return nil

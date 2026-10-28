@@ -64,3 +64,17 @@ func appendRef(refs []assets.Asset, dir string, ref *string) []assets.Asset {
 	*ref = path.Join(dir, *ref)
 	return append(refs, assets.Asset(*ref))
 }
+
+// distinct drops repeated refs, keeping the order they were found in.
+func distinct(refs []assets.Asset) []assets.Asset {
+	seen := make(map[assets.Asset]struct{}, len(refs))
+	out := refs[:0]
+	for _, ref := range refs {
+		if _, ok := seen[ref]; ok {
+			continue
+		}
+		seen[ref] = struct{}{}
+		out = append(out, ref)
+	}
+	return out
+}
