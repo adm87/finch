@@ -1,8 +1,8 @@
 # The buffer the game draws into.
 application:
   screen:
-    width: 800
-    height: 600
+    width: 640
+    height: 360
 
 engine:
   title: "Finch"
@@ -14,7 +14,7 @@ engine:
     fullscreen: false
     resizable: true
     resolution_scale: 0.5
-    screen_filter: 2
+    screen_filter: 0
 
 # Bundles loaded when the game starts. They stay loaded for the whole session.
 bundles:

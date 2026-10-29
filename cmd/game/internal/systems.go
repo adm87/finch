@@ -4,14 +4,18 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/yohamta/donburi"
+	"github.com/yohamta/donburi/filter"
 
 	"github.com/adm87/finch/cmd/game/internal/camera"
-	"github.com/adm87/finch/cmd/game/internal/debug"
 	"github.com/adm87/finch/cmd/game/internal/input"
 	"github.com/adm87/finch/cmd/game/internal/player"
 	"github.com/adm87/finch/pkg/application"
 	"github.com/adm87/finch/pkg/engine"
+	"github.com/adm87/finch/pkg/geom"
+	"github.com/adm87/finch/pkg/transform"
+	"github.com/adm87/finch/pkg/world"
 	"github.com/adm87/finch/plugins/aseprite"
+	"github.com/adm87/finch/plugins/tiled"
 )
 
 func gameSystems(app *application.Application) []engine.RunOption {
@@ -33,9 +37,11 @@ func gameSystems(app *application.Application) []engine.RunOption {
 		}
 		if p, ok := player.Player.First(w.ECS()); ok {
 			input.UpdatePlayer(dt, p)
+			if bounds, ok := mapBounds(w); ok {
+				t := transform.TransformComponent.Get(p)
+				t.SetPosition(bounds.ClampPoint(t.Position()))
+			}
 		}
-
-		debug.PollInput(w)
 		return nil
 	}
 
@@ -56,11 +62,30 @@ func gameSystems(app *application.Application) []engine.RunOption {
 		if cOk && pOk {
 			camera.Follow(dt, c, p)
 		}
+		if bounds, ok := mapBounds(w); cOk && ok {
+			view, _ := app.View().Viewport()
+			camera.Clamp(c, view, bounds)
+		}
 		return nil
 	}
 
 	return []engine.RunOption{
 		engine.WithUpdate(handleInput),
-		engine.WithLateUpdate(collectVisible, animate, followPlayer),
+		engine.WithLateUpdate(followPlayer, collectVisible, animate),
 	}
+}
+
+var tileMaps = donburi.NewQuery(filter.Contains(tiled.TileMapComponent))
+
+// mapBounds is the world rect of the first tile map.
+func mapBounds(w *world.World) (geom.Rect, bool) {
+	tm, ok := tileMaps.First(w.ECS())
+	if !ok {
+		return geom.Rect{}, false
+	}
+	b, ok := transform.GetBounds(tm)
+	if !ok {
+		return geom.Rect{}, false
+	}
+	return b.WorldRect(transform.TransformComponent.Get(tm)), true
 }

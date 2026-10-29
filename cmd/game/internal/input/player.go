@@ -48,7 +48,6 @@ func UpdatePlayer(dt float64, entry *donburi.Entry) {
 	}
 
 	if dx != 0 || dy != 0 {
-
 		l := math.Hypot(dx, dy)
 		dx, dy = dx/l, dy/l
 

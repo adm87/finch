@@ -38,6 +38,7 @@ func TestScreenFitCropsToFillTheWindow(t *testing.T) {
 	}{
 		{"wider window crops top and bottom", 1280, 600, geom.Rect{X: 0, Y: 15, Width: 320, Height: 150}},
 		{"taller window crops the sides", 1280, 800, geom.Rect{X: 16, Y: 0, Width: 288, Height: 180}},
+		{"fractional crop rounds out to whole pixels", 1300, 720, geom.Rect{X: 0, Y: 1, Width: 320, Height: 178}},
 	}
 
 	for _, tc := range cases {

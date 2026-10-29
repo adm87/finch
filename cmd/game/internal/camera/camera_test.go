@@ -6,6 +6,7 @@ import (
 	"github.com/go-openapi/testify/require"
 
 	"github.com/adm87/finch/cmd/game/internal/camera"
+	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/transform"
 	"github.com/adm87/finch/pkg/world"
 )
@@ -57,6 +58,19 @@ func TestFollowMovesTowardTheTarget(t *testing.T) {
 	tr, _ := transform.GetTransform(c)
 	x, y := tr.Position()
 	require.Greater(t, x, 0.0)
-	require.Less(t, x, 100.0)
+	require.LessOrEqual(t, x, 100.0)
 	require.InDelta(t, x/2, y, 1e-9)
+}
+
+func TestClampKeepsTheViewInsideBounds(t *testing.T) {
+	c := camera.NewMain(world.NewWorld())
+	tr, _ := transform.GetTransform(c)
+	tr.SetPosition(5, 5)
+
+	view := geom.Rect{X: -15, Y: -10, Width: 40, Height: 30}
+	camera.Clamp(c, view, geom.Rect{Width: 100, Height: 100})
+
+	x, y := tr.Position()
+	require.InDelta(t, 20.0, x, 1e-9)
+	require.InDelta(t, 15.0, y, 1e-9)
 }

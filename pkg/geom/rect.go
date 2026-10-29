@@ -72,6 +72,25 @@ func (r Rect) ContainsPoint(x, y float64) bool {
 	return x >= rMinX && x <= rMaxX && y >= rMinY && y <= rMaxY
 }
 
+func (r Rect) ClampPoint(x, y float64) (float64, float64) {
+	minX, minY := r.Min()
+	maxX, maxY := r.Max()
+	return min(max(x, minX), maxX), min(max(y, minY), maxY)
+}
+
+func (r Rect) ClampRect(other Rect) Rect {
+	other.X = clampSpan(other.X, other.Width, r.X, r.Width)
+	other.Y = clampSpan(other.Y, other.Height, r.Y, r.Height)
+	return other
+}
+
+func clampSpan(start, size, boundStart, boundSize float64) float64 {
+	if size >= boundSize {
+		return boundStart + (boundSize-size)/2
+	}
+	return min(max(start, boundStart), boundStart+boundSize-size)
+}
+
 func (r Rect) ToImageRectangle() image.Rectangle {
 	minX, minY := r.Min()
 	maxX, maxY := r.Max()

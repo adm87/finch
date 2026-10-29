@@ -143,10 +143,12 @@ func (s *Screen) calculateLayout(windowWidth, windowHeight float64) {
 
 	s.scale = max(windowWidth/buffW, windowHeight/buffH)
 
-	s.safeArea.Width = windowWidth / s.scale
-	s.safeArea.Height = windowHeight / s.scale
-	s.safeArea.X = math.Floor((buffW - s.safeArea.Width) / 2)
-	s.safeArea.Y = math.Floor((buffH - s.safeArea.Height) / 2)
+	// Rounded out to whole pixels, so it covers any pixel that's partly visible.
+	visibleW, visibleH := windowWidth/s.scale, windowHeight/s.scale
+	s.safeArea.X = math.Floor((buffW - visibleW) / 2)
+	s.safeArea.Y = math.Floor((buffH - visibleH) / 2)
+	s.safeArea.Width = math.Ceil(s.safeArea.X+visibleW) - s.safeArea.X
+	s.safeArea.Height = math.Ceil(s.safeArea.Y+visibleH) - s.safeArea.Y
 
 	s.options.GeoM.Reset()
 	s.options.GeoM.Translate(-s.safeArea.X, -s.safeArea.Y)

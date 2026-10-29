@@ -16,6 +16,7 @@ import (
 	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/logger"
 	"github.com/adm87/finch/pkg/rendering"
+	"github.com/adm87/finch/pkg/transform"
 	"github.com/adm87/finch/pkg/world"
 	"github.com/adm87/finch/plugins/aseprite"
 	"github.com/adm87/finch/plugins/tiled"
@@ -98,23 +99,23 @@ func registerPlugins(app *application.Application, fsys fs.FS) error {
 }
 
 func run(app *application.Application, cfg *config.GameConfig, l logger.Logger) error {
-	app.World().Create(debug.DebugComponent, world.DontPartition)
-
-	opts := append(gameSystems(app),
-		engine.WithStartup(
-			loadBundles(cfg.Bundles),
-			makeTestScene,
+	return engine.Run(app, &cfg.Engine, append(gameSystems(app),
+		engine.WithStartup(loadBundles(cfg.Bundles)),
+		engine.WithStartup(func(_ *application.Application) error {
+			app.World().Create(debug.DebugComponent, world.DontPartition)
+			return makeTestScene(app)
+		}),
+		engine.WithUpdate(
+			debug.PollInput(),
 		),
 		engine.WithOverlayDrawers(
-			debug.OverlayPartitions(app.World()),
 			debug.OverlayEntityBounds(app.World()),
 			debug.OverlayFPS(app.World()),
+			debug.OverlayPartitions(app.World()),
 			debug.OverlayZeroZero(app.World()),
 		),
 		engine.WithLogger(l),
-	)
-
-	return engine.Run(app, &cfg.Engine, opts...)
+	)...)
 }
 
 func makeTestScene(app *application.Application) error {
@@ -134,7 +135,8 @@ func makeTestScene(app *application.Application) error {
 	if err != nil {
 		return fmt.Errorf("create map: %w", err)
 	}
-	if _, err = tld.AddToWorld(mapHandle, w); err != nil {
+	tm, err := tld.AddToWorld(mapHandle, w)
+	if err != nil {
 		return fmt.Errorf("add map to world: %w", err)
 	}
 	mapInfo, err := maps.Map(mapHandle)
@@ -167,6 +169,12 @@ func makeTestScene(app *application.Application) error {
 		return fmt.Errorf("first frame of %q: %w", playerLibrary, err)
 	}
 
+	mb, _ := transform.GetBounds(tm)
+	mr := mb.WorldRect(transform.TransformComponent.Get(tm))
+
+	ct := transform.TransformComponent.Get(c)
+	ct.SetPosition(mr.Center())
+
 	width := float64(frame.Size.X)
 	height := float64(frame.Size.Y)
 
@@ -181,6 +189,9 @@ func makeTestScene(app *application.Application) error {
 		aseprite.AnimatorComponent,
 		player.Player,
 	)
+
+	t := transform.TransformComponent.Get(entry)
+	t.SetPosition(mr.Center())
 
 	r := rendering.RendererComponent.Get(entry)
 	r.SetRendererID(app.Renderers().Image)
