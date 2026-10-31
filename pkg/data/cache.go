@@ -1,46 +1,34 @@
 package data
 
 import (
-	"github.com/adm87/finch/pkg/slotmap"
+	"github.com/adm87/finch/pkg/slotmap/store"
 )
 
 // Handle refers to data in a Cache.
 type Handle uint64
 
 type Cache struct {
-	store *slotmap.SlotMap[[]byte]
+	store *store.Storage[Handle, []byte]
 }
 
 func NewCache() *Cache {
 	return &Cache{
-		store: slotmap.New[[]byte](256),
+		store: store.New[Handle, []byte](store.WithKind("data")),
 	}
 }
 
 func (dc *Cache) Get(handle Handle) ([]byte, error) {
-	data, err := dc.store.Get(slotmap.Unpack(uint64(handle)))
-	if err != nil {
-		return nil, slotmap.HandleError("get", "data", uint64(handle), err)
-	}
-	return data, nil
+	return dc.store.Get(handle)
 }
 
-func (dc *Cache) Set(handle Handle, data []byte) error {
-	if err := dc.store.Set(slotmap.Unpack(uint64(handle)), data); err != nil {
-		return slotmap.HandleError("set", "data", uint64(handle), err)
-	}
-	return nil
-}
-
-func (dc *Cache) Put(raw []byte) Handle {
-	k := dc.store.Insert(raw)
-	return Handle(k.Pack())
+func (dc *Cache) Put(name string, raw []byte) (Handle, error) {
+	return dc.store.Insert(name, raw)
 }
 
 func (dc *Cache) Delete(handle Handle) ([]byte, error) {
-	data, err := dc.store.Delete(slotmap.Unpack(uint64(handle)))
-	if err != nil {
-		return nil, slotmap.HandleError("delete", "data", uint64(handle), err)
-	}
-	return data, nil
+	return dc.store.Delete(handle)
+}
+
+func (dc *Cache) Lookup(name string) (Handle, bool) {
+	return dc.store.Lookup(name)
 }

@@ -16,37 +16,28 @@ func (f FileSystem) String() string {
 	return string(f)
 }
 
-// Handle is an importer's handle for a loaded asset.
-type Handle uint64
-
 type Importer interface {
-	// Import decodes reader, which holds asset from fsys. Paths that asset
-	// refers to can be resolved against it and loaded from fsys.
-	Import(asset Asset, fsys fs.FS, reader io.Reader) (Handle, error)
-	Delete(handle Handle) error
+	Import(asset Asset, fsys fs.FS, reader io.Reader) error
+	Delete(asset Asset) error
+	Lookup(name string) bool
 }
 
 type Assets struct {
 	importers   map[string]Importer
 	filesystems map[FileSystem]fs.FS
-	handles     map[Asset]Handle
 }
 
 func NewAssets() *Assets {
 	return &Assets{
 		importers:   make(map[string]Importer),
 		filesystems: make(map[FileSystem]fs.FS),
-		handles:     make(map[Asset]Handle),
 	}
 }
 
-// Handle returns a NotFoundError if the asset isn't loaded.
-func (a *Assets) Handle(asset Asset) (Handle, error) {
-	handle, exists := a.handles[asset]
-	if !exists {
-		return 0, errs.NotFound("asset", asset.String())
-	}
-	return handle, nil
+// Loaded reports whether the asset's importer holds it.
+func (a *Assets) Loaded(asset Asset) bool {
+	importer, ok := a.importers[asset.Type()]
+	return ok && importer.Lookup(asset.String())
 }
 
 func (a *Assets) FileSystem(name FileSystem) (fs.FS, error) {
@@ -130,12 +121,12 @@ func (a *Assets) run(batch []Asset, operation func(Asset) error) error {
 func (a *Assets) load(fsys fs.FS, asset Asset) error {
 	name := asset.String()
 
-	if _, loaded := a.handles[asset]; loaded {
-		return errs.AlreadyExists("asset", name)
-	}
 	importer, ok := a.importers[asset.Type()]
 	if !ok {
 		return errs.NotFound("importer", asset.Type())
+	}
+	if importer.Lookup(name) {
+		return errs.AlreadyExists("asset", name)
 	}
 
 	file, err := fsys.Open(name)
@@ -147,29 +138,21 @@ func (a *Assets) load(fsys fs.FS, asset Asset) error {
 	}
 	defer func() { _ = file.Close() }()
 
-	handle, err := importer.Import(asset, fsys, file)
-	if err != nil {
+	if err := importer.Import(asset, fsys, file); err != nil {
 		return fmt.Errorf("import %q: %w", name, err)
 	}
-	a.handles[asset] = handle
 	return nil
 }
 
 func (a *Assets) unload(asset Asset) error {
-	handle, loaded := a.handles[asset]
-	if !loaded {
-		return errs.NotFound("asset", asset.String())
-	}
 	importer, ok := a.importers[asset.Type()]
 	if !ok {
 		return errs.NotFound("importer", asset.Type())
 	}
-	delete(a.handles, asset)
-
-	if err := importer.Delete(handle); err != nil {
-		return fmt.Errorf("unload %q: %w", asset, err)
+	if !importer.Lookup(asset.String()) {
+		return errs.NotFound("asset", asset.String())
 	}
-	return nil
+	return importer.Delete(asset)
 }
 
 func (a *Assets) distinct(batch []Asset) []Asset {

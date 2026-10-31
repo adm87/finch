@@ -7,7 +7,7 @@ import (
 	"github.com/adm87/finch/pkg/transform"
 )
 
-func Follow(dt float64, c *donburi.Entry, target *donburi.Entry) {
+func Follow(_ float64, c *donburi.Entry, target *donburi.Entry) {
 	t, ok := transform.GetTransform(c)
 	if !ok {
 		return

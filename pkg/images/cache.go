@@ -9,7 +9,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/adm87/finch/pkg/errs"
-	"github.com/adm87/finch/pkg/slotmap"
+	"github.com/adm87/finch/pkg/slotmap/store"
 )
 
 // Handle refers to an image in a Cache.
@@ -17,48 +17,38 @@ type Handle uint64
 
 // Cache stores images and the frames they are sliced into.
 type Cache struct {
-	store  *slotmap.SlotMap[*ebiten.Image]
+	store  *store.Storage[Handle, *ebiten.Image]
 	frames map[Handle][]Frame
 }
 
 func NewCache() *Cache {
 	return &Cache{
-		store:  slotmap.New[*ebiten.Image](256),
+		store:  store.New[Handle, *ebiten.Image](store.WithKind("image")),
 		frames: make(map[Handle][]Frame),
 	}
 }
 
 func (ic *Cache) Get(handle Handle) (*ebiten.Image, error) {
-	img, err := ic.store.Get(slotmap.Unpack(uint64(handle)))
-	if err != nil {
-		return nil, slotmap.HandleError("get", "image", uint64(handle), err)
-	}
-	return img, nil
+	return ic.store.Get(handle)
 }
 
-func (ic *Cache) Put(img *ebiten.Image) Handle {
-	key := ic.store.Insert(img)
-	return Handle(key.Pack())
-}
-
-// Set replaces the image at handle and clears its frames.
-// The caller still owns the previous image.
-func (ic *Cache) Set(handle Handle, img *ebiten.Image) error {
-	if err := ic.store.Set(slotmap.Unpack(uint64(handle)), img); err != nil {
-		return slotmap.HandleError("set", "image", uint64(handle), err)
-	}
-	delete(ic.frames, handle)
-	return nil
+func (ic *Cache) Put(name string, img *ebiten.Image) (Handle, error) {
+	return ic.store.Insert(name, img)
 }
 
 // Delete removes the image and its frames. The caller must deallocate the image.
 func (ic *Cache) Delete(handle Handle) (*ebiten.Image, error) {
-	img, err := ic.store.Delete(slotmap.Unpack(uint64(handle)))
+	img, err := ic.store.Delete(handle)
 	if err != nil {
-		return nil, slotmap.HandleError("delete", "image", uint64(handle), err)
+		return nil, err
 	}
+
 	delete(ic.frames, handle)
 	return img, nil
+}
+
+func (ic *Cache) Lookup(name string) (Handle, bool) {
+	return ic.store.Lookup(name)
 }
 
 // Frame returns frame index of the image. An image that was never sliced

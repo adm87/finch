@@ -3,14 +3,13 @@ package tiled
 import (
 	"errors"
 	"fmt"
-	"strconv"
 
 	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/data"
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/logger"
-	"github.com/adm87/finch/pkg/slotmap"
+	"github.com/adm87/finch/pkg/slotmap/store"
 	"github.com/adm87/finch/plugins/tiled/tmx"
 )
 
@@ -40,29 +39,27 @@ const (
 )
 
 type Maps struct {
-	logger     logger.Logger
-	assets     *assets.Assets
-	data       *data.Cache
-	images     *images.Cache
-	config     *Config
-	maps       *slotmap.SlotMap[MapInfo]
-	mapsByName map[string]Handle
+	logger logger.Logger
+	assets *assets.Assets
+	data   *data.Cache
+	images *images.Cache
+	config *Config
+	maps   *store.Storage[Handle, MapInfo]
 }
 
 func NewMaps(as *assets.Assets, data *data.Cache, images *images.Cache, cfg *Config, log logger.Logger) *Maps {
 	return &Maps{
-		logger:     log.Named("tiled"),
-		assets:     as,
-		data:       data,
-		images:     images,
-		config:     cfg,
-		maps:       slotmap.New[MapInfo](32),
-		mapsByName: make(map[string]Handle),
+		logger: log.Named("tiled"),
+		assets: as,
+		data:   data,
+		images: images,
+		config: cfg,
+		maps:   store.New[Handle, MapInfo](store.WithKind(mapKind), store.WithCapacity(32)),
 	}
 }
 
 func (m *Maps) CreateMap(name string, mode LoadMode) (Handle, error) {
-	if handle, exists := m.mapsByName[name]; exists {
+	if handle, exists := m.maps.Lookup(name); exists {
 		return handle, nil
 	}
 
@@ -77,26 +74,21 @@ func (m *Maps) CreateMap(name string, mode LoadMode) (Handle, error) {
 
 	l := &mapLoader{maps: m, fsys: fsys, mode: mode, tilesets: make(map[assets.Asset]*tmx.Tileset)}
 	info, err := l.load(cfg.TMX)
-
 	if err != nil {
 		return 0, fmt.Errorf("map %q: %w", name, errors.Join(err, m.unload(l.owned)))
 	}
 	info.owned = l.owned
 
-	handle := Handle(m.maps.Insert(info).Pack())
-	m.mapsByName[name] = handle
-
-	return handle, nil
+	return m.maps.Insert(name, info)
 }
 
 func (m *Maps) ClearMap(name string, mode UnloadMode) error {
-	handle, exists := m.mapsByName[name]
+	handle, exists := m.maps.Lookup(name)
 	if !exists {
 		return errs.NotFound(mapKind, name)
 	}
 
-	info, err := m.maps.Delete(slotmap.Unpack(uint64(handle)))
-	delete(m.mapsByName, name)
+	info, err := m.maps.Delete(handle)
 	if err != nil {
 		return fmt.Errorf("clear map %q: %w", name, err)
 	}
@@ -111,12 +103,9 @@ func (m *Maps) ClearMap(name string, mode UnloadMode) error {
 }
 
 func (m *Maps) Map(handle Handle) (MapInfo, error) {
-	info, err := m.maps.Get(slotmap.Unpack(uint64(handle)))
-	if err != nil {
-		return MapInfo{}, errs.NotFound(mapKind, strconv.FormatUint(uint64(handle), 10)).Wrap(err)
-	}
-	return info, nil
+	return m.maps.Get(handle)
 }
+
 func (m *Maps) getMapConfig(name string) (*MapConfig, error) {
 	if name == "" {
 		return nil, errs.Argument("name", "cannot be empty")

@@ -12,9 +12,7 @@ import (
 
 	"github.com/adm87/finch/pkg/application"
 	"github.com/adm87/finch/pkg/assets"
-	"github.com/adm87/finch/pkg/data"
 	"github.com/adm87/finch/pkg/errs"
-	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/logger"
 )
 
@@ -100,15 +98,15 @@ func TestNewRegistersImporters(t *testing.T) {
 	require.NoError(t, app.RegisterFileSystems(fileSystems))
 	require.NoError(t, app.Assets().Load(fileSystems["test"], "sprite.png", "config.json"))
 
-	imgHandle, err := app.Assets().Handle("sprite.png")
-	require.NoError(t, err)
-	img, err := app.Cache().Images().Get(images.Handle(imgHandle))
+	imgHandle, ok := app.Cache().Images().Lookup("sprite.png")
+	require.True(t, ok)
+	img, err := app.Cache().Images().Get(imgHandle)
 	require.NoError(t, err)
 	require.Equal(t, image.Pt(3, 2), img.Bounds().Size())
 
-	dataHandle, err := app.Assets().Handle("config.json")
-	require.NoError(t, err)
-	raw, err := app.Cache().Data().Get(data.Handle(dataHandle))
+	dataHandle, ok := app.Cache().Data().Lookup("config.json")
+	require.True(t, ok)
+	raw, err := app.Cache().Data().Get(dataHandle)
 	require.NoError(t, err)
 	require.JSONEq(t, `{"ok": true}`, string(raw))
 }

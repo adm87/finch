@@ -15,37 +15,40 @@ import (
 )
 
 type fakeImporter struct {
-	next      assets.Handle
-	contents  map[assets.Handle]string
+	contents  map[string]string
 	imported  []assets.Asset
 	fsys      fs.FS
-	deleted   []assets.Handle
+	deleted   []assets.Asset
 	importErr error
 }
 
 func newFakeImporter() *fakeImporter {
-	return &fakeImporter{contents: make(map[assets.Handle]string)}
+	return &fakeImporter{contents: make(map[string]string)}
 }
 
-func (f *fakeImporter) Import(asset assets.Asset, fsys fs.FS, reader io.Reader) (assets.Handle, error) {
+func (f *fakeImporter) Import(asset assets.Asset, fsys fs.FS, reader io.Reader) error {
 	f.imported = append(f.imported, asset)
 	f.fsys = fsys
 	if f.importErr != nil {
-		return 0, f.importErr
+		return f.importErr
 	}
 	raw, err := io.ReadAll(reader)
 	if err != nil {
-		return 0, err
+		return err
 	}
-	f.next++
-	f.contents[f.next] = string(raw)
-	return f.next, nil
+	f.contents[asset.String()] = string(raw)
+	return nil
 }
 
-func (f *fakeImporter) Delete(handle assets.Handle) error {
-	f.deleted = append(f.deleted, handle)
-	delete(f.contents, handle)
+func (f *fakeImporter) Delete(asset assets.Asset) error {
+	f.deleted = append(f.deleted, asset)
+	delete(f.contents, asset.String())
 	return nil
+}
+
+func (f *fakeImporter) Lookup(name string) bool {
+	_, ok := f.contents[name]
+	return ok
 }
 
 var testFS = fstest.MapFS{
@@ -67,12 +70,10 @@ func TestLoadAndHandle(t *testing.T) {
 
 	require.NoError(t, as.Load(testFS, "a.txt", "b.txt"))
 
-	ha, err := as.Handle("a.txt")
-	require.NoError(t, err)
-	hb, err := as.Handle("b.txt")
-	require.NoError(t, err)
-	require.Equal(t, "alpha", imp.contents[ha])
-	require.Equal(t, "beta", imp.contents[hb])
+	require.True(t, as.Loaded("a.txt"))
+	require.True(t, as.Loaded("b.txt"))
+	require.Equal(t, "alpha", imp.contents["a.txt"])
+	require.Equal(t, "beta", imp.contents["b.txt"])
 }
 
 func TestLoadDuplicatesInOneBatchLoadOnce(t *testing.T) {
@@ -109,8 +110,7 @@ func TestLoadErrors(t *testing.T) {
 			require.Error(t, err)
 			require.True(t, tc.check(err), err.Error())
 
-			_, err = as.Handle(tc.asset)
-			require.True(t, errs.IsNotFound(err))
+			require.False(t, as.Loaded(tc.asset))
 		})
 	}
 }
@@ -120,9 +120,7 @@ func TestLoadFailureDoesNotStopTheBatch(t *testing.T) {
 
 	err := as.Load(testFS, "missing.txt", "a.txt")
 	require.True(t, errs.IsNotFound(err))
-
-	_, err = as.Handle("a.txt")
-	require.NoError(t, err)
+	require.True(t, as.Loaded("a.txt"))
 }
 
 func TestImportFailureLeavesAssetUnloaded(t *testing.T) {
@@ -131,9 +129,7 @@ func TestImportFailureLeavesAssetUnloaded(t *testing.T) {
 
 	err := as.Load(testFS, "a.txt")
 	require.ErrorIs(t, err, imp.importErr)
-
-	_, err = as.Handle("a.txt")
-	require.True(t, errs.IsNotFound(err))
+	require.False(t, as.Loaded("a.txt"))
 }
 
 func TestLoadNilFileSystem(t *testing.T) {
@@ -144,14 +140,10 @@ func TestLoadNilFileSystem(t *testing.T) {
 func TestUnload(t *testing.T) {
 	as, imp := newAssets(t)
 	require.NoError(t, as.Load(testFS, "a.txt"))
-	h, err := as.Handle("a.txt")
-	require.NoError(t, err)
 
 	require.NoError(t, as.Unload("a.txt"))
-	require.Equal(t, []assets.Handle{h}, imp.deleted)
-
-	_, err = as.Handle("a.txt")
-	require.True(t, errs.IsNotFound(err))
+	require.Equal(t, []assets.Asset{"a.txt"}, imp.deleted)
+	require.False(t, as.Loaded("a.txt"))
 
 	require.True(t, errs.IsNotFound(as.Unload("a.txt")))
 	require.NoError(t, as.Load(testFS, "a.txt"))
@@ -196,12 +188,10 @@ func TestAssetBundle(t *testing.T) {
 
 	bundle := assets.AssetBundle{FileSystem: "test", Assets: []assets.Asset{"a.txt", "b.txt"}}
 	require.NoError(t, bundle.Load(as))
-	_, err := as.Handle("b.txt")
-	require.NoError(t, err)
+	require.True(t, as.Loaded("b.txt"))
 
 	require.NoError(t, bundle.Unload(as))
-	_, err = as.Handle("b.txt")
-	require.True(t, errs.IsNotFound(err))
+	require.False(t, as.Loaded("b.txt"))
 
 	missing := assets.AssetBundle{FileSystem: "nope", Assets: []assets.Asset{"a.txt"}}
 	require.True(t, errs.IsNotFound(missing.Load(as)))
@@ -229,30 +219,35 @@ func TestImportReceivesTheAssetAndFileSystem(t *testing.T) {
 // refImporter loads the asset its file names, relative to the file itself, the
 // way a Tiled map loads its tilesets.
 type refImporter struct {
-	as   *assets.Assets
-	next assets.Handle
+	as     *assets.Assets
+	loaded map[string]bool
 }
 
-func (r *refImporter) Import(asset assets.Asset, fsys fs.FS, reader io.Reader) (assets.Handle, error) {
+func (r *refImporter) Import(asset assets.Asset, fsys fs.FS, reader io.Reader) error {
 	raw, err := io.ReadAll(reader)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	ref := assets.Asset(path.Join(path.Dir(asset.String()), string(raw)))
 	if err := r.as.Load(fsys, ref); err != nil {
-		return 0, err
+		return err
 	}
-	r.next++
-	return r.next, nil
+	r.loaded[asset.String()] = true
+	return nil
 }
 
-func (r *refImporter) Delete(assets.Handle) error {
+func (r *refImporter) Delete(asset assets.Asset) error {
+	delete(r.loaded, asset.String())
 	return nil
+}
+
+func (r *refImporter) Lookup(name string) bool {
+	return r.loaded[name]
 }
 
 func TestImporterCanLoadAssetsItRefersTo(t *testing.T) {
 	as, imp := newAssets(t)
-	require.NoError(t, as.RegisterImporter(&refImporter{as: as}, []string{"map"}))
+	require.NoError(t, as.RegisterImporter(&refImporter{as: as, loaded: make(map[string]bool)}, []string{"map"}))
 
 	fsys := fstest.MapFS{
 		"maps/level.map":  {Data: []byte("../tiles/grass.txt")},
@@ -260,9 +255,6 @@ func TestImporterCanLoadAssetsItRefersTo(t *testing.T) {
 	}
 	require.NoError(t, as.Load(fsys, "maps/level.map"))
 
-	_, err := as.Handle("maps/level.map")
-	require.NoError(t, err)
-	tile, err := as.Handle("tiles/grass.txt")
-	require.NoError(t, err)
-	require.Equal(t, "grass", imp.contents[tile])
+	require.True(t, as.Loaded("maps/level.map"))
+	require.Equal(t, "grass", imp.contents["tiles/grass.txt"])
 }

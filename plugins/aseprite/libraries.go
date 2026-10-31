@@ -79,13 +79,8 @@ func (l *Libraries) CreateLibrary(name string, mode LoadMode) (Handle, error) {
 		return 0, err
 	}
 
-	loaded, err := l.isLibraryLoaded(library)
-	if err != nil && !errs.IsNotFound(err) {
-		return 0, fmt.Errorf("check library %q: %w", name, err)
-	}
-
 	owned := false
-	if !loaded {
+	if !l.isLibraryLoaded(library) {
 		if mode == LoadModeRequired {
 			return 0, errs.InvalidOperation(fmt.Sprintf("library %q is not loaded and mode is LoadModeRequired", name))
 		}
@@ -162,16 +157,15 @@ func (l *Libraries) getLibraryConfig(name string) (*LibraryConfig, error) {
 func (l *Libraries) decodeLibrary(library *LibraryConfig) (LibraryInfo, error) {
 	atlasPath := library.Atlas.String()
 
-	atlasAsset, err := l.as.Handle(library.Atlas)
-	if err != nil {
-		return LibraryInfo{}, fmt.Errorf("atlas %q: %w", atlasPath, err)
+	imageHandle, exists := l.ic.Lookup(library.Image.String())
+	if !exists {
+		return LibraryInfo{}, errs.NotFound("image", library.Image.String())
 	}
-	imageAsset, err := l.as.Handle(library.Image)
-	if err != nil {
-		return LibraryInfo{}, fmt.Errorf("image %q: %w", library.Image.String(), err)
+
+	dataHandle, exists := l.dc.Lookup(atlasPath)
+	if !exists {
+		return LibraryInfo{}, errs.NotFound("data", atlasPath)
 	}
-	dataHandle := data.Handle(atlasAsset)
-	imageHandle := images.Handle(imageAsset)
 
 	raw, err := l.dc.Get(dataHandle)
 	if err != nil {
@@ -191,17 +185,18 @@ func (l *Libraries) decodeLibrary(library *LibraryConfig) (LibraryInfo, error) {
 	if err := info.Atlas.Validate(); err != nil {
 		return LibraryInfo{}, fmt.Errorf("atlas %q: %w", atlasPath, err)
 	}
+
 	info.Atlas.fitTagsToFrames()
 	return info, nil
 }
 
-func (l *Libraries) isLibraryLoaded(cfg *LibraryConfig) (bool, error) {
-	for _, r := range cfg.Assets() {
-		if _, err := l.as.Handle(r); err != nil {
-			return false, err
+func (l *Libraries) isLibraryLoaded(cfg *LibraryConfig) bool {
+	for _, asset := range cfg.Assets() {
+		if !l.as.Loaded(asset) {
+			return false
 		}
 	}
-	return true, nil
+	return true
 }
 
 func (l *Libraries) loadLibrary(cfg *LibraryConfig) error {

@@ -27,20 +27,34 @@ func NewImporter(cache *Cache) *Importer {
 	}
 }
 
-// Import returns an assets.Handle that converts to a Handle in the cache.
-func (l *Importer) Import(_ assets.Asset, _ fs.FS, reader io.Reader) (assets.Handle, error) {
+// Import stores the image in the cache under the asset's path.
+func (l *Importer) Import(asset assets.Asset, _ fs.FS, reader io.Reader) error {
 	img, _, err := ebitenutil.NewImageFromReader(reader)
 	if err != nil {
-		return 0, errs.Format("image", "decode").Wrap(err)
+		return errs.Format("image", "decode").Wrap(err)
 	}
-	return assets.Handle(l.cache.Put(img)), nil
+	if _, err := l.cache.Put(asset.String(), img); err != nil {
+		img.Deallocate()
+		return err
+	}
+	return nil
 }
 
-func (l *Importer) Delete(handle assets.Handle) error {
-	img, err := l.cache.Delete(Handle(handle))
+// Delete removes the image from the cache and frees it.
+func (l *Importer) Delete(asset assets.Asset) error {
+	handle, exists := l.cache.Lookup(asset.String())
+	if !exists {
+		return errs.NotFound("image", asset.String())
+	}
+	img, err := l.cache.Delete(handle)
 	if err != nil {
 		return err
 	}
 	img.Deallocate()
 	return nil
+}
+
+func (l *Importer) Lookup(name string) bool {
+	_, exists := l.cache.Lookup(name)
+	return exists
 }

@@ -10,7 +10,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/adm87/finch/pkg/assets"
-	"github.com/adm87/finch/pkg/data"
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/images"
@@ -160,18 +159,18 @@ func (l *mapLoader) image(img *tmx.Image) (images.Handle, error) {
 	if img.Source == "" {
 		return 0, errs.NotSupported("images embedded as data")
 	}
-	handle, err := l.maps.assets.Handle(assets.Asset(img.Source))
-	if err != nil {
-		return 0, fmt.Errorf("image %q: %w", img.Source, err)
+	handle, exists := l.maps.images.Lookup(img.Source)
+	if !exists {
+		return 0, errs.NotFound("image", img.Source)
 	}
-	return images.Handle(handle), nil
+	return handle, nil
 }
 
 // require loads the assets that aren't loaded, or fails in LoadModeRequired.
 func (l *mapLoader) require(refs ...assets.Asset) error {
 	var missing []assets.Asset
 	for _, ref := range refs {
-		if _, err := l.maps.assets.Handle(ref); err != nil {
+		if !l.maps.assets.Loaded(ref) {
 			missing = append(missing, ref)
 		}
 	}
@@ -186,7 +185,7 @@ func (l *mapLoader) require(refs ...assets.Asset) error {
 
 	// Load keeps going after a failure, so own whatever made it in.
 	for _, ref := range missing {
-		if _, herr := l.maps.assets.Handle(ref); herr == nil {
+		if l.maps.assets.Loaded(ref) {
 			l.owned = append(l.owned, ref)
 		}
 	}
@@ -201,11 +200,11 @@ func parseAsset[T any, PT interface {
 	if err := l.require(asset); err != nil {
 		return nil, err
 	}
-	handle, err := l.maps.assets.Handle(asset)
-	if err != nil {
-		return nil, err
+	handle, exists := l.maps.data.Lookup(asset.String())
+	if !exists {
+		return nil, errs.NotFound("data", asset.String())
 	}
-	raw, err := l.maps.data.Get(data.Handle(handle))
+	raw, err := l.maps.data.Get(handle)
 	if err != nil {
 		return nil, fmt.Errorf("%q: %w", asset, err)
 	}

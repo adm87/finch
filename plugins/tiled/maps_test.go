@@ -23,13 +23,23 @@ type blankImporter struct {
 	cache *images.Cache
 }
 
-func (b blankImporter) Import(assets.Asset, fs.FS, io.Reader) (assets.Handle, error) {
-	return assets.Handle(b.cache.Put(ebiten.NewImage(32, 16))), nil
+func (b blankImporter) Import(asset assets.Asset, _ fs.FS, _ io.Reader) error {
+	_, err := b.cache.Put(asset.String(), ebiten.NewImage(32, 16))
+	return err
 }
 
-func (b blankImporter) Delete(handle assets.Handle) error {
-	_, err := b.cache.Delete(images.Handle(handle))
+func (b blankImporter) Delete(asset assets.Asset) error {
+	handle, exists := b.cache.Lookup(asset.String())
+	if !exists {
+		return errs.NotFound("image", asset.String())
+	}
+	_, err := b.cache.Delete(handle)
 	return err
+}
+
+func (b blankImporter) Lookup(name string) bool {
+	_, exists := b.cache.Lookup(name)
+	return exists
 }
 
 var mapFS = fstest.MapFS{
@@ -117,8 +127,7 @@ func TestCreateMapLoadsEverythingItRefersTo(t *testing.T) {
 	handle, err := maps.CreateMap("level", tiled.LoadModeDynamic)
 	require.NoError(t, err)
 	for _, f := range mapFiles {
-		_, err := as.Handle(f)
-		require.NoError(t, err, f)
+		require.True(t, as.Loaded(f), f)
 	}
 
 	again, err := maps.CreateMap("level", tiled.LoadModeDynamic)
@@ -146,11 +155,11 @@ func TestCreateMapLoadsEverythingItRefersTo(t *testing.T) {
 	ts, id, ok = info.Tileset(info.Layers[0].GIDs[1])
 	require.True(t, ok)
 	require.Equal(t, "props", ts.Tileset.Name)
-	rock, err := as.Handle("maps/props/rock.png")
-	require.NoError(t, err)
+	rock, ok := ic.Lookup("maps/props/rock.png")
+	require.True(t, ok)
 	img, _, ok = ts.TileImage(id)
 	require.True(t, ok)
-	require.Equal(t, images.Handle(rock), img)
+	require.Equal(t, rock, img)
 
 	_, _, ok = info.Tileset(0)
 	require.False(t, ok)
@@ -168,8 +177,7 @@ func TestCreateMapRequiredNeedsFilesLoaded(t *testing.T) {
 
 	// Nothing was owned, so clearing keeps the files.
 	require.NoError(t, maps.ClearMap("level", tiled.UnloadModeIfOwned))
-	_, err = as.Handle("maps/level.tmx")
-	require.NoError(t, err)
+	require.True(t, as.Loaded("maps/level.tmx"))
 	_, err = maps.Map(handle)
 	require.True(t, errs.IsNotFound(err))
 }
@@ -182,8 +190,7 @@ func TestClearMapUnloadsWhatItLoaded(t *testing.T) {
 	require.NoError(t, maps.ClearMap("level", tiled.UnloadModeIfOwned))
 
 	for _, f := range mapFiles {
-		_, err := as.Handle(f)
-		require.True(t, errs.IsNotFound(err), f)
+		require.False(t, as.Loaded(f), f)
 	}
 	require.True(t, errs.IsNotFound(maps.ClearMap("level", tiled.UnloadModeKeep)))
 }
@@ -193,6 +200,5 @@ func TestCreateMapFailureUnloadsWhatItLoaded(t *testing.T) {
 
 	_, err := maps.CreateMap("broken", tiled.LoadModeDynamic)
 	require.True(t, errs.IsNotFound(err))
-	_, err = as.Handle("broken/level.tmx")
-	require.True(t, errs.IsNotFound(err))
+	require.False(t, as.Loaded("broken/level.tmx"))
 }

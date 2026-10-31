@@ -13,7 +13,8 @@ import (
 
 func TestSliceFramesKeepsTrim(t *testing.T) {
 	cache := images.NewCache()
-	handle := cache.Put(ebiten.NewImage(64, 64))
+	handle, err := cache.Put("img.png", ebiten.NewImage(64, 64))
+	require.NoError(t, err)
 
 	require.NoError(t, cache.SliceFrames(handle, []images.FrameRect{
 		{Rect: image.Rect(0, 0, 24, 28), Offset: image.Pt(26, 36), Size: image.Pt(96, 96)},
@@ -34,9 +35,10 @@ func TestSliceFramesKeepsTrim(t *testing.T) {
 
 func TestSliceFramesRejectsFramesOffTheirCanvas(t *testing.T) {
 	cache := images.NewCache()
-	handle := cache.Put(ebiten.NewImage(64, 64))
+	handle, err := cache.Put("img.png", ebiten.NewImage(64, 64))
+	require.NoError(t, err)
 
-	err := cache.SliceFrames(handle, []images.FrameRect{
+	err = cache.SliceFrames(handle, []images.FrameRect{
 		{Rect: image.Rect(0, 0, 24, 28), Offset: image.Pt(80, 0), Size: image.Pt(96, 96)},
 	})
 	require.ErrorIs(t, err, errs.ErrArgumentOutOfRange)
@@ -44,7 +46,8 @@ func TestSliceFramesRejectsFramesOffTheirCanvas(t *testing.T) {
 
 func TestFrameOfUnslicedImageIsUntrimmed(t *testing.T) {
 	cache := images.NewCache()
-	handle := cache.Put(ebiten.NewImage(10, 12))
+	handle, err := cache.Put("img.png", ebiten.NewImage(10, 12))
+	require.NoError(t, err)
 
 	frame, err := cache.Frame(handle, 3)
 	require.NoError(t, err)
