@@ -14,6 +14,7 @@ import (
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/logger"
 	"github.com/adm87/finch/pkg/rendering"
+	"github.com/adm87/finch/pkg/resource"
 	"github.com/adm87/finch/plugins/tiled"
 	"github.com/adm87/finch/plugins/tiled/tmx"
 )
@@ -82,6 +83,8 @@ var mapFS = fstest.MapFS{
 </map>`)},
 }
 
+const testSource resource.Source = "test"
+
 var mapImages = []string{"tilesets/terrain.png", "tilesets/crates.png", "maps/props/rock.png"}
 
 func newMaps(t *testing.T) *tiled.Plugin {
@@ -92,7 +95,8 @@ func newMaps(t *testing.T) *tiled.Plugin {
 		"layered":  {TMX: "layered/map.tmx"},
 		"infinite": {TMX: "infinite/map.tmx"},
 	}}
-	p, err := tiled.NewPlugin(cfg, mapFS, rendering.NewPipeline(), logger.NewLogger(io.Discard, logger.Options{}))
+	sources := resource.NewLoader(map[resource.Source]fs.FS{testSource: mapFS})
+	p, err := tiled.NewPlugin(cfg, sources, rendering.NewPipeline(), logger.NewLogger(io.Discard, logger.Options{}))
 	require.NoError(t, err)
 	return p
 }
@@ -101,14 +105,14 @@ func TestLoadLoadsEverythingItRefersTo(t *testing.T) {
 	maps := newMaps(t)
 	ic := maps.Images()
 
-	handle, err := maps.Load("level")
+	handle, err := maps.Load(testSource, "level")
 	require.NoError(t, err)
 	for _, f := range mapImages {
-		_, ok := ic.Lookup(f)
+		_, ok := ic.Lookup(resource.Key(testSource, f))
 		require.True(t, ok, f)
 	}
 
-	again, err := maps.Load("level")
+	again, err := maps.Load(testSource, "level")
 	require.NoError(t, err)
 	require.Equal(t, handle, again)
 	info, err := maps.Map(handle)
@@ -132,7 +136,7 @@ func TestLoadLoadsEverythingItRefersTo(t *testing.T) {
 	ts, id, ok = info.Tileset(info.Layers[0].GIDs[1])
 	require.True(t, ok)
 	require.Equal(t, "props", ts.Tileset.Name)
-	rock, ok := ic.Lookup("maps/props/rock.png")
+	rock, ok := ic.Lookup(resource.Key(testSource, "maps/props/rock.png"))
 	require.True(t, ok)
 	img, _, ok = ts.TileImage(id)
 	require.True(t, ok)
@@ -145,19 +149,35 @@ func TestLoadLoadsEverythingItRefersTo(t *testing.T) {
 func TestUnloadForgetsTheMap(t *testing.T) {
 	maps := newMaps(t)
 
-	handle, err := maps.Load("level")
+	handle, err := maps.Load(testSource, "level")
 	require.NoError(t, err)
-	require.NoError(t, maps.Unload("level"))
+	require.NoError(t, maps.Unload(testSource, "level"))
 
 	_, err = maps.Map(handle)
 	require.True(t, errs.IsNotFound(err))
-	require.True(t, errs.IsNotFound(maps.Unload("level")))
+	require.True(t, errs.IsNotFound(maps.Unload(testSource, "level")))
 }
 
 func TestLoadFailureKeepsNothing(t *testing.T) {
 	maps := newMaps(t)
 
-	_, err := maps.Load("broken")
+	_, err := maps.Load(testSource, "broken")
 	require.ErrorIs(t, err, fs.ErrNotExist)
-	require.True(t, errs.IsNotFound(maps.Unload("broken")))
+	require.True(t, errs.IsNotFound(maps.Unload(testSource, "broken")))
+}
+
+func TestLoadKeepsSourcesApart(t *testing.T) {
+	cfg := &tiled.Config{Maps: map[string]tiled.MapConfig{"level": {TMX: "maps/level.tmx"}}}
+	sources := resource.NewLoader(map[resource.Source]fs.FS{"disk": mapFS, "cdn": mapFS})
+	maps, err := tiled.NewPlugin(cfg, sources, rendering.NewPipeline(), logger.N)
+	require.NoError(t, err)
+
+	disk, err := maps.Load("disk", "level")
+	require.NoError(t, err)
+	cdn, err := maps.Load("cdn", "level")
+	require.NoError(t, err)
+	require.NotEqual(t, disk, cdn)
+
+	_, err = maps.Load("nowhere", "level")
+	require.True(t, errs.IsNotFound(err))
 }

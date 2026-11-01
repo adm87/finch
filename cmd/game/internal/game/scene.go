@@ -12,6 +12,7 @@ import (
 )
 
 const (
+	gymBundle     = "gym"
 	playerLibrary = "captain"
 	gym04         = "gym04"
 )
@@ -23,7 +24,12 @@ func (g *Game) MakeTestScene() error {
 	camera.SetZoom(c, 2)
 	g.view.SetCamera(c)
 
-	mapHandle, err := g.tiled.Load(gym04)
+	if err := g.LoadBundles(gymBundle); err != nil {
+		return err
+	}
+	src := g.bundles[gymBundle].Source
+
+	mapHandle, err := g.tiled.Load(src, gym04)
 	if err != nil {
 		return fmt.Errorf("load map: %w", err)
 	}
@@ -40,7 +46,7 @@ func (g *Game) MakeTestScene() error {
 		return fmt.Errorf("map %q has no player layer", gym04)
 	}
 
-	libraryID, err := g.aseprite.Load(playerLibrary)
+	libraryID, err := g.aseprite.Load(src, playerLibrary)
 	if err != nil {
 		return fmt.Errorf("load library %q: %w", playerLibrary, err)
 	}

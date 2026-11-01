@@ -2,7 +2,6 @@ package game
 
 import (
 	"fmt"
-	"io/fs"
 
 	"github.com/yohamta/donburi"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/logger"
 	"github.com/adm87/finch/pkg/rendering"
+	"github.com/adm87/finch/pkg/resource"
 	"github.com/adm87/finch/pkg/world"
 	"github.com/adm87/finch/plugins/aseprite"
 	"github.com/adm87/finch/plugins/tiled"
@@ -21,8 +21,9 @@ type Game struct {
 	screen        *display.Screen
 	view          *display.View
 	pipeline      *rendering.Pipeline
+	sources       *resource.Loader
 	images        *images.Cache
-	imageFiles    fs.FS
+	bundles       map[string]Bundle
 	tiled         *tiled.Plugin
 	aseprite      *aseprite.Plugin
 	visible       []*donburi.Entry
@@ -36,15 +37,8 @@ type Configs struct {
 	Aseprite *aseprite.Config
 }
 
-// Files are the file systems the game loads assets from.
-type Files struct {
-	Images   fs.FS
-	Aseprite fs.FS
-	Tiled    fs.FS
-}
-
-// New builds the engine pieces and the plugins.
-func New(cfgs Configs, files Files, l logger.Logger) (*Game, error) {
+// New builds the engine pieces and the plugins. Bundles are loaded from sources.
+func New(cfgs Configs, sources *resource.Loader, l logger.Logger) (*Game, error) {
 	cfg := cfgs.Game
 	if err := cfg.Screen.Validate(); err != nil {
 		return nil, err
@@ -56,8 +50,9 @@ func New(cfgs Configs, files Files, l logger.Logger) (*Game, error) {
 		screen:   screen,
 		view:     display.NewViewport(screen),
 		pipeline: rendering.NewPipeline(),
-		images:     images.NewCache(),
-		imageFiles: files.Images,
+		sources:  sources,
+		images:   images.NewCache(),
+		bundles:  cfg.Bundles,
 	}
 
 	imageRenderer, err := g.pipeline.RegisterRenderer(images.NewRenderer(g.images))
@@ -66,11 +61,11 @@ func New(cfgs Configs, files Files, l logger.Logger) (*Game, error) {
 	}
 	g.imageRenderer = imageRenderer
 
-	if g.tiled, err = tiled.NewPlugin(cfgs.Tiled, files.Tiled, g.pipeline, l); err != nil {
+	if g.tiled, err = tiled.NewPlugin(cfgs.Tiled, sources, g.pipeline, l); err != nil {
 		return nil, fmt.Errorf("create tiled plugin: %w", err)
 	}
 
-	if g.aseprite, err = aseprite.NewPlugin(cfgs.Aseprite, files.Aseprite, g.images, l); err != nil {
+	if g.aseprite, err = aseprite.NewPlugin(cfgs.Aseprite, sources, g.images, l); err != nil {
 		return nil, fmt.Errorf("create aseprite plugin: %w", err)
 	}
 

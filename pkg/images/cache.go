@@ -39,17 +39,17 @@ func (ic *Cache) Put(name string, img *ebiten.Image) (Handle, error) {
 	return ic.store.Insert(name, img)
 }
 
-// Load decodes name from fsys and stores it under name. An image that's
-// already stored returns its handle without reading the file again.
-func (ic *Cache) Load(fsys fs.FS, name string) (Handle, error) {
-	if handle, ok := ic.Lookup(name); ok {
+// Load decodes name from fsys and stores it under key. An image already
+// stored under key returns its handle without reading the file again.
+func (ic *Cache) Load(key string, fsys fs.FS, name string) (Handle, error) {
+	if handle, ok := ic.Lookup(key); ok {
 		return handle, nil
 	}
 	img, _, err := ebitenutil.NewImageFromFileSystem(fsys, name)
 	if err != nil {
 		return 0, fmt.Errorf("load image %q: %w", name, err)
 	}
-	handle, err := ic.Put(name, img)
+	handle, err := ic.Put(key, img)
 	if err != nil {
 		img.Deallocate()
 		return 0, err

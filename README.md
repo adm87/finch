@@ -33,6 +33,7 @@ go run -tags finch_dev ./cmd/game
 - `pkg/` is the engine core:
   - `engine` runs the game loop, the update phases and drawing.
   - `world` is the entity world with a spatial index.
+  - `resource` maps source names to file systems, so bundles can load from disk, the binary or anywhere else.
   - The rest are smaller building blocks: `images`, `rendering`, `transform`, `display`, `hashgrid`, `slotmap` and `errs`.
 - `plugins/` connects third-party tools:
   - `aseprite` handles sprite sheets and animation.
@@ -41,8 +42,10 @@ go run -tags finch_dev ./cmd/game
   Plugins can use `pkg/`, but `pkg/` never imports `plugins/`. A test checks that.
 - `cmd/game` is the test game. `boot` loads the configs and file systems, and `game` wires up the engine and plugins.
 - `content/` holds the game's files:
-  - `embedded` is built into the binary: the config files and the default image.
-  - `resources` is read from disk, with a folder per tool (`aseprite`, `tiled`).
+  - `embedded` is built into the binary: the config files and the default image. It's the `embedded` source.
+  - `resources` is read from disk, with a folder per tool (`aseprite`, `tiled`). It's the `disk` source.
+
+  Bundles in `game_config.yaml` group maps, libraries and images under one source.
 
 ## Development
 

@@ -1,3 +1,3 @@
 maps:
   gym04:
-    tmx: gym04.tmx
+    tmx: tiled/gym04.tmx

@@ -15,6 +15,20 @@ engine:
     resolution_scale: 0.5
     screen_filter: 0
 
-# Embedded images loaded when the game starts. They stay loaded for the whole session.
-preload:
-  - default_10x10.png
+# Content loaded together from one source: "embedded" (built into the binary)
+# or "disk" (content/resources).
+bundles:
+  startup:
+    source: embedded
+    images:
+      - images/default_10x10.png
+  gym:
+    source: disk
+    maps:
+      - gym04
+    libraries:
+      - captain
+
+# Bundles loaded before the first scene. They stay loaded for the whole session.
+startup:
+  - startup

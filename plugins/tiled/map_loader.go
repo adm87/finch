@@ -12,13 +12,16 @@ import (
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/images"
+	"github.com/adm87/finch/pkg/resource"
 	"github.com/adm87/finch/plugins/tiled/tmx"
 )
 
-// mapLoader builds one map's info from the plugin's file system.
+// mapLoader builds one map's info from one source.
 type mapLoader struct {
 	plugin   *Plugin
+	fsys     fs.FS
 	tilesets map[string]*tmx.Tileset // parsed once per map
+	src      resource.Source
 }
 
 func (l *mapLoader) load(name string) (MapInfo, error) {
@@ -155,15 +158,15 @@ func (l *mapLoader) image(img *tmx.Image) (images.Handle, error) {
 	if img.Source == "" {
 		return 0, errs.NotSupported("images embedded as data")
 	}
-	return l.plugin.images.Load(l.plugin.fsys, img.Source)
+	return l.plugin.images.Load(resource.Key(l.src, img.Source), l.fsys, img.Source)
 }
 
-// parseFile reads name from the plugin's file system and parses it.
+// parseFile reads name from the loader's source and parses it.
 func parseFile[T any, PT interface {
 	*T
 	tmx.Validator
 }](l *mapLoader, name string) (*T, error) {
-	raw, err := fs.ReadFile(l.plugin.fsys, name)
+	raw, err := fs.ReadFile(l.fsys, name)
 	if err != nil {
 		return nil, fmt.Errorf("read %q: %w", name, err)
 	}

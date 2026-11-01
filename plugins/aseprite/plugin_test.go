@@ -2,19 +2,19 @@ package aseprite_test
 
 import (
 	"testing"
-	"testing/fstest"
 
 	"github.com/go-openapi/testify/require"
 
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/logger"
+	"github.com/adm87/finch/pkg/resource"
 	"github.com/adm87/finch/plugins/aseprite"
 )
 
 func TestNewPluginChecksTheConfig(t *testing.T) {
 	newPlugin := func(cfg *aseprite.Config) (*aseprite.Plugin, error) {
-		return aseprite.NewPlugin(cfg, fstest.MapFS{}, images.NewCache(), logger.N)
+		return aseprite.NewPlugin(cfg, resource.NewLoader(nil), images.NewCache(), logger.N)
 	}
 
 	_, err := newPlugin(nil)

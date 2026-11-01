@@ -65,16 +65,16 @@ func TestLoadDecodesOnceAndReusesTheHandle(t *testing.T) {
 	fsys := fstest.MapFS{"sprite.png": {Data: raw.Bytes()}}
 
 	cache := images.NewCache()
-	handle, err := cache.Load(fsys, "sprite.png")
+	handle, err := cache.Load("test:sprite.png", fsys, "sprite.png")
 	require.NoError(t, err)
 	img, err := cache.Get(handle)
 	require.NoError(t, err)
 	require.Equal(t, image.Pt(3, 2), img.Bounds().Size())
 
-	again, err := cache.Load(fstest.MapFS{}, "sprite.png")
+	again, err := cache.Load("test:sprite.png", fstest.MapFS{}, "sprite.png")
 	require.NoError(t, err)
 	require.Equal(t, handle, again)
 
-	_, err = cache.Load(fsys, "missing.png")
+	_, err = cache.Load("test:missing.png", fsys, "missing.png")
 	require.ErrorIs(t, err, fs.ErrNotExist)
 }

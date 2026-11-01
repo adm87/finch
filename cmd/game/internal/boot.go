@@ -15,12 +15,19 @@ import (
 	"github.com/adm87/finch/content/resources"
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/logger"
+	"github.com/adm87/finch/pkg/resource"
 	"github.com/adm87/finch/plugins/aseprite"
 	"github.com/adm87/finch/plugins/tiled"
 )
 
 // resourcesRoot is relative to where the game is started.
 const resourcesRoot = "content/resources"
+
+// Sources that bundles in the game config can name.
+const (
+	embeddedSource resource.Source = "embedded"
+	diskSource     resource.Source = "disk"
+)
 
 func Boot() error {
 	l := logger.NewLogger(os.Stdout, loggerOptions).Named("finch")
@@ -30,11 +37,11 @@ func Boot() error {
 		return err
 	}
 
-	g, err := game.New(cfgs, newFiles(resourcesRoot), l)
+	g, err := game.New(cfgs, newSources(resourcesRoot), l)
 	if err != nil {
 		return err
 	}
-	if err := g.Preload(cfgs.Game.Preload); err != nil {
+	if err := g.LoadBundles(cfgs.Game.Startup...); err != nil {
 		return err
 	}
 	if err := g.MakeTestScene(); err != nil {
@@ -73,11 +80,9 @@ func loadConfig[T any](fsys fs.FS, path string, cfg *T) error {
 	return nil
 }
 
-func newFiles(root string) game.Files {
-	res := resources.New(root)
-	return game.Files{
-		Images:   embedded.Images,
-		Aseprite: res.Aseprite,
-		Tiled:    res.Tiled,
-	}
+func newSources(root string) *resource.Loader {
+	return resource.NewLoader(map[resource.Source]fs.FS{
+		embeddedSource: embedded.Assets,
+		diskSource:     resources.New(root),
+	})
 }

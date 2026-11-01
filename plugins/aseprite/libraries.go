@@ -8,6 +8,7 @@ import (
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/logger"
+	"github.com/adm87/finch/pkg/resource"
 )
 
 const libraryKind = "aseprite library"
@@ -21,9 +22,11 @@ type LibraryInfo struct {
 	ImageHandle images.Handle
 }
 
-// Load builds the named library from the config, or returns it if it's already loaded.
-func (p *Plugin) Load(name string) (Handle, error) {
-	if handle, exists := p.libraries.Lookup(name); exists {
+// Load builds the named library from src, or returns it if it's already
+// loaded from there.
+func (p *Plugin) Load(src resource.Source, name string) (Handle, error) {
+	key := resource.Key(src, name)
+	if handle, exists := p.libraries.Lookup(key); exists {
 		return handle, nil
 	}
 
@@ -31,13 +34,17 @@ func (p *Plugin) Load(name string) (Handle, error) {
 	if err != nil {
 		return 0, err
 	}
-
-	atlas, err := p.decodeAtlas(library.Atlas)
+	fsys, err := p.sources.FS(src)
 	if err != nil {
 		return 0, fmt.Errorf("library %q: %w", name, err)
 	}
 
-	imageHandle, err := p.images.Load(p.fsys, library.Image)
+	atlas, err := p.decodeAtlas(fsys, library.Atlas)
+	if err != nil {
+		return 0, fmt.Errorf("library %q: %w", name, err)
+	}
+
+	imageHandle, err := p.images.Load(resource.Key(src, library.Image), fsys, library.Image)
 	if err != nil {
 		return 0, fmt.Errorf("library %q: %w", name, err)
 	}
@@ -45,12 +52,12 @@ func (p *Plugin) Load(name string) (Handle, error) {
 		return 0, fmt.Errorf("slice image %q: %w", library.Image, err)
 	}
 
-	return p.libraries.Insert(name, LibraryInfo{Atlas: atlas, ImageHandle: imageHandle})
+	return p.libraries.Insert(key, LibraryInfo{Atlas: atlas, ImageHandle: imageHandle})
 }
 
-// Unload forgets the library. Its image stays in the image cache.
-func (p *Plugin) Unload(name string) error {
-	handle, exists := p.libraries.Lookup(name)
+// Unload forgets the library loaded from src. Its image stays in the image cache.
+func (p *Plugin) Unload(src resource.Source, name string) error {
+	handle, exists := p.libraries.Lookup(resource.Key(src, name))
 	if !exists {
 		return errs.NotFound(libraryKind, name)
 	}
@@ -75,8 +82,8 @@ func (p *Plugin) getLibraryConfig(name string) (*LibraryConfig, error) {
 	return &library, nil
 }
 
-func (p *Plugin) decodeAtlas(name string) (*Atlas, error) {
-	raw, err := fs.ReadFile(p.fsys, name)
+func (p *Plugin) decodeAtlas(fsys fs.FS, name string) (*Atlas, error) {
+	raw, err := fs.ReadFile(fsys, name)
 	if err != nil {
 		return nil, fmt.Errorf("read %q: %w", name, err)
 	}
