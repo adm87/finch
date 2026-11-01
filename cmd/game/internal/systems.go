@@ -12,6 +12,7 @@ import (
 	"github.com/adm87/finch/pkg/application"
 	"github.com/adm87/finch/pkg/engine"
 	"github.com/adm87/finch/pkg/geom"
+	"github.com/adm87/finch/pkg/logger"
 	"github.com/adm87/finch/pkg/transform"
 	"github.com/adm87/finch/pkg/world"
 	"github.com/adm87/finch/plugins/aseprite"
@@ -51,8 +52,12 @@ func gameSystems(app *application.Application) []engine.RunOption {
 		return nil
 	}
 
-	animate := func(_ *application.Application, dt float64) error {
-		return aseprite.AdvanceAnimations(dt, ase.Libraries(), entries)
+	// A broken animation shouldn't end the game.
+	animate := func(app *application.Application, dt float64) error {
+		if err := aseprite.AdvanceAnimations(dt, ase, entries); err != nil {
+			app.Logger().Error("animation error", logger.ErrorField("error", err))
+		}
+		return nil
 	}
 
 	followPlayer := func(app *application.Application, dt float64) error {

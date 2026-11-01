@@ -129,9 +129,8 @@ func makeTestScene(app *application.Application) error {
 	if err != nil {
 		return fmt.Errorf("get tiled plugin: %w", err)
 	}
-	maps := tld.Maps()
 
-	mapHandle, err := maps.CreateMap(gym04, tiled.LoadModeDynamic)
+	mapHandle, err := tld.CreateMap(gym04, assets.LoadModeDynamic)
 	if err != nil {
 		return fmt.Errorf("create map: %w", err)
 	}
@@ -139,7 +138,7 @@ func makeTestScene(app *application.Application) error {
 	if err != nil {
 		return fmt.Errorf("add map to world: %w", err)
 	}
-	mapInfo, err := maps.Map(mapHandle)
+	mapInfo, err := tld.Map(mapHandle)
 	if err != nil {
 		return fmt.Errorf("map %q: %w", gym04, err)
 	}
@@ -152,14 +151,13 @@ func makeTestScene(app *application.Application) error {
 	if err != nil {
 		return fmt.Errorf("get aseprite plugin: %w", err)
 	}
-	libraries := ase.Libraries()
 
-	libraryID, err := libraries.CreateLibrary(playerLibrary, aseprite.LoadModeDynamic)
+	libraryID, err := ase.CreateLibrary(playerLibrary, assets.LoadModeDynamic)
 	if err != nil {
 		return fmt.Errorf("create library %q: %w", playerLibrary, err)
 	}
 
-	library, err := libraries.Library(libraryID)
+	library, err := ase.Library(libraryID)
 	if err != nil {
 		return fmt.Errorf("library %q: %w", playerLibrary, err)
 	}

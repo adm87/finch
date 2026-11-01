@@ -1,16 +1,17 @@
 package tiled_test
 
 import (
-	"io"
+	"bytes"
+	"image"
+	"image/png"
 	"io/fs"
 	"testing"
 	"testing/fstest"
 
 	"github.com/go-openapi/testify/require"
-	"github.com/hajimehoshi/ebiten/v2"
 
+	"github.com/adm87/finch/pkg/application"
 	"github.com/adm87/finch/pkg/assets"
-	"github.com/adm87/finch/pkg/data"
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/logger"
@@ -18,29 +19,14 @@ import (
 	"github.com/adm87/finch/plugins/tiled/tmx"
 )
 
-// blankImporter stands in for the png importer, so tests don't need real images.
-type blankImporter struct {
-	cache *images.Cache
-}
-
-func (b blankImporter) Import(asset assets.Asset, _ fs.FS, _ io.Reader) error {
-	_, err := b.cache.Put(asset.String(), ebiten.NewImage(32, 16))
-	return err
-}
-
-func (b blankImporter) Delete(asset assets.Asset) error {
-	handle, exists := b.cache.Lookup(asset.String())
-	if !exists {
-		return errs.NotFound("image", asset.String())
+// blankPNG is a real png, so the app's own image importer can load it.
+var blankPNG = func() []byte {
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, image.NewRGBA(image.Rect(0, 0, 32, 16))); err != nil {
+		panic(err)
 	}
-	_, err := b.cache.Delete(handle)
-	return err
-}
-
-func (b blankImporter) Lookup(name string) bool {
-	_, exists := b.cache.Lookup(name)
-	return exists
-}
+	return buf.Bytes()
+}()
 
 var mapFS = fstest.MapFS{
 	"maps/level.tmx": {Data: []byte(`<map orientation="orthogonal" width="2" height="1" tilewidth="16" tileheight="16">
@@ -64,9 +50,9 @@ var mapFS = fstest.MapFS{
 	"tilesets/crates.tsx": {Data: []byte(`<tileset name="crates" tilewidth="16" tileheight="16" tilecount="2" columns="2">
  <image source="crates.png" width="32" height="16"/>
 </tileset>`)},
-	"tilesets/terrain.png": {},
-	"tilesets/crates.png":  {},
-	"maps/props/rock.png":  {},
+	"tilesets/terrain.png": {Data: blankPNG},
+	"tilesets/crates.png":  {Data: blankPNG},
+	"maps/props/rock.png":  {Data: blankPNG},
 	"broken/level.tmx": {Data: []byte(`<map orientation="orthogonal" width="1" height="1" tilewidth="16" tileheight="16">
  <tileset firstgid="1" source="missing.tsx"/>
  <layer id="1" name="ground" width="1" height="1"><data encoding="csv">1</data></layer>
@@ -104,37 +90,36 @@ var mapFiles = []assets.Asset{
 	"maps/props/rock.png",
 }
 
-func newMaps(t *testing.T) (*tiled.Maps, *assets.Assets, *images.Cache) {
+func newPlugin(t *testing.T) (*tiled.Plugin, *assets.Assets, *images.Cache) {
 	t.Helper()
-	as := assets.NewAssets()
-	dc, ic := data.NewCache(), images.NewCache()
-	require.NoError(t, as.RegisterFileSystem("test", mapFS))
-	require.NoError(t, as.RegisterImporter(data.NewImporter(dc), []string{"tmx", "tsx", "tx"}))
-	require.NoError(t, as.RegisterImporter(blankImporter{cache: ic}, []string{"png"}))
+	app, err := application.New(nil, logger.N)
+	require.NoError(t, err)
+	require.NoError(t, app.RegisterFileSystems(map[assets.FileSystem]fs.FS{"test": mapFS}))
 
-	cfg := &tiled.Config{Maps: map[string]tiled.MapConfig{
+	plugin := tiled.NewPlugin(&tiled.Config{Maps: map[string]tiled.MapConfig{
 		"level":    {FileSystem: "test", TMX: "maps/level.tmx"},
 		"broken":   {FileSystem: "test", TMX: "broken/level.tmx"},
 		"layered":  {FileSystem: "test", TMX: "layered/map.tmx"},
 		"infinite": {FileSystem: "test", TMX: "infinite/map.tmx"},
-	}}
-	return tiled.NewMaps(as, dc, ic, cfg, logger.NewLogger(io.Discard, logger.Options{})), as, ic
+	}})
+	require.NoError(t, app.RegisterPlugin(plugin))
+	return plugin, app.Assets(), app.Cache().Images()
 }
 
 func TestCreateMapLoadsEverythingItRefersTo(t *testing.T) {
-	maps, as, ic := newMaps(t)
+	plugin, as, ic := newPlugin(t)
 
-	handle, err := maps.CreateMap("level", tiled.LoadModeDynamic)
+	handle, err := plugin.CreateMap("level", assets.LoadModeDynamic)
 	require.NoError(t, err)
 	for _, f := range mapFiles {
 		require.True(t, as.Loaded(f), f)
 	}
 
-	again, err := maps.CreateMap("level", tiled.LoadModeDynamic)
+	again, err := plugin.CreateMap("level", assets.LoadModeDynamic)
 	require.NoError(t, err)
 	require.Equal(t, handle, again)
 
-	info, err := maps.Map(handle)
+	info, err := plugin.Map(handle)
 	require.NoError(t, err)
 	require.Len(t, info.Tilesets, 2)
 	require.Equal(t, "tilesets/terrain.tsx", info.Map.Tilesets[0].Source)
@@ -166,39 +151,73 @@ func TestCreateMapLoadsEverythingItRefersTo(t *testing.T) {
 }
 
 func TestCreateMapRequiredNeedsFilesLoaded(t *testing.T) {
-	maps, as, _ := newMaps(t)
+	plugin, as, _ := newPlugin(t)
 
-	_, err := maps.CreateMap("level", tiled.LoadModeRequired)
+	_, err := plugin.CreateMap("level", assets.LoadModeRequired)
 	require.ErrorIs(t, err, errs.ErrInvalidOperation)
 
 	require.NoError(t, as.Load(mapFS, mapFiles...))
-	handle, err := maps.CreateMap("level", tiled.LoadModeRequired)
+	handle, err := plugin.CreateMap("level", assets.LoadModeRequired)
 	require.NoError(t, err)
 
 	// Nothing was owned, so clearing keeps the files.
-	require.NoError(t, maps.ClearMap("level", tiled.UnloadModeIfOwned))
+	require.NoError(t, plugin.ClearMap("level", assets.UnloadModeIfOwned))
 	require.True(t, as.Loaded("maps/level.tmx"))
-	_, err = maps.Map(handle)
+	_, err = plugin.Map(handle)
 	require.True(t, errs.IsNotFound(err))
 }
 
 func TestClearMapUnloadsWhatItLoaded(t *testing.T) {
-	maps, as, _ := newMaps(t)
+	plugin, as, _ := newPlugin(t)
 
-	_, err := maps.CreateMap("level", tiled.LoadModeDynamic)
+	_, err := plugin.CreateMap("level", assets.LoadModeDynamic)
 	require.NoError(t, err)
-	require.NoError(t, maps.ClearMap("level", tiled.UnloadModeIfOwned))
+	require.NoError(t, plugin.ClearMap("level", assets.UnloadModeIfOwned))
 
 	for _, f := range mapFiles {
 		require.False(t, as.Loaded(f), f)
 	}
-	require.True(t, errs.IsNotFound(maps.ClearMap("level", tiled.UnloadModeKeep)))
+	require.True(t, errs.IsNotFound(plugin.ClearMap("level", assets.UnloadModeKeep)))
 }
 
 func TestCreateMapFailureUnloadsWhatItLoaded(t *testing.T) {
-	maps, as, _ := newMaps(t)
+	plugin, as, _ := newPlugin(t)
 
-	_, err := maps.CreateMap("broken", tiled.LoadModeDynamic)
+	_, err := plugin.CreateMap("broken", assets.LoadModeDynamic)
 	require.True(t, errs.IsNotFound(err))
 	require.False(t, as.Loaded("broken/level.tmx"))
+}
+
+func TestClearMapKeepsFilesAnotherMapUses(t *testing.T) {
+	plugin, as, _ := newPlugin(t)
+
+	_, err := plugin.CreateMap("level", assets.LoadModeDynamic)
+	require.NoError(t, err)
+	layered, err := plugin.CreateMap("layered", assets.LoadModeDynamic)
+	require.NoError(t, err)
+
+	require.NoError(t, plugin.ClearMap("level", assets.UnloadModeIfOwned))
+	require.True(t, as.Loaded("tilesets/terrain.png"))
+	require.False(t, as.Loaded("tilesets/crates.png"))
+	require.False(t, as.Loaded("maps/level.tmx"))
+
+	_, err = plugin.Map(layered)
+	require.NoError(t, err)
+
+	require.NoError(t, plugin.ClearMap("layered", assets.UnloadModeIfOwned))
+	require.False(t, as.Loaded("tilesets/terrain.png"))
+	require.False(t, as.Loaded("tilesets/terrain.tsx"))
+}
+
+func TestClearMapKeepLeavesFilesLoaded(t *testing.T) {
+	plugin, as, _ := newPlugin(t)
+
+	_, err := plugin.CreateMap("level", assets.LoadModeDynamic)
+	require.NoError(t, err)
+	require.NoError(t, plugin.ClearMap("level", assets.UnloadModeKeep))
+
+	for _, f := range mapFiles {
+		require.True(t, as.Loaded(f), f)
+		require.Zero(t, as.References(f), f)
+	}
 }

@@ -25,12 +25,14 @@ type Importer interface {
 type Assets struct {
 	importers   map[string]Importer
 	filesystems map[FileSystem]fs.FS
+	usage       map[Asset]usage
 }
 
 func NewAssets() *Assets {
 	return &Assets{
 		importers:   make(map[string]Importer),
 		filesystems: make(map[FileSystem]fs.FS),
+		usage:       make(map[Asset]usage),
 	}
 }
 
@@ -145,6 +147,9 @@ func (a *Assets) load(fsys fs.FS, asset Asset) error {
 }
 
 func (a *Assets) unload(asset Asset) error {
+	if refs := a.usage[asset].refs; refs > 0 {
+		return errs.InvalidOperation(fmt.Sprintf("unload %q: it has %d references", asset, refs))
+	}
 	importer, ok := a.importers[asset.Type()]
 	if !ok {
 		return errs.NotFound("importer", asset.Type())

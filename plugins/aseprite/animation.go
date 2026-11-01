@@ -1,6 +1,8 @@
 package aseprite
 
 import (
+	"errors"
+
 	"github.com/yohamta/donburi"
 
 	"github.com/adm87/finch/pkg/geom"
@@ -9,8 +11,10 @@ import (
 )
 
 // AdvanceAnimations steps every entry that has an Animator and an Image, and
-// fits its Bounds, if it has one, to the visible pixels of the current tag.
-func AdvanceAnimations(dt float64, libs *Libraries, entries []*donburi.Entry) error {
+// fits its Bounds, if it has one, to the visible pixels of the current tag. An
+// entry whose library is gone stops animating, so its error is returned once.
+func AdvanceAnimations(dt float64, plugin *Plugin, entries []*donburi.Entry) error {
+	var errList []error
 	for _, entry := range entries {
 		anim, ok := GetAnimator(entry)
 		if !ok || anim.Library() == 0 || anim.Animation() == "" {
@@ -22,15 +26,17 @@ func AdvanceAnimations(dt float64, libs *Libraries, entries []*donburi.Entry) er
 			continue
 		}
 
-		lib, err := libs.Library(anim.Library())
+		lib, err := plugin.Library(anim.Library())
 		if err != nil {
-			return err
+			anim.SetLibrary(0)
+			errList = append(errList, err)
+			continue
 		}
 
 		bounds, _ := transform.GetBounds(entry)
 		advanceAnimation(dt, lib, anim, img, bounds)
 	}
-	return nil
+	return errors.Join(errList...)
 }
 
 func advanceAnimation(dt float64, library LibraryInfo, anim *Animator, img *images.Image, bounds *transform.Bounds) {

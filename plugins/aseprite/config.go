@@ -23,9 +23,9 @@ func (c Config) Validate() error {
 }
 
 type LibraryConfig struct {
-	Atlas      assets.Asset `yaml:"atlas"`
-	Image      assets.Asset `yaml:"image"`
-	FileSystem string       `yaml:"filesystem"`
+	Atlas      assets.Asset      `yaml:"atlas"`
+	Image      assets.Asset      `yaml:"image"`
+	FileSystem assets.FileSystem `yaml:"filesystem"`
 }
 
 func (lc LibraryConfig) Validate() error {

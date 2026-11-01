@@ -7,6 +7,7 @@ import (
 	"github.com/go-openapi/testify/require"
 
 	"github.com/adm87/finch/pkg/application"
+	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/logger"
 	"github.com/adm87/finch/plugins/tiled"
@@ -35,5 +36,6 @@ func TestPluginInitChecksTheConfig(t *testing.T) {
 	require.NoError(t, err)
 	plugin := tiled.NewPlugin(&tiled.Config{})
 	require.NoError(t, plugin.Init(app))
-	require.NotNil(t, plugin.Maps())
+	_, err = plugin.CreateMap("nope", assets.LoadModeDynamic)
+	require.True(t, errs.IsNotFound(err))
 }

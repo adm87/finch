@@ -18,8 +18,8 @@ type drawn struct {
 	depth int32
 }
 
-// layeredAdapter splits each entity into one job per depth, like a tile map
-// with several layers, and records what it draws.
+// layeredAdapter splits each entity into one job per depth and records what
+// it draws.
 type layeredAdapter struct {
 	drawn  *[]drawn
 	names  map[donburi.Entity]string

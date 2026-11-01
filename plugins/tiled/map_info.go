@@ -15,10 +15,10 @@ import (
 // MapInfo is a decoded map with everything needed to draw it.
 type MapInfo struct {
 	Map      *tmx.Map
+	lease    *assets.Lease // released when the map is cleared
 	Tilesets []TilesetInfo // same order as Map.Tilesets
 	Layers   []LayerInfo   // tile layers in draw order, groups flattened
-	owned    []assets.Asset
-	overdraw image.Point // how far tiles can reach past their cell, in pixels
+	overdraw image.Point   // how far tiles can reach past their cell, in pixels
 }
 
 // Bounds returns the rectangle that contains all the map's tile layers.

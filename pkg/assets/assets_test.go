@@ -216,8 +216,7 @@ func TestImportReceivesTheAssetAndFileSystem(t *testing.T) {
 	require.Equal(t, testFS, imp.fsys)
 }
 
-// refImporter loads the asset its file names, relative to the file itself, the
-// way a Tiled map loads its tilesets.
+// refImporter loads the asset its file names, relative to the file itself.
 type refImporter struct {
 	as     *assets.Assets
 	loaded map[string]bool
@@ -257,4 +256,103 @@ func TestImporterCanLoadAssetsItRefersTo(t *testing.T) {
 
 	require.True(t, as.Loaded("maps/level.map"))
 	require.Equal(t, "grass", imp.contents["tiles/grass.txt"])
+}
+
+func TestAcquireCountsReferencesAndReleaseUnloadsAtZero(t *testing.T) {
+	as, _ := newAssets(t)
+
+	require.NoError(t, as.Acquire(testFS, "a.txt"))
+	require.NoError(t, as.Acquire(testFS, "a.txt"))
+	require.Equal(t, 2, as.References("a.txt"))
+
+	require.NoError(t, as.Release("a.txt"))
+	require.True(t, as.Loaded("a.txt"))
+	require.NoError(t, as.Release("a.txt"))
+	require.False(t, as.Loaded("a.txt"))
+
+	require.ErrorIs(t, as.Release("a.txt"), errs.ErrInvalidOperation)
+}
+
+func TestReleaseLeavesLoadedAssetsAlone(t *testing.T) {
+	as, _ := newAssets(t)
+	require.NoError(t, as.Load(testFS, "a.txt"))
+
+	require.NoError(t, as.Acquire(testFS, "a.txt"))
+	require.NoError(t, as.Release("a.txt"))
+	require.True(t, as.Loaded("a.txt"))
+}
+
+func TestKeepStopsReleaseFromUnloading(t *testing.T) {
+	as, _ := newAssets(t)
+
+	require.NoError(t, as.Acquire(testFS, "a.txt"))
+	as.Keep("a.txt")
+	require.NoError(t, as.Release("a.txt"))
+	require.True(t, as.Loaded("a.txt"))
+}
+
+func TestAcquireFailureLoadsAndCountsNothing(t *testing.T) {
+	as, _ := newAssets(t)
+
+	err := as.Acquire(testFS, "a.txt", "missing.txt")
+	require.True(t, errs.IsNotFound(err))
+	require.False(t, as.Loaded("a.txt"))
+	require.Zero(t, as.References("a.txt"))
+}
+
+func TestUnloadRefusesReferencedAssets(t *testing.T) {
+	as, _ := newAssets(t)
+	require.NoError(t, as.Acquire(testFS, "a.txt"))
+
+	require.ErrorIs(t, as.Unload("a.txt"), errs.ErrInvalidOperation)
+	require.True(t, as.Loaded("a.txt"))
+}
+
+func TestReleaseCountsEachOccurrence(t *testing.T) {
+	as, _ := newAssets(t)
+	require.NoError(t, as.Acquire(testFS, "a.txt", "a.txt"))
+	require.Equal(t, 2, as.References("a.txt"))
+
+	require.ErrorIs(t, as.Release("a.txt", "a.txt", "a.txt"), errs.ErrInvalidOperation)
+	require.Equal(t, 2, as.References("a.txt"))
+
+	require.NoError(t, as.Release("a.txt", "a.txt"))
+	require.False(t, as.Loaded("a.txt"))
+}
+
+func TestLeaseReleasesWhatItRequired(t *testing.T) {
+	as, _ := newAssets(t)
+	lease := as.Lease(testFS, assets.LoadModeDynamic)
+
+	require.NoError(t, lease.Require("a.txt"))
+	require.NoError(t, lease.Require("a.txt", "b.txt"))
+	require.Equal(t, 2, as.References("a.txt"))
+
+	require.NoError(t, lease.Release(assets.UnloadModeIfOwned))
+	require.False(t, as.Loaded("a.txt"))
+	require.False(t, as.Loaded("b.txt"))
+	require.NoError(t, lease.Release(assets.UnloadModeIfOwned))
+}
+
+func TestLeaseRequiredModeLoadsNothing(t *testing.T) {
+	as, imp := newAssets(t)
+	lease := as.Lease(testFS, assets.LoadModeRequired)
+
+	require.ErrorIs(t, lease.Require("a.txt"), errs.ErrInvalidOperation)
+	require.Empty(t, imp.contents)
+
+	require.NoError(t, as.Load(testFS, "a.txt"))
+	require.NoError(t, lease.Require("a.txt"))
+	require.NoError(t, lease.Release(assets.UnloadModeIfOwned))
+	require.True(t, as.Loaded("a.txt"))
+}
+
+func TestLeaseKeepLeavesAssetsLoaded(t *testing.T) {
+	as, _ := newAssets(t)
+	lease := as.Lease(testFS, assets.LoadModeDynamic)
+
+	require.NoError(t, lease.Require("a.txt"))
+	require.NoError(t, lease.Release(assets.UnloadModeKeep))
+	require.True(t, as.Loaded("a.txt"))
+	require.Zero(t, as.References("a.txt"))
 }

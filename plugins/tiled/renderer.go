@@ -8,7 +8,6 @@ import (
 	"github.com/yohamta/donburi"
 
 	"github.com/adm87/finch/pkg/geom"
-	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/rendering"
 	"github.com/adm87/finch/plugins/tiled/tmx"
 )
@@ -16,16 +15,12 @@ import (
 // TileMapRenderer draws each tile layer of a map as its own job, so other
 // entities can draw between layers.
 type TileMapRenderer struct {
-	maps   *Maps
-	images *images.Cache
+	plugin *Plugin
 	opts   ebiten.DrawImageOptions
 }
 
-func NewTileMapRenderer(maps *Maps, images *images.Cache) *TileMapRenderer {
-	return &TileMapRenderer{
-		maps:   maps,
-		images: images,
-	}
+func NewTileMapRenderer(plugin *Plugin) *TileMapRenderer {
+	return &TileMapRenderer{plugin: plugin}
 }
 
 func (tm *TileMapRenderer) Jobs(candidate *rendering.Candidate, jobs []rendering.Job) []rendering.Job {
@@ -107,7 +102,7 @@ func (tm *TileMapRenderer) mapInfo(entry *donburi.Entry) (MapInfo, bool) {
 	if !ok {
 		return MapInfo{}, false
 	}
-	info, err := tm.maps.Map(m.Handle())
+	info, err := tm.plugin.Map(m.Handle())
 	return info, err == nil
 }
 
@@ -122,7 +117,7 @@ func (tm *TileMapRenderer) drawTile(target *ebiten.Image, info *MapInfo, gid tmx
 	if !ok {
 		return
 	}
-	frame, err := tm.images.Frame(handle, frameIndex)
+	frame, err := tm.plugin.images.Frame(handle, frameIndex)
 	if err != nil {
 		return
 	}
