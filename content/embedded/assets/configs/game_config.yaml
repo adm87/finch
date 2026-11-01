@@ -1,4 +1,4 @@
-# The buffer the game draws into.
+# The buffer the finch draws into.
 application:
   screen:
     width: 640
@@ -16,7 +16,7 @@ engine:
     resolution_scale: 0.5
     screen_filter: 0
 
-# Bundles loaded when the game starts. They stay loaded for the whole session.
+# Bundles loaded when the finch starts. They stay loaded for the whole session.
 bundles:
   - filesystem: embedded
     assets:

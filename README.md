@@ -4,16 +4,16 @@ A small 2D game engine in Go, built on [Ebiten](https://ebitengine.org) for the 
 
 ## Running
 
-Run from the repo root. The game looks for `content/assets` relative to where it's started.
+Run from the repo root. The game looks for `content/resources/assets` relative to where it's started.
 
 ```bash
-go run ./cmd/game
+go run ./cmd/finch
 ```
 
 For debug logging with file and line numbers, use the dev build:
 
 ```bash
-go run -tags finch_dev ./cmd/game
+go run -tags finch_dev ./cmd/finch
 ```
 
 ## Controls
@@ -40,7 +40,7 @@ go run -tags finch_dev ./cmd/game
   - `tiled` is for maps, and is still in progress.
 
   Plugins can use `pkg/`, but `pkg/` never imports `plugins/`. A test checks that.
-- `cmd/game` is the test game.
+- `cmd/finch` is the test game.
 - `content/` holds the game's assets and its embedded config files.
 
 ## Development
