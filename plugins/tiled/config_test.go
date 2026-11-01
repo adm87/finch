@@ -15,6 +15,8 @@ import (
 )
 
 func TestConfigValidate(t *testing.T) {
+	require.NoError(t, tiled.DefaultConfig().Validate())
+
 	valid := tiled.Config{Maps: map[string]tiled.MapConfig{
 		"gym04": {FileSystem: "assets", TMX: "tiled/gym04.tmx"},
 	}}

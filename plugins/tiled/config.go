@@ -18,6 +18,10 @@ type Config struct {
 	Maps map[string]MapConfig `yaml:"maps"`
 }
 
+func DefaultConfig() *Config {
+	return &Config{Maps: make(map[string]MapConfig)}
+}
+
 func (c Config) Validate() error {
 	var errList []error
 	for name, m := range c.Maps {

@@ -13,7 +13,7 @@ import (
 
 var (
 	testdata = os.DirFS("testdata")
-	assets   = os.DirFS("../../../content/assets")
+	assets   = os.DirFS("../../../content/resources/assets")
 )
 
 func decodeFile[T any](t *testing.T, fsys fs.FS, path string) T {

@@ -4,7 +4,7 @@ A small 2D game engine in Go, built on [Ebiten](https://ebitengine.org) for the 
 
 ## Running
 
-Run from the repo root. The game looks for `content/assets` relative to where it's started.
+Run from the repo root. The game looks for `content/resources` relative to where it's started.
 
 ```bash
 go run ./cmd/game
@@ -31,7 +31,6 @@ go run -tags finch_dev ./cmd/game
 ## Layout
 
 - `pkg/` is the engine core:
-  - `application` holds the assets, caches, screen, view, world, render pipeline and plugins.
   - `engine` runs the game loop, the update phases and drawing.
   - `world` is the entity world with a spatial index.
   - The rest are smaller building blocks: `assets`, `images`, `data`, `rendering`, `transform`, `display`, `hashgrid`, `slotmap` and `errs`.
@@ -40,8 +39,10 @@ go run -tags finch_dev ./cmd/game
   - `tiled` is for maps, and is still in progress.
 
   Plugins can use `pkg/`, but `pkg/` never imports `plugins/`. A test checks that.
-- `cmd/game` is the test game.
-- `content/` holds the game's assets and its embedded config files.
+- `cmd/game` is the test game. `boot` loads the configs and file systems, and `game` wires up the engine and plugins.
+- `content/` holds the game's files:
+  - `embedded` is built into the binary: the config files and the default image.
+  - `resources` is read from disk, with a folder per tool (`aseprite`, `tiled`).
 
 ## Development
 

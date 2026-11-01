@@ -12,6 +12,10 @@ type Config struct {
 	Libraries map[string]LibraryConfig `yaml:"libraries"`
 }
 
+func DefaultConfig() *Config {
+	return &Config{Libraries: make(map[string]LibraryConfig)}
+}
+
 func (c Config) Validate() error {
 	var errList []error
 	for name, lib := range c.Libraries {

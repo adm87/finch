@@ -17,6 +17,6 @@ engine:
 
 # Bundles loaded when the game starts. They stay loaded for the whole session.
 bundles:
-  - filesystem: embedded
+  - filesystem: images
     assets:
-      - embedded/images/default_10x10.png
+      - default_10x10.png
