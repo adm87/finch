@@ -14,8 +14,8 @@ import (
 )
 
 func TestLayersFoldInTheirGroups(t *testing.T) {
-	maps, _, _ := newMaps(t)
-	handle, err := maps.Load("layered", tiled.LoadModeDynamic)
+	maps := newMaps(t)
+	handle, err := maps.Load("layered")
 	require.NoError(t, err)
 	info, err := maps.Map(handle)
 	require.NoError(t, err)
@@ -50,8 +50,8 @@ func TestLayersFoldInTheirGroups(t *testing.T) {
 }
 
 func TestRendererMakesAJobPerVisibleLayer(t *testing.T) {
-	maps, _, _ := newMaps(t)
-	handle, err := maps.Load("layered", tiled.LoadModeDynamic)
+	maps := newMaps(t)
+	handle, err := maps.Load("layered")
 	require.NoError(t, err)
 
 	w := donburi.NewWorld()
@@ -80,7 +80,7 @@ func TestRendererMakesAJobPerVisibleLayer(t *testing.T) {
 }
 
 func TestRendererSkipsEntitiesWithoutAMap(t *testing.T) {
-	maps, _, _ := newMaps(t)
+	maps := newMaps(t)
 	w := donburi.NewWorld()
 	e := w.Entry(w.Create(transform.TransformComponent))
 	tf, _ := transform.GetTransform(e)
@@ -91,8 +91,8 @@ func TestRendererSkipsEntitiesWithoutAMap(t *testing.T) {
 }
 
 func TestInfiniteMapsKeepTheirChunks(t *testing.T) {
-	maps, _, _ := newMaps(t)
-	handle, err := maps.Load("infinite", tiled.LoadModeDynamic)
+	maps := newMaps(t)
+	handle, err := maps.Load("infinite")
 	require.NoError(t, err)
 	info, err := maps.Map(handle)
 	require.NoError(t, err)
@@ -112,8 +112,8 @@ func TestInfiniteMapsKeepTheirChunks(t *testing.T) {
 }
 
 func TestInfiniteMapJobsCoverTheirChunks(t *testing.T) {
-	maps, _, _ := newMaps(t)
-	handle, err := maps.Load("infinite", tiled.LoadModeDynamic)
+	maps := newMaps(t)
+	handle, err := maps.Load("infinite")
 	require.NoError(t, err)
 
 	w := donburi.NewWorld()

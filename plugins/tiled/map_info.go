@@ -6,7 +6,6 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
-	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/plugins/tiled/tmx"
@@ -17,7 +16,6 @@ type MapInfo struct {
 	Map      *tmx.Map
 	Tilesets []TilesetInfo // same order as Map.Tilesets
 	Layers   []LayerInfo   // tile layers in draw order, groups flattened
-	owned    []assets.Asset
 	overdraw image.Point // how far tiles can reach past their cell, in pixels
 }
 

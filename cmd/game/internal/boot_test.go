@@ -12,14 +12,14 @@ import (
 	"github.com/adm87/finch/pkg/logger"
 )
 
-// TestBootSequence runs boot up to the game loop: configs, game, bundles, then the scene.
+// TestBootSequence runs boot up to the game loop: configs, game, preload, then the scene.
 func TestBootSequence(t *testing.T) {
 	cfgs, err := loadConfigs(embedded.Configs)
 	require.NoError(t, err)
 
 	g, err := game.New(cfgs, newFiles("../../../"+resourcesRoot), logger.N)
 	require.NoError(t, err)
-	require.NoError(t, g.LoadBundles(cfgs.Game.Bundles))
+	require.NoError(t, g.Preload(cfgs.Game.Preload))
 	require.NoError(t, g.MakeTestScene())
 }
 
@@ -28,7 +28,7 @@ func TestLoadTheGameConfigs(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, cfgs.Game.Screen.Validate())
 	require.NoError(t, cfgs.Game.Engine.Validate())
-	require.NotEmpty(t, cfgs.Game.Bundles)
+	require.NotEmpty(t, cfgs.Game.Preload)
 	require.NoError(t, cfgs.Aseprite.Validate())
 	require.NoError(t, cfgs.Tiled.Validate())
 }

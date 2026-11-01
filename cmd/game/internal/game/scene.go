@@ -9,7 +9,6 @@ import (
 	"github.com/adm87/finch/pkg/rendering"
 	"github.com/adm87/finch/pkg/transform"
 	"github.com/adm87/finch/plugins/aseprite"
-	"github.com/adm87/finch/plugins/tiled"
 )
 
 const (
@@ -24,7 +23,7 @@ func (g *Game) MakeTestScene() error {
 	camera.SetZoom(c, 2)
 	g.view.SetCamera(c)
 
-	mapHandle, err := g.tiled.Load(gym04, tiled.LoadModeDynamic)
+	mapHandle, err := g.tiled.Load(gym04)
 	if err != nil {
 		return fmt.Errorf("load map: %w", err)
 	}
@@ -41,7 +40,7 @@ func (g *Game) MakeTestScene() error {
 		return fmt.Errorf("map %q has no player layer", gym04)
 	}
 
-	libraryID, err := g.aseprite.Load(playerLibrary, aseprite.LoadModeDynamic)
+	libraryID, err := g.aseprite.Load(playerLibrary)
 	if err != nil {
 		return fmt.Errorf("load library %q: %w", playerLibrary, err)
 	}

@@ -15,8 +15,6 @@ engine:
     resolution_scale: 0.5
     screen_filter: 0
 
-# Bundles loaded when the game starts. They stay loaded for the whole session.
-bundles:
-  - filesystem: images
-    assets:
-      - default_10x10.png
+# Embedded images loaded when the game starts. They stay loaded for the whole session.
+preload:
+  - default_10x10.png

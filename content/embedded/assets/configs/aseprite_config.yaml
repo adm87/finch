@@ -1,5 +1,4 @@
 libraries:
   captain:
-    filesystem: aseprite
     atlas: captain/captain.json
     image: captain/captain.png

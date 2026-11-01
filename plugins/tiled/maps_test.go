@@ -1,47 +1,31 @@
 package tiled_test
 
 import (
+	"bytes"
+	"image"
+	"image/png"
 	"io"
 	"io/fs"
 	"testing"
 	"testing/fstest"
 
 	"github.com/go-openapi/testify/require"
-	"github.com/hajimehoshi/ebiten/v2"
 
-	"github.com/adm87/finch/pkg/assets"
-	"github.com/adm87/finch/pkg/data"
 	"github.com/adm87/finch/pkg/errs"
-	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/logger"
 	"github.com/adm87/finch/pkg/rendering"
 	"github.com/adm87/finch/plugins/tiled"
 	"github.com/adm87/finch/plugins/tiled/tmx"
 )
 
-// blankImporter stands in for the png importer, so tests don't need real images.
-type blankImporter struct {
-	cache *images.Cache
-}
-
-func (b blankImporter) Import(asset assets.Asset, _ fs.FS, _ io.Reader) error {
-	_, err := b.cache.Put(asset.String(), ebiten.NewImage(32, 16))
-	return err
-}
-
-func (b blankImporter) Delete(asset assets.Asset) error {
-	handle, exists := b.cache.Lookup(asset.String())
-	if !exists {
-		return errs.NotFound("image", asset.String())
+// blankPNG is a 32x16 image, so tests don't need real art.
+var blankPNG = func() []byte {
+	var raw bytes.Buffer
+	if err := png.Encode(&raw, image.NewRGBA(image.Rect(0, 0, 32, 16))); err != nil {
+		panic(err)
 	}
-	_, err := b.cache.Delete(handle)
-	return err
-}
-
-func (b blankImporter) Lookup(name string) bool {
-	_, exists := b.cache.Lookup(name)
-	return exists
-}
+	return raw.Bytes()
+}()
 
 var mapFS = fstest.MapFS{
 	"maps/level.tmx": {Data: []byte(`<map orientation="orthogonal" width="2" height="1" tilewidth="16" tileheight="16">
@@ -65,9 +49,9 @@ var mapFS = fstest.MapFS{
 	"tilesets/crates.tsx": {Data: []byte(`<tileset name="crates" tilewidth="16" tileheight="16" tilecount="2" columns="2">
  <image source="crates.png" width="32" height="16"/>
 </tileset>`)},
-	"tilesets/terrain.png": {},
-	"tilesets/crates.png":  {},
-	"maps/props/rock.png":  {},
+	"tilesets/terrain.png": {Data: blankPNG},
+	"tilesets/crates.png":  {Data: blankPNG},
+	"maps/props/rock.png":  {Data: blankPNG},
 	"broken/level.tmx": {Data: []byte(`<map orientation="orthogonal" width="1" height="1" tilewidth="16" tileheight="16">
  <tileset firstgid="1" source="missing.tsx"/>
  <layer id="1" name="ground" width="1" height="1"><data encoding="csv">1</data></layer>
@@ -98,44 +82,35 @@ var mapFS = fstest.MapFS{
 </map>`)},
 }
 
-var mapFiles = []assets.Asset{
-	"maps/level.tmx", "maps/crate.tx",
-	"tilesets/terrain.tsx", "tilesets/terrain.png",
-	"tilesets/crates.tsx", "tilesets/crates.png",
-	"maps/props/rock.png",
-}
+var mapImages = []string{"tilesets/terrain.png", "tilesets/crates.png", "maps/props/rock.png"}
 
-func newMaps(t *testing.T) (*tiled.Plugin, *assets.Assets, *images.Cache) {
+func newMaps(t *testing.T) *tiled.Plugin {
 	t.Helper()
-	as := assets.NewAssets()
-	dc, ic := data.NewCache(), images.NewCache()
-	require.NoError(t, as.RegisterFileSystem("test", mapFS))
-	require.NoError(t, as.RegisterImporter(blankImporter{cache: ic}, []string{"png"}))
-
 	cfg := &tiled.Config{Maps: map[string]tiled.MapConfig{
-		"level":    {FileSystem: "test", TMX: "maps/level.tmx"},
-		"broken":   {FileSystem: "test", TMX: "broken/level.tmx"},
-		"layered":  {FileSystem: "test", TMX: "layered/map.tmx"},
-		"infinite": {FileSystem: "test", TMX: "infinite/map.tmx"},
+		"level":    {TMX: "maps/level.tmx"},
+		"broken":   {TMX: "broken/level.tmx"},
+		"layered":  {TMX: "layered/map.tmx"},
+		"infinite": {TMX: "infinite/map.tmx"},
 	}}
-	p, err := tiled.NewPlugin(cfg, as, dc, ic, rendering.NewPipeline(), logger.NewLogger(io.Discard, logger.Options{}))
+	p, err := tiled.NewPlugin(cfg, mapFS, rendering.NewPipeline(), logger.NewLogger(io.Discard, logger.Options{}))
 	require.NoError(t, err)
-	return p, as, ic
+	return p
 }
 
 func TestLoadLoadsEverythingItRefersTo(t *testing.T) {
-	maps, as, ic := newMaps(t)
+	maps := newMaps(t)
+	ic := maps.Images()
 
-	handle, err := maps.Load("level", tiled.LoadModeDynamic)
+	handle, err := maps.Load("level")
 	require.NoError(t, err)
-	for _, f := range mapFiles {
-		require.True(t, as.Loaded(f), f)
+	for _, f := range mapImages {
+		_, ok := ic.Lookup(f)
+		require.True(t, ok, f)
 	}
 
-	again, err := maps.Load("level", tiled.LoadModeDynamic)
+	again, err := maps.Load("level")
 	require.NoError(t, err)
 	require.Equal(t, handle, again)
-
 	info, err := maps.Map(handle)
 	require.NoError(t, err)
 	require.Len(t, info.Tilesets, 2)
@@ -167,40 +142,22 @@ func TestLoadLoadsEverythingItRefersTo(t *testing.T) {
 	require.False(t, ok)
 }
 
-func TestLoadRequiredNeedsFilesLoaded(t *testing.T) {
-	maps, as, _ := newMaps(t)
+func TestUnloadForgetsTheMap(t *testing.T) {
+	maps := newMaps(t)
 
-	_, err := maps.Load("level", tiled.LoadModeRequired)
-	require.ErrorIs(t, err, errs.ErrInvalidOperation)
-
-	require.NoError(t, as.Load(mapFS, mapFiles...))
-	handle, err := maps.Load("level", tiled.LoadModeRequired)
+	handle, err := maps.Load("level")
 	require.NoError(t, err)
+	require.NoError(t, maps.Unload("level"))
 
-	// Nothing was owned, so clearing keeps the files.
-	require.NoError(t, maps.Unload("level", tiled.UnloadModeIfOwned))
-	require.True(t, as.Loaded("maps/level.tmx"))
 	_, err = maps.Map(handle)
 	require.True(t, errs.IsNotFound(err))
+	require.True(t, errs.IsNotFound(maps.Unload("level")))
 }
 
-func TestUnloadUnloadsWhatItLoaded(t *testing.T) {
-	maps, as, _ := newMaps(t)
+func TestLoadFailureKeepsNothing(t *testing.T) {
+	maps := newMaps(t)
 
-	_, err := maps.Load("level", tiled.LoadModeDynamic)
-	require.NoError(t, err)
-	require.NoError(t, maps.Unload("level", tiled.UnloadModeIfOwned))
-
-	for _, f := range mapFiles {
-		require.False(t, as.Loaded(f), f)
-	}
-	require.True(t, errs.IsNotFound(maps.Unload("level", tiled.UnloadModeKeep)))
-}
-
-func TestLoadFailureUnloadsWhatItLoaded(t *testing.T) {
-	maps, as, _ := newMaps(t)
-
-	_, err := maps.Load("broken", tiled.LoadModeDynamic)
-	require.True(t, errs.IsNotFound(err))
-	require.False(t, as.Loaded("broken/level.tmx"))
+	_, err := maps.Load("broken")
+	require.ErrorIs(t, err, fs.ErrNotExist)
+	require.True(t, errs.IsNotFound(maps.Unload("broken")))
 }

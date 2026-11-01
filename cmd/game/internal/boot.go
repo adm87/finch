@@ -34,7 +34,7 @@ func Boot() error {
 	if err != nil {
 		return err
 	}
-	if err := g.LoadBundles(cfgs.Game.Bundles); err != nil {
+	if err := g.Preload(cfgs.Game.Preload); err != nil {
 		return err
 	}
 	if err := g.MakeTestScene(); err != nil {

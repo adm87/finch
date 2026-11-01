@@ -4,9 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	_ "image/png" // decodes .png files for Load
+	"io/fs"
 	"strconv"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/slotmap/store"
@@ -34,6 +37,24 @@ func (ic *Cache) Get(handle Handle) (*ebiten.Image, error) {
 
 func (ic *Cache) Put(name string, img *ebiten.Image) (Handle, error) {
 	return ic.store.Insert(name, img)
+}
+
+// Load decodes name from fsys and stores it under name. An image that's
+// already stored returns its handle without reading the file again.
+func (ic *Cache) Load(fsys fs.FS, name string) (Handle, error) {
+	if handle, ok := ic.Lookup(name); ok {
+		return handle, nil
+	}
+	img, _, err := ebitenutil.NewImageFromFileSystem(fsys, name)
+	if err != nil {
+		return 0, fmt.Errorf("load image %q: %w", name, err)
+	}
+	handle, err := ic.Put(name, img)
+	if err != nil {
+		img.Deallocate()
+		return 0, err
+	}
+	return handle, nil
 }
 
 // Delete removes the image and its frames. The caller must deallocate the image.

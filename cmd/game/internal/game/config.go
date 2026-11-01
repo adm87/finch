@@ -1,13 +1,12 @@
 package game
 
 import (
-	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/display"
 	"github.com/adm87/finch/pkg/engine"
 )
 
 type Config struct {
-	Bundles []assets.AssetBundle `yaml:"bundles"`
+	Preload []string       `yaml:"preload"` // embedded images loaded at startup
 	Engine  engine.Config        `yaml:"engine"`
 	Screen  display.Config       `yaml:"screen"`
 }

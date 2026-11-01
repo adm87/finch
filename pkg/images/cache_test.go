@@ -1,8 +1,12 @@
 package images_test
 
 import (
+	"bytes"
 	"image"
+	"image/png"
+	"io/fs"
 	"testing"
+	"testing/fstest"
 
 	"github.com/go-openapi/testify/require"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -53,4 +57,24 @@ func TestFrameOfUnslicedImageIsUntrimmed(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, image.Point{}, frame.Offset)
 	require.Equal(t, image.Pt(10, 12), frame.Size)
+}
+
+func TestLoadDecodesOnceAndReusesTheHandle(t *testing.T) {
+	var raw bytes.Buffer
+	require.NoError(t, png.Encode(&raw, image.NewRGBA(image.Rect(0, 0, 3, 2))))
+	fsys := fstest.MapFS{"sprite.png": {Data: raw.Bytes()}}
+
+	cache := images.NewCache()
+	handle, err := cache.Load(fsys, "sprite.png")
+	require.NoError(t, err)
+	img, err := cache.Get(handle)
+	require.NoError(t, err)
+	require.Equal(t, image.Pt(3, 2), img.Bounds().Size())
+
+	again, err := cache.Load(fstest.MapFS{}, "sprite.png")
+	require.NoError(t, err)
+	require.Equal(t, handle, again)
+
+	_, err = cache.Load(fsys, "missing.png")
+	require.ErrorIs(t, err, fs.ErrNotExist)
 }

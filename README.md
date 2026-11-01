@@ -33,7 +33,7 @@ go run -tags finch_dev ./cmd/game
 - `pkg/` is the engine core:
   - `engine` runs the game loop, the update phases and drawing.
   - `world` is the entity world with a spatial index.
-  - The rest are smaller building blocks: `assets`, `images`, `data`, `rendering`, `transform`, `display`, `hashgrid`, `slotmap` and `errs`.
+  - The rest are smaller building blocks: `images`, `rendering`, `transform`, `display`, `hashgrid`, `slotmap` and `errs`.
 - `plugins/` connects third-party tools:
   - `aseprite` handles sprite sheets and animation.
   - `tiled` is for maps, and is still in progress.

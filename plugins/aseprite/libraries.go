@@ -2,11 +2,9 @@ package aseprite
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
+	"io/fs"
 
-	"github.com/adm87/finch/pkg/assets"
-	"github.com/adm87/finch/pkg/data"
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/logger"
@@ -14,39 +12,17 @@ import (
 
 const libraryKind = "aseprite library"
 
-// LoadMode controls whether Load may load missing content.
-type LoadMode int
-
-const (
-	// LoadModeRequired fails if the library's content isn't already loaded.
-	LoadModeRequired LoadMode = iota
-	// LoadModeDynamic loads the library's content if it isn't loaded.
-	LoadModeDynamic
-)
-
-// UnloadMode controls whether Unload unloads the library's content.
-type UnloadMode int
-
-const (
-	// UnloadModeKeep leaves the content loaded.
-	UnloadModeKeep UnloadMode = iota
-	// UnloadModeIfOwned unloads the content only if Load loaded it.
-	UnloadModeIfOwned
-)
-
 // Handle uniquely identifies an Aseprite library.
 type Handle uint64
 
-// LibraryInfo is a decoded library and the handles of its content.
+// LibraryInfo is a decoded library and the handle of its image.
 type LibraryInfo struct {
 	Atlas       *Atlas
 	ImageHandle images.Handle
-	DataHandle  data.Handle
-	owned       bool
 }
 
 // Load builds the named library from the config, or returns it if it's already loaded.
-func (p *Plugin) Load(name string, mode LoadMode) (Handle, error) {
+func (p *Plugin) Load(name string) (Handle, error) {
 	if handle, exists := p.libraries.Lookup(name); exists {
 		return handle, nil
 	}
@@ -56,53 +32,29 @@ func (p *Plugin) Load(name string, mode LoadMode) (Handle, error) {
 		return 0, err
 	}
 
-	owned := false
-	if !p.isLibraryLoaded(library) {
-		if mode == LoadModeRequired {
-			return 0, errs.InvalidOperation(fmt.Sprintf("library %q is not loaded and mode is LoadModeRequired", name))
-		}
-		if err := p.loadLibrary(library); err != nil && !errs.IsAlreadyExists(err) {
-			return 0, fmt.Errorf("load library %q: %w", name, err)
-		}
-		owned = true
-	}
-
-	info, err := p.decodeLibrary(library)
+	atlas, err := p.decodeAtlas(library.Atlas)
 	if err != nil {
-		if owned {
-			err = errors.Join(err, p.unloadLibrary(library))
-		}
 		return 0, fmt.Errorf("library %q: %w", name, err)
 	}
-	info.owned = owned
 
-	if err := p.images.SliceFrames(info.ImageHandle, info.Atlas.Frames.FrameRects()); err != nil {
-		return 0, fmt.Errorf("slice image %q: %w", library.Image.String(), err)
+	imageHandle, err := p.images.Load(p.fsys, library.Image)
+	if err != nil {
+		return 0, fmt.Errorf("library %q: %w", name, err)
+	}
+	if err := p.images.SliceFrames(imageHandle, atlas.Frames.FrameRects()); err != nil {
+		return 0, fmt.Errorf("slice image %q: %w", library.Image, err)
 	}
 
-	return p.libraries.Insert(name, info)
+	return p.libraries.Insert(name, LibraryInfo{Atlas: atlas, ImageHandle: imageHandle})
 }
 
-func (p *Plugin) Unload(name string, mode UnloadMode) error {
+// Unload forgets the library. Its image stays in the image cache.
+func (p *Plugin) Unload(name string) error {
 	handle, exists := p.libraries.Lookup(name)
 	if !exists {
 		return errs.NotFound(libraryKind, name)
 	}
-
-	info, err := p.libraries.Delete(handle)
-	if err != nil {
-		return fmt.Errorf("unload library %q: %w", name, err)
-	}
-
-	if mode != UnloadModeIfOwned || !info.owned {
-		return nil
-	}
-
-	cfg, err := p.getLibraryConfig(name)
-	if err != nil {
-		return err
-	}
-	if err := p.unloadLibrary(cfg); err != nil {
+	if _, err := p.libraries.Delete(handle); err != nil {
 		return fmt.Errorf("unload library %q: %w", name, err)
 	}
 	return nil
@@ -123,63 +75,26 @@ func (p *Plugin) getLibraryConfig(name string) (*LibraryConfig, error) {
 	return &library, nil
 }
 
-func (p *Plugin) decodeLibrary(library *LibraryConfig) (LibraryInfo, error) {
-	atlasPath := library.Atlas.String()
-
-	imageHandle, exists := p.images.Lookup(library.Image.String())
-	if !exists {
-		return LibraryInfo{}, errs.NotFound("image", library.Image.String())
-	}
-
-	dataHandle, exists := p.data.Lookup(atlasPath)
-	if !exists {
-		return LibraryInfo{}, errs.NotFound("data", atlasPath)
-	}
-
-	raw, err := p.data.Get(dataHandle)
+func (p *Plugin) decodeAtlas(name string) (*Atlas, error) {
+	raw, err := fs.ReadFile(p.fsys, name)
 	if err != nil {
-		return LibraryInfo{}, fmt.Errorf("atlas %q: %w", atlasPath, err)
+		return nil, fmt.Errorf("read %q: %w", name, err)
 	}
 
-	info := LibraryInfo{ImageHandle: imageHandle, DataHandle: dataHandle}
-	if err := json.Unmarshal(raw, &info.Atlas); err != nil {
-		return LibraryInfo{}, errs.Format(atlasPath, "invalid aseprite json").Wrap(err)
+	var atlas *Atlas
+	if err := json.Unmarshal(raw, &atlas); err != nil {
+		return nil, errs.Format(name, "invalid aseprite json").Wrap(err)
 	}
-	if info.Atlas == nil {
-		return LibraryInfo{}, errs.Format(atlasPath, "atlas is empty")
+	if atlas == nil {
+		return nil, errs.Format(name, "atlas is empty")
 	}
-	if dropped := info.Atlas.DropMissingTags(); len(dropped) > 0 {
-		p.logger.Warn("dropping missing tags", logger.String("atlas", atlasPath), logger.Strings("tags", dropped))
+	if dropped := atlas.DropMissingTags(); len(dropped) > 0 {
+		p.logger.Warn("dropping missing tags", logger.String("atlas", name), logger.Strings("tags", dropped))
 	}
-	if err := info.Atlas.Validate(); err != nil {
-		return LibraryInfo{}, fmt.Errorf("atlas %q: %w", atlasPath, err)
+	if err := atlas.Validate(); err != nil {
+		return nil, fmt.Errorf("atlas %q: %w", name, err)
 	}
 
-	info.Atlas.fitTagsToFrames()
-	return info, nil
-}
-
-func (p *Plugin) isLibraryLoaded(cfg *LibraryConfig) bool {
-	for _, asset := range cfg.Assets() {
-		if !p.assets.Loaded(asset) {
-			return false
-		}
-	}
-	return true
-}
-
-func (p *Plugin) loadLibrary(cfg *LibraryConfig) error {
-	bundle := assets.AssetBundle{
-		FileSystem: assets.FileSystem(cfg.FileSystem),
-		Assets:     cfg.Assets(),
-	}
-	return bundle.Load(p.assets)
-}
-
-func (p *Plugin) unloadLibrary(cfg *LibraryConfig) error {
-	bundle := assets.AssetBundle{
-		FileSystem: assets.FileSystem(cfg.FileSystem),
-		Assets:     cfg.Assets(),
-	}
-	return bundle.Unload(p.assets)
+	atlas.fitTagsToFrames()
+	return atlas, nil
 }

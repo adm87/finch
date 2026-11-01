@@ -7,8 +7,6 @@ import (
 	"github.com/yohamta/donburi"
 
 	"github.com/adm87/finch/cmd/game/internal/debug"
-	"github.com/adm87/finch/pkg/assets"
-	"github.com/adm87/finch/pkg/data"
 	"github.com/adm87/finch/pkg/display"
 	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/logger"
@@ -23,8 +21,8 @@ type Game struct {
 	screen        *display.Screen
 	view          *display.View
 	pipeline      *rendering.Pipeline
-	assets        *assets.Assets
 	images        *images.Cache
+	imageFiles    fs.FS
 	tiled         *tiled.Plugin
 	aseprite      *aseprite.Plugin
 	visible       []*donburi.Entry
@@ -38,8 +36,7 @@ type Configs struct {
 	Aseprite *aseprite.Config
 }
 
-// Files are the file systems the game loads assets from. Their names are
-// what configs use for "filesystem".
+// Files are the file systems the game loads assets from.
 type Files struct {
 	Images   fs.FS
 	Aseprite fs.FS
@@ -59,26 +56,8 @@ func New(cfgs Configs, files Files, l logger.Logger) (*Game, error) {
 		screen:   screen,
 		view:     display.NewViewport(screen),
 		pipeline: rendering.NewPipeline(),
-		assets:   assets.NewAssets(),
-		images:   images.NewCache(),
-	}
-
-	for name, fsys := range map[assets.FileSystem]fs.FS{
-		"images":   files.Images,
-		"aseprite": files.Aseprite,
-		"tiled":    files.Tiled,
-	} {
-		if err := g.assets.RegisterFileSystem(name, fsys); err != nil {
-			return nil, fmt.Errorf("register file system %q: %w", name, err)
-		}
-	}
-
-	dataCache := data.NewCache()
-	if err := g.assets.RegisterImporter(data.NewImporter(dataCache), data.Types()); err != nil {
-		return nil, err
-	}
-	if err := g.assets.RegisterImporter(images.NewImporter(g.images), images.Types()); err != nil {
-		return nil, err
+		images:     images.NewCache(),
+		imageFiles: files.Images,
 	}
 
 	imageRenderer, err := g.pipeline.RegisterRenderer(images.NewRenderer(g.images))
@@ -87,11 +66,11 @@ func New(cfgs Configs, files Files, l logger.Logger) (*Game, error) {
 	}
 	g.imageRenderer = imageRenderer
 
-	if g.tiled, err = tiled.NewPlugin(cfgs.Tiled, g.assets, dataCache, g.images, g.pipeline, l); err != nil {
+	if g.tiled, err = tiled.NewPlugin(cfgs.Tiled, files.Tiled, g.pipeline, l); err != nil {
 		return nil, fmt.Errorf("create tiled plugin: %w", err)
 	}
 
-	if g.aseprite, err = aseprite.NewPlugin(cfgs.Aseprite, g.assets, dataCache, g.images, l); err != nil {
+	if g.aseprite, err = aseprite.NewPlugin(cfgs.Aseprite, files.Aseprite, g.images, l); err != nil {
 		return nil, fmt.Errorf("create aseprite plugin: %w", err)
 	}
 
