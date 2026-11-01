@@ -8,27 +8,22 @@ import (
 	"github.com/yohamta/donburi"
 
 	"github.com/adm87/finch/pkg/geom"
-	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/rendering"
 	"github.com/adm87/finch/plugins/tiled/tmx"
 )
 
-// TileMapRenderer draws each tile layer of a map as its own job, so other
+// tileMapRenderer draws each tile layer of a map as its own job, so other
 // entities can draw between layers.
-type TileMapRenderer struct {
-	maps   *Maps
-	images *images.Cache
+type tileMapRenderer struct {
+	plugin *Plugin
 	opts   ebiten.DrawImageOptions
 }
 
-func NewTileMapRenderer(maps *Maps, images *images.Cache) *TileMapRenderer {
-	return &TileMapRenderer{
-		maps:   maps,
-		images: images,
-	}
+func newTileMapRenderer(p *Plugin) *tileMapRenderer {
+	return &tileMapRenderer{plugin: p}
 }
 
-func (tm *TileMapRenderer) Jobs(candidate *rendering.Candidate, jobs []rendering.Job) []rendering.Job {
+func (tm *tileMapRenderer) Jobs(candidate *rendering.Candidate, jobs []rendering.Job) []rendering.Job {
 	info, ok := tm.mapInfo(candidate.Entry)
 	if !ok {
 		return jobs
@@ -48,7 +43,7 @@ func (tm *TileMapRenderer) Jobs(candidate *rendering.Candidate, jobs []rendering
 	return jobs
 }
 
-func (tm *TileMapRenderer) Render(target *ebiten.Image, job *rendering.Job, viewRect geom.Rect, viewMatrix geom.Matrix) {
+func (tm *tileMapRenderer) Render(target *ebiten.Image, job *rendering.Job, viewRect geom.Rect, viewMatrix geom.Matrix) {
 	info, ok := tm.mapInfo(job.Entry)
 	if !ok || job.Pass >= len(info.Layers) {
 		return
@@ -102,18 +97,18 @@ func chunkCells(gids []tmx.GID, chunk, visible image.Rectangle, yield func(image
 	return true
 }
 
-func (tm *TileMapRenderer) mapInfo(entry *donburi.Entry) (MapInfo, bool) {
+func (tm *tileMapRenderer) mapInfo(entry *donburi.Entry) (MapInfo, bool) {
 	m, ok := GetTileMap(entry)
 	if !ok {
 		return MapInfo{}, false
 	}
-	info, err := tm.maps.Map(m.Handle())
+	info, err := tm.plugin.Map(m.Handle())
 	return info, err == nil
 }
 
 // drawTile draws a tile in cell x, y. Tiles bigger than a cell keep to the
 // cell's bottom left, like Tiled draws them.
-func (tm *TileMapRenderer) drawTile(target *ebiten.Image, info *MapInfo, gid tmx.GID, x, y int, toTarget geom.Matrix) {
+func (tm *tileMapRenderer) drawTile(target *ebiten.Image, info *MapInfo, gid tmx.GID, x, y int, toTarget geom.Matrix) {
 	ts, id, ok := info.Tileset(gid)
 	if !ok {
 		return
@@ -124,7 +119,7 @@ func (tm *TileMapRenderer) drawTile(target *ebiten.Image, info *MapInfo, gid tmx
 		return
 	}
 
-	frame, err := tm.images.Frame(handle, frameIndex)
+	frame, err := tm.plugin.images.Frame(handle, frameIndex)
 	if err != nil {
 		return
 	}

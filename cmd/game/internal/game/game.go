@@ -26,7 +26,7 @@ type Game struct {
 	assets        *assets.Assets
 	images        *images.Cache
 	tiled         *tiled.Plugin
-	libs          *aseprite.Libraries
+	aseprite      *aseprite.Plugin
 	visible       []*donburi.Entry
 	imageRenderer rendering.AdapterID
 }
@@ -91,7 +91,9 @@ func New(cfgs Configs, files Files, l logger.Logger) (*Game, error) {
 		return nil, fmt.Errorf("create tiled plugin: %w", err)
 	}
 
-	g.libs = aseprite.NewLibraries(g.assets, l, dataCache, g.images, cfgs.Aseprite)
+	if g.aseprite, err = aseprite.NewPlugin(cfgs.Aseprite, g.assets, dataCache, g.images, l); err != nil {
+		return nil, fmt.Errorf("create aseprite plugin: %w", err)
+	}
 
 	g.world.Create(debug.DebugComponent, world.DontPartition)
 

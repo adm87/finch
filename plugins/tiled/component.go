@@ -4,7 +4,7 @@ import (
 	"github.com/yohamta/donburi"
 )
 
-// TileMap draws a map created by Maps.
+// TileMap draws a map loaded by the Plugin.
 type TileMap struct {
 	handle Handle
 }

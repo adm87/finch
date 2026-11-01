@@ -4,19 +4,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 
 	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/data"
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/logger"
-	"github.com/adm87/finch/pkg/slotmap"
 )
 
 const libraryKind = "aseprite library"
 
-// LoadMode controls whether CreateLibrary may load missing content.
+// LoadMode controls whether Load may load missing content.
 type LoadMode int
 
 const (
@@ -26,13 +24,13 @@ const (
 	LoadModeDynamic
 )
 
-// UnloadMode controls whether ClearLibrary unloads the library's content.
+// UnloadMode controls whether Unload unloads the library's content.
 type UnloadMode int
 
 const (
 	// UnloadModeKeep leaves the content loaded.
 	UnloadModeKeep UnloadMode = iota
-	// UnloadModeIfOwned unloads the content only if CreateLibrary loaded it.
+	// UnloadModeIfOwned unloads the content only if Load loaded it.
 	UnloadModeIfOwned
 )
 
@@ -47,127 +45,98 @@ type LibraryInfo struct {
 	owned       bool
 }
 
-type Libraries struct {
-	logger     logger.Logger
-	as         *assets.Assets
-	dc         *data.Cache
-	ic         *images.Cache
-	libraries  *slotmap.SlotMap[LibraryInfo]
-	config     *Config
-	libsByName map[string]Handle
-}
-
-func NewLibraries(as *assets.Assets, log logger.Logger, dc *data.Cache, ic *images.Cache, config *Config) *Libraries {
-	return &Libraries{
-		logger:     log.Named("aseprite"),
-		as:         as,
-		dc:         dc,
-		ic:         ic,
-		config:     config,
-		libraries:  slotmap.New[LibraryInfo](128),
-		libsByName: make(map[string]Handle),
-	}
-}
-
-func (l *Libraries) CreateLibrary(name string, mode LoadMode) (Handle, error) {
-	if id, exists := l.libsByName[name]; exists {
-		return id, nil
+// Load builds the named library from the config, or returns it if it's already loaded.
+func (p *Plugin) Load(name string, mode LoadMode) (Handle, error) {
+	if handle, exists := p.libraries.Lookup(name); exists {
+		return handle, nil
 	}
 
-	library, err := l.getLibraryConfig(name)
+	library, err := p.getLibraryConfig(name)
 	if err != nil {
 		return 0, err
 	}
 
 	owned := false
-	if !l.isLibraryLoaded(library) {
+	if !p.isLibraryLoaded(library) {
 		if mode == LoadModeRequired {
 			return 0, errs.InvalidOperation(fmt.Sprintf("library %q is not loaded and mode is LoadModeRequired", name))
 		}
-		if err := l.loadLibrary(library); err != nil && !errs.IsAlreadyExists(err) {
+		if err := p.loadLibrary(library); err != nil && !errs.IsAlreadyExists(err) {
 			return 0, fmt.Errorf("load library %q: %w", name, err)
 		}
 		owned = true
 	}
 
-	info, err := l.decodeLibrary(library)
+	info, err := p.decodeLibrary(library)
 	if err != nil {
 		if owned {
-			err = errors.Join(err, l.unloadLibrary(library))
+			err = errors.Join(err, p.unloadLibrary(library))
 		}
 		return 0, fmt.Errorf("library %q: %w", name, err)
 	}
 	info.owned = owned
 
-	if err := l.ic.SliceFrames(info.ImageHandle, info.Atlas.Frames.FrameRects()); err != nil {
+	if err := p.images.SliceFrames(info.ImageHandle, info.Atlas.Frames.FrameRects()); err != nil {
 		return 0, fmt.Errorf("slice image %q: %w", library.Image.String(), err)
 	}
 
-	id := Handle(l.libraries.Insert(info).Pack())
-	l.libsByName[name] = id
-
-	return id, nil
+	return p.libraries.Insert(name, info)
 }
 
-func (l *Libraries) ClearLibrary(name string, mode UnloadMode) error {
-	id, exists := l.libsByName[name]
+func (p *Plugin) Unload(name string, mode UnloadMode) error {
+	handle, exists := p.libraries.Lookup(name)
 	if !exists {
 		return errs.NotFound(libraryKind, name)
 	}
 
-	info, err := l.libraries.Delete(slotmap.Unpack(uint64(id)))
-	delete(l.libsByName, name)
+	info, err := p.libraries.Delete(handle)
 	if err != nil {
-		return fmt.Errorf("clear library %q: %w", name, err)
+		return fmt.Errorf("unload library %q: %w", name, err)
 	}
 
 	if mode != UnloadModeIfOwned || !info.owned {
 		return nil
 	}
 
-	cfg, err := l.getLibraryConfig(name)
+	cfg, err := p.getLibraryConfig(name)
 	if err != nil {
 		return err
 	}
-	if err := l.unloadLibrary(cfg); err != nil {
+	if err := p.unloadLibrary(cfg); err != nil {
 		return fmt.Errorf("unload library %q: %w", name, err)
 	}
 	return nil
 }
 
-func (l *Libraries) Library(id Handle) (LibraryInfo, error) {
-	info, err := l.libraries.Get(slotmap.Unpack(uint64(id)))
-	if err != nil {
-		return LibraryInfo{}, errs.NotFound(libraryKind, strconv.FormatUint(uint64(id), 10)).Wrap(err)
-	}
-	return info, nil
+func (p *Plugin) Library(handle Handle) (LibraryInfo, error) {
+	return p.libraries.Get(handle)
 }
 
-func (l *Libraries) getLibraryConfig(name string) (*LibraryConfig, error) {
+func (p *Plugin) getLibraryConfig(name string) (*LibraryConfig, error) {
 	if name == "" {
 		return nil, errs.Argument("name", "cannot be empty")
 	}
-	library, exists := l.config.Libraries[name]
+	library, exists := p.config.Libraries[name]
 	if !exists {
 		return nil, errs.NotFound(libraryKind, name)
 	}
 	return &library, nil
 }
 
-func (l *Libraries) decodeLibrary(library *LibraryConfig) (LibraryInfo, error) {
+func (p *Plugin) decodeLibrary(library *LibraryConfig) (LibraryInfo, error) {
 	atlasPath := library.Atlas.String()
 
-	imageHandle, exists := l.ic.Lookup(library.Image.String())
+	imageHandle, exists := p.images.Lookup(library.Image.String())
 	if !exists {
 		return LibraryInfo{}, errs.NotFound("image", library.Image.String())
 	}
 
-	dataHandle, exists := l.dc.Lookup(atlasPath)
+	dataHandle, exists := p.data.Lookup(atlasPath)
 	if !exists {
 		return LibraryInfo{}, errs.NotFound("data", atlasPath)
 	}
 
-	raw, err := l.dc.Get(dataHandle)
+	raw, err := p.data.Get(dataHandle)
 	if err != nil {
 		return LibraryInfo{}, fmt.Errorf("atlas %q: %w", atlasPath, err)
 	}
@@ -180,7 +149,7 @@ func (l *Libraries) decodeLibrary(library *LibraryConfig) (LibraryInfo, error) {
 		return LibraryInfo{}, errs.Format(atlasPath, "atlas is empty")
 	}
 	if dropped := info.Atlas.DropMissingTags(); len(dropped) > 0 {
-		l.logger.Warn("dropping missing tags", logger.String("atlas", atlasPath), logger.Strings("tags", dropped))
+		p.logger.Warn("dropping missing tags", logger.String("atlas", atlasPath), logger.Strings("tags", dropped))
 	}
 	if err := info.Atlas.Validate(); err != nil {
 		return LibraryInfo{}, fmt.Errorf("atlas %q: %w", atlasPath, err)
@@ -190,27 +159,27 @@ func (l *Libraries) decodeLibrary(library *LibraryConfig) (LibraryInfo, error) {
 	return info, nil
 }
 
-func (l *Libraries) isLibraryLoaded(cfg *LibraryConfig) bool {
+func (p *Plugin) isLibraryLoaded(cfg *LibraryConfig) bool {
 	for _, asset := range cfg.Assets() {
-		if !l.as.Loaded(asset) {
+		if !p.assets.Loaded(asset) {
 			return false
 		}
 	}
 	return true
 }
 
-func (l *Libraries) loadLibrary(cfg *LibraryConfig) error {
+func (p *Plugin) loadLibrary(cfg *LibraryConfig) error {
 	bundle := assets.AssetBundle{
 		FileSystem: assets.FileSystem(cfg.FileSystem),
 		Assets:     cfg.Assets(),
 	}
-	return bundle.Load(l.as)
+	return bundle.Load(p.assets)
 }
 
-func (l *Libraries) unloadLibrary(cfg *LibraryConfig) error {
+func (p *Plugin) unloadLibrary(cfg *LibraryConfig) error {
 	bundle := assets.AssetBundle{
 		FileSystem: assets.FileSystem(cfg.FileSystem),
 		Assets:     cfg.Assets(),
 	}
-	return bundle.Unload(l.as)
+	return bundle.Unload(p.assets)
 }

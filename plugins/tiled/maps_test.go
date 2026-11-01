@@ -14,6 +14,7 @@ import (
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/logger"
+	"github.com/adm87/finch/pkg/rendering"
 	"github.com/adm87/finch/plugins/tiled"
 	"github.com/adm87/finch/plugins/tiled/tmx"
 )
@@ -104,12 +105,11 @@ var mapFiles = []assets.Asset{
 	"maps/props/rock.png",
 }
 
-func newMaps(t *testing.T) (*tiled.Maps, *assets.Assets, *images.Cache) {
+func newMaps(t *testing.T) (*tiled.Plugin, *assets.Assets, *images.Cache) {
 	t.Helper()
 	as := assets.NewAssets()
 	dc, ic := data.NewCache(), images.NewCache()
 	require.NoError(t, as.RegisterFileSystem("test", mapFS))
-	require.NoError(t, as.RegisterImporter(data.NewImporter(dc), []string{"tmx", "tsx", "tx"}))
 	require.NoError(t, as.RegisterImporter(blankImporter{cache: ic}, []string{"png"}))
 
 	cfg := &tiled.Config{Maps: map[string]tiled.MapConfig{
@@ -118,19 +118,21 @@ func newMaps(t *testing.T) (*tiled.Maps, *assets.Assets, *images.Cache) {
 		"layered":  {FileSystem: "test", TMX: "layered/map.tmx"},
 		"infinite": {FileSystem: "test", TMX: "infinite/map.tmx"},
 	}}
-	return tiled.NewMaps(as, dc, ic, cfg, logger.NewLogger(io.Discard, logger.Options{})), as, ic
+	p, err := tiled.NewPlugin(cfg, as, dc, ic, rendering.NewPipeline(), logger.NewLogger(io.Discard, logger.Options{}))
+	require.NoError(t, err)
+	return p, as, ic
 }
 
-func TestCreateMapLoadsEverythingItRefersTo(t *testing.T) {
+func TestLoadLoadsEverythingItRefersTo(t *testing.T) {
 	maps, as, ic := newMaps(t)
 
-	handle, err := maps.CreateMap("level", tiled.LoadModeDynamic)
+	handle, err := maps.Load("level", tiled.LoadModeDynamic)
 	require.NoError(t, err)
 	for _, f := range mapFiles {
 		require.True(t, as.Loaded(f), f)
 	}
 
-	again, err := maps.CreateMap("level", tiled.LoadModeDynamic)
+	again, err := maps.Load("level", tiled.LoadModeDynamic)
 	require.NoError(t, err)
 	require.Equal(t, handle, again)
 
@@ -165,40 +167,40 @@ func TestCreateMapLoadsEverythingItRefersTo(t *testing.T) {
 	require.False(t, ok)
 }
 
-func TestCreateMapRequiredNeedsFilesLoaded(t *testing.T) {
+func TestLoadRequiredNeedsFilesLoaded(t *testing.T) {
 	maps, as, _ := newMaps(t)
 
-	_, err := maps.CreateMap("level", tiled.LoadModeRequired)
+	_, err := maps.Load("level", tiled.LoadModeRequired)
 	require.ErrorIs(t, err, errs.ErrInvalidOperation)
 
 	require.NoError(t, as.Load(mapFS, mapFiles...))
-	handle, err := maps.CreateMap("level", tiled.LoadModeRequired)
+	handle, err := maps.Load("level", tiled.LoadModeRequired)
 	require.NoError(t, err)
 
 	// Nothing was owned, so clearing keeps the files.
-	require.NoError(t, maps.ClearMap("level", tiled.UnloadModeIfOwned))
+	require.NoError(t, maps.Unload("level", tiled.UnloadModeIfOwned))
 	require.True(t, as.Loaded("maps/level.tmx"))
 	_, err = maps.Map(handle)
 	require.True(t, errs.IsNotFound(err))
 }
 
-func TestClearMapUnloadsWhatItLoaded(t *testing.T) {
+func TestUnloadUnloadsWhatItLoaded(t *testing.T) {
 	maps, as, _ := newMaps(t)
 
-	_, err := maps.CreateMap("level", tiled.LoadModeDynamic)
+	_, err := maps.Load("level", tiled.LoadModeDynamic)
 	require.NoError(t, err)
-	require.NoError(t, maps.ClearMap("level", tiled.UnloadModeIfOwned))
+	require.NoError(t, maps.Unload("level", tiled.UnloadModeIfOwned))
 
 	for _, f := range mapFiles {
 		require.False(t, as.Loaded(f), f)
 	}
-	require.True(t, errs.IsNotFound(maps.ClearMap("level", tiled.UnloadModeKeep)))
+	require.True(t, errs.IsNotFound(maps.Unload("level", tiled.UnloadModeKeep)))
 }
 
-func TestCreateMapFailureUnloadsWhatItLoaded(t *testing.T) {
+func TestLoadFailureUnloadsWhatItLoaded(t *testing.T) {
 	maps, as, _ := newMaps(t)
 
-	_, err := maps.CreateMap("broken", tiled.LoadModeDynamic)
+	_, err := maps.Load("broken", tiled.LoadModeDynamic)
 	require.True(t, errs.IsNotFound(err))
 	require.False(t, as.Loaded("broken/level.tmx"))
 }

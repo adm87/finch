@@ -7,7 +7,6 @@ import (
 	"github.com/yohamta/donburi"
 
 	"github.com/adm87/finch/pkg/geom"
-	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/rendering"
 	"github.com/adm87/finch/pkg/transform"
 	"github.com/adm87/finch/plugins/tiled"
@@ -16,7 +15,7 @@ import (
 
 func TestLayersFoldInTheirGroups(t *testing.T) {
 	maps, _, _ := newMaps(t)
-	handle, err := maps.CreateMap("layered", tiled.LoadModeDynamic)
+	handle, err := maps.Load("layered", tiled.LoadModeDynamic)
 	require.NoError(t, err)
 	info, err := maps.Map(handle)
 	require.NoError(t, err)
@@ -52,7 +51,7 @@ func TestLayersFoldInTheirGroups(t *testing.T) {
 
 func TestRendererMakesAJobPerVisibleLayer(t *testing.T) {
 	maps, _, _ := newMaps(t)
-	handle, err := maps.CreateMap("layered", tiled.LoadModeDynamic)
+	handle, err := maps.Load("layered", tiled.LoadModeDynamic)
 	require.NoError(t, err)
 
 	w := donburi.NewWorld()
@@ -66,7 +65,7 @@ func TestRendererMakesAJobPerVisibleLayer(t *testing.T) {
 	r.SetLayer(2)
 	r.SetDepth(10)
 
-	renderer := tiled.NewTileMapRenderer(maps, images.NewCache())
+	renderer := maps.Renderer()
 	jobs := renderer.Jobs(&rendering.Candidate{Entry: e, Renderer: r, Transform: tf}, nil)
 
 	require.Len(t, jobs, 2) // the hidden layer is skipped
@@ -86,14 +85,14 @@ func TestRendererSkipsEntitiesWithoutAMap(t *testing.T) {
 	e := w.Entry(w.Create(transform.TransformComponent))
 	tf, _ := transform.GetTransform(e)
 
-	renderer := tiled.NewTileMapRenderer(maps, images.NewCache())
+	renderer := maps.Renderer()
 	jobs := renderer.Jobs(&rendering.Candidate{Entry: e, Renderer: &rendering.Renderer{}, Transform: tf}, nil)
 	require.Empty(t, jobs)
 }
 
 func TestInfiniteMapsKeepTheirChunks(t *testing.T) {
 	maps, _, _ := newMaps(t)
-	handle, err := maps.CreateMap("infinite", tiled.LoadModeDynamic)
+	handle, err := maps.Load("infinite", tiled.LoadModeDynamic)
 	require.NoError(t, err)
 	info, err := maps.Map(handle)
 	require.NoError(t, err)
@@ -114,7 +113,7 @@ func TestInfiniteMapsKeepTheirChunks(t *testing.T) {
 
 func TestInfiniteMapJobsCoverTheirChunks(t *testing.T) {
 	maps, _, _ := newMaps(t)
-	handle, err := maps.CreateMap("infinite", tiled.LoadModeDynamic)
+	handle, err := maps.Load("infinite", tiled.LoadModeDynamic)
 	require.NoError(t, err)
 
 	w := donburi.NewWorld()
@@ -124,7 +123,7 @@ func TestInfiniteMapJobsCoverTheirChunks(t *testing.T) {
 	tf, _ := transform.GetTransform(e)
 	tf.SetPosition(100, 100)
 
-	renderer := tiled.NewTileMapRenderer(maps, images.NewCache())
+	renderer := maps.Renderer()
 	jobs := renderer.Jobs(&rendering.Candidate{Entry: e, Renderer: &rendering.Renderer{}, Transform: tf}, nil)
 
 	require.Len(t, jobs, 1)

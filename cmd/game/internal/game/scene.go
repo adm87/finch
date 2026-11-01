@@ -24,16 +24,15 @@ func (g *Game) MakeTestScene() error {
 	camera.SetZoom(c, 2)
 	g.view.SetCamera(c)
 
-	maps := g.tiled.Maps()
-	mapHandle, err := maps.CreateMap(gym04, tiled.LoadModeDynamic)
+	mapHandle, err := g.tiled.Load(gym04, tiled.LoadModeDynamic)
 	if err != nil {
-		return fmt.Errorf("create map: %w", err)
+		return fmt.Errorf("load map: %w", err)
 	}
-	tm, err := g.tiled.AddToWorld(mapHandle, w)
+	tm, err := g.tiled.Spawn(mapHandle, w)
 	if err != nil {
-		return fmt.Errorf("add map to world: %w", err)
+		return fmt.Errorf("spawn map: %w", err)
 	}
-	mapInfo, err := maps.Map(mapHandle)
+	mapInfo, err := g.tiled.Map(mapHandle)
 	if err != nil {
 		return fmt.Errorf("map %q: %w", gym04, err)
 	}
@@ -42,11 +41,11 @@ func (g *Game) MakeTestScene() error {
 		return fmt.Errorf("map %q has no player layer", gym04)
 	}
 
-	libraryID, err := g.libs.CreateLibrary(playerLibrary, aseprite.LoadModeDynamic)
+	libraryID, err := g.aseprite.Load(playerLibrary, aseprite.LoadModeDynamic)
 	if err != nil {
-		return fmt.Errorf("create library %q: %w", playerLibrary, err)
+		return fmt.Errorf("load library %q: %w", playerLibrary, err)
 	}
-	library, err := g.libs.Library(libraryID)
+	library, err := g.aseprite.Library(libraryID)
 	if err != nil {
 		return fmt.Errorf("library %q: %w", playerLibrary, err)
 	}

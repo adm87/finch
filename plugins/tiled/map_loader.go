@@ -18,7 +18,7 @@ import (
 
 // mapLoader builds one map's info, recording the files it had to load.
 type mapLoader struct {
-	maps     *Maps
+	plugin   *Plugin
 	fsys     fs.FS
 	tilesets map[assets.Asset]*tmx.Tileset // parsed once per map
 	owned    []assets.Asset
@@ -121,11 +121,11 @@ func (l *mapLoader) tilesetImages(ts *tmx.Tileset) (TilesetInfo, error) {
 			return TilesetInfo{}, err
 		}
 
-		img, err := l.maps.images.Get(handle)
+		img, err := l.plugin.images.Get(handle)
 		if err != nil {
 			return TilesetInfo{}, err
 		}
-		if err := l.maps.images.SliceRects(handle, sheetRects(ts, img.Bounds())); err != nil {
+		if err := l.plugin.images.SliceRects(handle, sheetRects(ts, img.Bounds())); err != nil {
 			return TilesetInfo{}, fmt.Errorf("slice image %q: %w", ts.Image.Source, err)
 		}
 
@@ -159,7 +159,7 @@ func (l *mapLoader) image(img *tmx.Image) (images.Handle, error) {
 	if img.Source == "" {
 		return 0, errs.NotSupported("images embedded as data")
 	}
-	handle, exists := l.maps.images.Lookup(img.Source)
+	handle, exists := l.plugin.images.Lookup(img.Source)
 	if !exists {
 		return 0, errs.NotFound("image", img.Source)
 	}
@@ -170,7 +170,7 @@ func (l *mapLoader) image(img *tmx.Image) (images.Handle, error) {
 func (l *mapLoader) require(refs ...assets.Asset) error {
 	var missing []assets.Asset
 	for _, ref := range refs {
-		if !l.maps.assets.Loaded(ref) {
+		if !l.plugin.assets.Loaded(ref) {
 			missing = append(missing, ref)
 		}
 	}
@@ -181,11 +181,11 @@ func (l *mapLoader) require(refs ...assets.Asset) error {
 		return errs.InvalidOperation(fmt.Sprintf("%v not loaded and mode is LoadModeRequired", missing))
 	}
 
-	err := l.maps.assets.Load(l.fsys, missing...)
+	err := l.plugin.assets.Load(l.fsys, missing...)
 
 	// Load keeps going after a failure, so own whatever made it in.
 	for _, ref := range missing {
-		if l.maps.assets.Loaded(ref) {
+		if l.plugin.assets.Loaded(ref) {
 			l.owned = append(l.owned, ref)
 		}
 	}
@@ -200,11 +200,11 @@ func parseAsset[T any, PT interface {
 	if err := l.require(asset); err != nil {
 		return nil, err
 	}
-	handle, exists := l.maps.data.Lookup(asset.String())
+	handle, exists := l.plugin.data.Lookup(asset.String())
 	if !exists {
 		return nil, errs.NotFound("data", asset.String())
 	}
-	raw, err := l.maps.data.Get(handle)
+	raw, err := l.plugin.data.Get(handle)
 	if err != nil {
 		return nil, fmt.Errorf("%q: %w", asset, err)
 	}

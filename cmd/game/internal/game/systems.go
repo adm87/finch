@@ -12,7 +12,6 @@ import (
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/transform"
 	"github.com/adm87/finch/pkg/world"
-	"github.com/adm87/finch/plugins/aseprite"
 	"github.com/adm87/finch/plugins/tiled"
 )
 
@@ -40,7 +39,7 @@ func (g *Game) collectVisible(float64) error {
 }
 
 func (g *Game) animate(dt float64) error {
-	return aseprite.AdvanceAnimations(dt, g.libs, g.visible)
+	return g.aseprite.Animate(dt, g.visible)
 }
 
 func (g *Game) followPlayer(dt float64) error {
