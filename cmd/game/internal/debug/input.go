@@ -4,14 +4,12 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
-	"github.com/adm87/finch/pkg/application"
 	"github.com/adm87/finch/pkg/engine"
+	"github.com/adm87/finch/pkg/world"
 )
 
-func PollInput() engine.System {
-	return func(app *application.Application, _ float64) error {
-		w := app.World()
-
+func PollInput(w *world.World) engine.System {
+	return func(float64) error {
 		d := GetDebug(w.ECS())
 		if inpututil.IsKeyJustPressed(ebiten.Key1) {
 			d.SetOverlay(OverlayTypeEntities, !d.HasOverlay(OverlayTypeEntities))

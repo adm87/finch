@@ -19,7 +19,7 @@ func TestLoadTheGameConfigs(t *testing.T) {
 
 	cfg := config.Default()
 	require.NoError(t, config.Load(embedded, content.GameConfig.String(), cfg))
-	require.NoError(t, cfg.Application.Validate())
+	require.NoError(t, cfg.Screen.Validate())
 	require.NoError(t, cfg.Engine.Validate())
 	require.NotEmpty(t, cfg.Bundles)
 

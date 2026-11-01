@@ -6,40 +6,33 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
-	"github.com/adm87/finch/pkg/application"
+	"github.com/adm87/finch/pkg/display"
 	"github.com/adm87/finch/pkg/hexcolor"
 	"github.com/adm87/finch/pkg/logger"
+	"github.com/adm87/finch/pkg/world"
 )
 
 type shell struct {
 	clearColor   color.Color
-	app          *application.Application
-	options      *RunOptions
-	clock        *clock
-	worldDrawers Drawers
-	drawCtx      DrawContext
+	world   *world.World
+	screen  *display.Screen
+	view    *display.View
+	options *RunOptions
+	clock   *clock
+	drawCtx DrawContext
 }
 
-func newShell(app *application.Application, cfg Config, options *RunOptions, clock *clock) *shell {
-	app.Screen().SetResolutionScale(cfg.Window.ResolutionScale)
-	app.Screen().SetFilter(ebiten.Filter(cfg.Window.ScreenFilter))
+func newShell(w *world.World, screen *display.Screen, view *display.View, cfg Config, options *RunOptions, clock *clock) *shell {
+	screen.SetResolutionScale(cfg.Window.ResolutionScale)
+	screen.SetFilter(ebiten.Filter(cfg.Window.ScreenFilter))
 
-	worldDrawers := options.WorldDrawers
-	if len(worldDrawers) == 0 {
-		worldDrawers = Drawers{DrawerFunc(drawPipeline(app))}
-	}
 	return &shell{
-		app:          app,
-		options:      options,
-		clock:        clock,
-		worldDrawers: worldDrawers,
-		clearColor:   hexcolor.ToRGBA(cfg.ClearColor),
-	}
-}
-
-func drawPipeline(app *application.Application) func(*ebiten.Image, *DrawContext) error {
-	return func(target *ebiten.Image, ctx *DrawContext) error {
-		return app.RenderPipeline().Draw(target, ctx.Entries, ctx.View, ctx.Matrix)
+		world:      w,
+		screen:     screen,
+		view:       view,
+		options:    options,
+		clock:      clock,
+		clearColor: hexcolor.ToRGBA(cfg.ClearColor),
 	}
 }
 
@@ -67,12 +60,12 @@ func (sh *shell) runPhase(systems []System, dt float64) error {
 	if err := sh.runSystems(systems, dt); err != nil {
 		return err
 	}
-	return sh.app.World().Sync()
+	return sh.world.Sync()
 }
 
 func (sh *shell) runSystems(systems []System, dt float64) error {
 	for _, system := range systems {
-		if err := system(sh.app, dt); err != nil {
+		if err := system(dt); err != nil {
 			return err
 		}
 	}
@@ -80,27 +73,25 @@ func (sh *shell) runSystems(systems []System, dt float64) error {
 }
 
 func (sh *shell) Draw(target *ebiten.Image) {
-	screen := sh.app.Screen()
-
-	buf := screen.Buffer()
+	buf := sh.screen.Buffer()
 	buf.Fill(sh.clearColor)
 
 	// No camera means nothing to draw in the world, but overlays still run.
 	ctx := &sh.drawCtx
 	*ctx = DrawContext{Entries: ctx.Entries[:0]}
 
-	if sh.app.View().HasCamera() {
-		ctx.View, ctx.Matrix = sh.app.View().Viewport()
-		ctx.Entries = sh.app.World().Query(ctx.View, ctx.Entries)
+	if sh.view.HasCamera() {
+		ctx.View, ctx.Matrix = sh.view.Viewport()
+		ctx.Entries = sh.world.Query(ctx.View, ctx.Entries)
 
-		if err := sh.worldDrawers.Draw(buf, ctx); err != nil {
+		if err := sh.options.WorldDrawers.Draw(buf, ctx); err != nil {
 			sh.options.Logger.Error("draw error", logger.ErrorField("error", err))
 		}
 	}
 
-	target.DrawImage(buf, screen.Options())
+	target.DrawImage(buf, sh.screen.Options())
 
-	ctx.Matrix.Concat(screen.Options().GeoM)
+	ctx.Matrix.Concat(sh.screen.Options().GeoM)
 	if err := sh.options.OverlayDrawers.Draw(target, ctx); err != nil {
 		sh.options.Logger.Error("overlay error", logger.ErrorField("error", err))
 	}
@@ -113,5 +104,5 @@ func (sh *shell) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 func (sh *shell) LayoutF(outsideWidth, outsideHeight float64) (float64, float64) {
-	return sh.app.Screen().Layout(outsideWidth, outsideHeight)
+	return sh.screen.Layout(outsideWidth, outsideHeight)
 }

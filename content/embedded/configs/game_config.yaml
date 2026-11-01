@@ -1,8 +1,7 @@
 # The buffer the game draws into.
-application:
-  screen:
-    width: 640
-    height: 360
+screen:
+  width: 640
+  height: 360
 
 engine:
   title: "Finch"

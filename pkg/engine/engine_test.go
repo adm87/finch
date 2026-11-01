@@ -9,11 +9,10 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 
-	"github.com/adm87/finch/pkg/application"
+	"github.com/adm87/finch/pkg/display"
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/hexcolor"
-	"github.com/adm87/finch/pkg/logger"
 	"github.com/adm87/finch/pkg/transform"
 	"github.com/adm87/finch/pkg/world"
 )
@@ -27,6 +26,21 @@ func (f *fakeTime) advance(d time.Duration) { f.t = f.t.Add(d) }
 func newFakeClock(tickRate int) (*clock, *fakeTime) {
 	ft := &fakeTime{t: time.Unix(1000, 0)}
 	return newClock(tickRate, ft.now), ft
+}
+
+type parts struct {
+	world  *world.World
+	screen *display.Screen
+	view   *display.View
+}
+
+func newParts(width, height int) parts {
+	screen := display.NewScreen(width, height)
+	return parts{world: world.NewWorld(), screen: screen, view: display.NewViewport(screen)}
+}
+
+func (p parts) shell(cfg Config, options *RunOptions, c *clock) *shell {
+	return newShell(p.world, p.screen, p.view, cfg, options, c)
 }
 
 func TestClockFirstTickHasNoDelta(t *testing.T) {
@@ -70,12 +84,11 @@ func TestClockCapsLongAndBackwardsGaps(t *testing.T) {
 }
 
 func TestShellRunsPhasesInOrder(t *testing.T) {
-	app, err := application.New(nil, logger.N)
-	require.NoError(t, err)
+	app := newParts(800, 600)
 
 	var calls []string
 	record := func(name string) System {
-		return func(_ *application.Application, dt float64) error {
+		return func(dt float64) error {
 			calls = append(calls, name)
 			require.Positive(t, dt)
 			return nil
@@ -88,7 +101,7 @@ func TestShellRunsPhasesInOrder(t *testing.T) {
 	WithLateUpdate(record("late"), record("late 2"))(options)
 
 	c, ft := newFakeClock(10)
-	sh := newShell(app, *DefaultConfig(), options, c)
+	sh := app.shell(*DefaultConfig(), options, c)
 	c.tick()
 	ft.advance(200 * time.Millisecond)
 
@@ -97,18 +110,17 @@ func TestShellRunsPhasesInOrder(t *testing.T) {
 }
 
 func TestShellStopsAtFirstError(t *testing.T) {
-	app, err := application.New(nil, logger.N)
-	require.NoError(t, err)
+	app := newParts(800, 600)
 
 	stop := errors.New("stop")
 	late := false
 
 	options := DefaultRunOptions()
-	WithUpdate(func(*application.Application, float64) error { return stop })(options)
-	WithLateUpdate(func(*application.Application, float64) error { late = true; return nil })(options)
+	WithUpdate(func(float64) error { return stop })(options)
+	WithLateUpdate(func(float64) error { late = true; return nil })(options)
 
 	c, _ := newFakeClock(60)
-	require.ErrorIs(t, newShell(app, *DefaultConfig(), options, c).Update(), stop)
+	require.ErrorIs(t, app.shell(*DefaultConfig(), options, c).Update(), stop)
 	require.False(t, late)
 }
 
@@ -130,65 +142,39 @@ func TestDrawersDrawInOrderAndReportEveryError(t *testing.T) {
 	require.NoError(t, Drawers(nil).Draw(nil, &DrawContext{}))
 }
 
-func TestShellDefaultsWorldDrawersWithoutChangingOptions(t *testing.T) {
-	app, err := application.New(nil, logger.N)
-	require.NoError(t, err)
-
-	options := DefaultRunOptions()
-	c, _ := newFakeClock(60)
-	sh := newShell(app, *DefaultConfig(), options, c)
-
-	require.Len(t, sh.worldDrawers, 1)
-	require.Empty(t, options.WorldDrawers)
-
-	drewCustom := false
-	custom := DrawerFunc(func(*ebiten.Image, *DrawContext) error {
-		drewCustom = true
-		return nil
-	})
-	WithWorldDrawers(custom)(options)
-	sh = newShell(app, *DefaultConfig(), options, c)
-
-	require.NoError(t, sh.worldDrawers.Draw(nil, &DrawContext{}))
-	require.True(t, drewCustom)
-	require.Len(t, sh.worldDrawers, 1)
-}
-
 func TestShellSyncsWorldBeforeLateUpdate(t *testing.T) {
-	app, err := application.New(nil, logger.N)
-	require.NoError(t, err)
+	app := newParts(800, 600)
 
-	w := app.World()
+	w := app.world
 	entry := w.Create()
 	transform.BoundsComponent.Get(entry).SetRect(geom.Rect{Width: 10, Height: 10})
 
 	options := DefaultRunOptions()
-	WithUpdate(func(*application.Application, float64) error {
+	WithUpdate(func(float64) error {
 		transform.TransformComponent.Get(entry).SetPosition(300, 300)
 		return nil
 	})(options)
 
 	var seen []*donburi.Entry
-	WithLateUpdate(func(app *application.Application, _ float64) error {
-		seen = app.World().Query(geom.Rect{X: 300, Y: 300, Width: 10, Height: 10}, seen[:0])
+	WithLateUpdate(func(float64) error {
+		seen = app.world.Query(geom.Rect{X: 300, Y: 300, Width: 10, Height: 10}, seen[:0])
 		return nil
 	})(options)
 
 	c, _ := newFakeClock(60)
-	require.NoError(t, newShell(app, *DefaultConfig(), options, c).Update())
+	require.NoError(t, app.shell(*DefaultConfig(), options, c).Update())
 	require.Len(t, seen, 1)
 	require.Equal(t, entry.Entity(), seen[0].Entity())
 }
 
 func TestShellSyncsWorldAfterEveryPhase(t *testing.T) {
-	app, err := application.New(nil, logger.N)
-	require.NoError(t, err)
+	app := newParts(800, 600)
 
-	entry := app.World().Create()
+	entry := app.world.Create()
 	transform.BoundsComponent.Get(entry).SetRect(geom.Rect{Width: 10, Height: 10})
 
-	at := func(app *application.Application, x, y float64) bool {
-		hits := app.World().Query(geom.Rect{X: x, Y: y, Width: 10, Height: 10}, nil)
+	at := func(x, y float64) bool {
+		hits := app.world.Query(geom.Rect{X: x, Y: y, Width: 10, Height: 10}, nil)
 		return len(hits) == 1 && hits[0].Entity() == entry.Entity()
 	}
 	moveTo := func(x, y float64) {
@@ -198,28 +184,28 @@ func TestShellSyncsWorldAfterEveryPhase(t *testing.T) {
 	var seen []bool
 	step := 0
 	options := DefaultRunOptions()
-	WithUpdate(func(*application.Application, float64) error {
+	WithUpdate(func(float64) error {
 		moveTo(100, 100)
 		return nil
 	})(options)
-	WithFixedUpdate(func(app *application.Application, _ float64) error {
+	WithFixedUpdate(func(float64) error {
 		step++
 		if step == 1 {
-			seen = append(seen, at(app, 100, 100))
+			seen = append(seen, at(100, 100))
 			moveTo(200, 200)
 			return nil
 		}
-		seen = append(seen, at(app, 200, 200))
+		seen = append(seen, at(200, 200))
 		moveTo(300, 300)
 		return nil
 	})(options)
-	WithLateUpdate(func(app *application.Application, _ float64) error {
-		seen = append(seen, at(app, 300, 300))
+	WithLateUpdate(func(float64) error {
+		seen = append(seen, at(300, 300))
 		return nil
 	})(options)
 
 	c, ft := newFakeClock(10)
-	sh := newShell(app, *DefaultConfig(), options, c)
+	sh := app.shell(*DefaultConfig(), options, c)
 	c.tick()
 	ft.advance(200 * time.Millisecond)
 
@@ -229,18 +215,15 @@ func TestShellSyncsWorldAfterEveryPhase(t *testing.T) {
 }
 
 func TestShellGivesOverlaysTheWindowMatrix(t *testing.T) {
-	cfg := *application.DefaultConfig()
-	cfg.Screen.Width, cfg.Screen.Height = 320, 180
-	app, err := application.New(&cfg, logger.N)
-	require.NoError(t, err)
+	app := newParts(320, 180)
 
-	app.Screen().Fit(1280, 800)
-	require.NotZero(t, app.Screen().SafeArea().X)
-	require.NotEqual(t, 1.0, app.Screen().Scale())
+	app.screen.Fit(1280, 800)
+	require.NotZero(t, app.screen.SafeArea().X)
+	require.NotEqual(t, 1.0, app.screen.Scale())
 
-	camera := app.World().Create(world.DontPartition)
+	camera := app.world.Create(world.DontPartition)
 	transform.TransformComponent.Get(camera).SetPosition(50, -20)
-	app.View().SetCamera(camera)
+	app.view.SetCamera(camera)
 
 	var worldMatrix, overlayMatrix geom.Matrix
 	options := DefaultRunOptions()
@@ -254,23 +237,22 @@ func TestShellGivesOverlaysTheWindowMatrix(t *testing.T) {
 	}))(options)
 
 	c, _ := newFakeClock(60)
-	newShell(app, *DefaultConfig(), options, c).Draw(ebiten.NewImage(1280, 800))
+	app.shell(*DefaultConfig(), options, c).Draw(ebiten.NewImage(1280, 800))
 
 	bx, by := worldMatrix.Apply(10, 20)
-	wantX, wantY := app.Screen().BufferToWindow(bx, by)
+	wantX, wantY := app.screen.BufferToWindow(bx, by)
 	wx, wy := overlayMatrix.Apply(10, 20)
 	require.InDelta(t, wantX, wx, 1e-9)
 	require.InDelta(t, wantY, wy, 1e-9)
 }
 
 func TestShellWithoutCameraStillRunsOverlays(t *testing.T) {
-	app, err := application.New(nil, logger.N)
-	require.NoError(t, err)
-	require.False(t, app.View().HasCamera())
+	app := newParts(800, 600)
+	require.False(t, app.view.HasCamera())
 
-	entry := app.World().Create()
+	entry := app.world.Create()
 	transform.BoundsComponent.Get(entry).SetRect(geom.Rect{Width: 10, Height: 10})
-	require.NoError(t, app.World().Sync())
+	require.NoError(t, app.world.Sync())
 
 	drewWorld, drewOverlay := false, false
 	var overlayEntries []*donburi.Entry
@@ -288,37 +270,12 @@ func TestShellWithoutCameraStillRunsOverlays(t *testing.T) {
 	}))(options)
 
 	c, _ := newFakeClock(60)
-	newShell(app, *DefaultConfig(), options, c).Draw(ebiten.NewImage(800, 600))
+	app.shell(*DefaultConfig(), options, c).Draw(ebiten.NewImage(800, 600))
 
 	require.False(t, drewWorld)
 	require.True(t, drewOverlay)
 	require.Empty(t, overlayEntries)
 	require.Zero(t, overlayRect.Area())
-}
-
-func TestStartRunsStartupInOrder(t *testing.T) {
-	var calls []string
-	record := func(name string, err error) Startup {
-		return func(*application.Application) error {
-			calls = append(calls, name)
-			return err
-		}
-	}
-
-	options := DefaultRunOptions()
-	WithStartup(record("a", nil), record("b", nil))(options)
-	require.NoError(t, start(nil, options))
-	require.Equal(t, []string{"a", "b"}, calls)
-
-	calls = nil
-	broken := errors.New("broken")
-	options = DefaultRunOptions()
-	WithStartup(record("a", broken), record("b", nil))(options)
-
-	err := start(nil, options)
-	require.ErrorIs(t, err, broken)
-	require.ErrorContains(t, err, "startup:")
-	require.Equal(t, []string{"a"}, calls)
 }
 
 func TestConfigValidate(t *testing.T) {
@@ -338,25 +295,23 @@ func TestConfigValidate(t *testing.T) {
 }
 
 func TestShellClearsWithTheEngineColor(t *testing.T) {
-	app, err := application.New(nil, logger.N)
-	require.NoError(t, err)
+	app := newParts(800, 600)
 
 	cfg := *DefaultConfig()
 	cfg.ClearColor = hexcolor.Color{R: 10, G: 20, B: 30, A: 255}
 	c, _ := newFakeClock(60)
-	sh := newShell(app, cfg, DefaultRunOptions(), c)
+	sh := app.shell(cfg, DefaultRunOptions(), c)
 
 	require.Equal(t, hexcolor.ToRGBA(cfg.ClearColor), sh.clearColor)
 }
 
 func TestShellSetsTheResolutionScale(t *testing.T) {
-	app, err := application.New(nil, logger.N)
-	require.NoError(t, err)
+	app := newParts(800, 600)
 
 	cfg := *DefaultConfig()
 	cfg.Window.ResolutionScale = 0.5
 	c, _ := newFakeClock(60)
-	newShell(app, cfg, DefaultRunOptions(), c)
+	app.shell(cfg, DefaultRunOptions(), c)
 
-	require.Equal(t, 0.5, app.Screen().ResolutionScale())
+	require.Equal(t, 0.5, app.screen.ResolutionScale())
 }

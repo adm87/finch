@@ -6,15 +6,12 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 
-	"github.com/adm87/finch/pkg/application"
 	"github.com/adm87/finch/pkg/geom"
+	"github.com/adm87/finch/pkg/rendering"
 )
 
 // System runs once per update phase, with dt in seconds.
-type System func(app *application.Application, dt float64) error
-
-// Startup runs once, before the first update.
-type Startup func(app *application.Application) error
+type System func(dt float64) error
 
 // DrawContext holds what a drawer needs for one frame. It's reused, so don't hold on to it.
 type DrawContext struct {
@@ -43,4 +40,11 @@ func (d Drawers) Draw(target *ebiten.Image, ctx *DrawContext) error {
 		}
 	}
 	return errors.Join(errList...)
+}
+
+// DrawPipeline draws the frame's entries through the render pipeline.
+func DrawPipeline(pipeline *rendering.Pipeline) Drawer {
+	return DrawerFunc(func(target *ebiten.Image, ctx *DrawContext) error {
+		return pipeline.Draw(target, ctx.Entries, ctx.View, ctx.Matrix)
+	})
 }

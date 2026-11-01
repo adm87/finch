@@ -53,7 +53,7 @@ func (mi MapInfo) visibleTiles(view geom.Rect) image.Rectangle {
 func (mi MapInfo) LayerDepth(name string) (int32, bool) {
 	var index int32
 	for layer := range mi.Map.Layers.All() {
-		if base := layer.Base(); base.Name == name {
+		if base := layer.Base(); base != nil && base.Name == name {
 			return layerDepth(base, index), true
 		}
 		index++

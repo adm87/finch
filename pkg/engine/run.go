@@ -1,21 +1,16 @@
 package engine
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
-	"github.com/adm87/finch/pkg/application"
-	"github.com/adm87/finch/pkg/errs"
+	"github.com/adm87/finch/pkg/display"
+	"github.com/adm87/finch/pkg/world"
 )
 
 // Run sets up the window and runs the game loop. A nil config uses DefaultConfig.
-func Run(app *application.Application, config *Config, opts ...RunOption) error {
-	if app == nil {
-		return errs.ArgumentNil("app")
-	}
-
+func Run(config *Config, w *world.World, screen *display.Screen, view *display.View, opts ...RunOption) error {
 	cfg := *DefaultConfig()
 	if config != nil {
 		cfg = *config
@@ -29,10 +24,6 @@ func Run(app *application.Application, config *Config, opts ...RunOption) error 
 		opt(options)
 	}
 
-	if err := start(app, options); err != nil {
-		return err
-	}
-
 	resizing := ebiten.WindowResizingModeDisabled
 	if cfg.Window.Resizable {
 		resizing = ebiten.WindowResizingModeEnabled
@@ -44,15 +35,5 @@ func Run(app *application.Application, config *Config, opts ...RunOption) error 
 	ebiten.SetWindowResizingMode(resizing)
 	ebiten.SetTPS(cfg.TickRate)
 
-	return ebiten.RunGame(newShell(app, cfg, options, newClock(cfg.TickRate, time.Now)))
-}
-
-// start runs the startup functions in order.
-func start(app *application.Application, options *RunOptions) error {
-	for _, startup := range options.Startup {
-		if err := startup(app); err != nil {
-			return fmt.Errorf("startup: %w", err)
-		}
-	}
-	return nil
+	return ebiten.RunGame(newShell(w, screen, view, cfg, options, newClock(cfg.TickRate, time.Now)))
 }

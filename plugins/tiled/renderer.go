@@ -118,10 +118,12 @@ func (tm *TileMapRenderer) drawTile(target *ebiten.Image, info *MapInfo, gid tmx
 	if !ok {
 		return
 	}
+
 	handle, frameIndex, ok := ts.TileImage(id)
 	if !ok {
 		return
 	}
+
 	frame, err := tm.images.Frame(handle, frameIndex)
 	if err != nil {
 		return
@@ -130,6 +132,7 @@ func (tm *TileMapRenderer) drawTile(target *ebiten.Image, info *MapInfo, gid tmx
 	w, h := float64(frame.Size.X), float64(frame.Size.Y)
 	tm.opts.GeoM.Reset()
 	flipTile(&tm.opts.GeoM, gid, w, h)
+
 	if gid.FlippedDiagonally() {
 		h = w // it's drawn on its side
 	}
@@ -138,6 +141,7 @@ func (tm *TileMapRenderer) drawTile(target *ebiten.Image, info *MapInfo, gid tmx
 	if to := ts.Tileset.TileOffset; to != nil {
 		offsetX, offsetY = float64(to.X), float64(to.Y)
 	}
+
 	tm.opts.GeoM.Translate(
 		float64(x*info.Map.TileWidth+frame.Offset.X)+offsetX,
 		float64((y+1)*info.Map.TileHeight+frame.Offset.Y)-h+offsetY,
@@ -160,12 +164,14 @@ func flipTile(m *geom.Matrix, gid tmx.GID, w, h float64) {
 		m.Scale(-1, 1)
 		w, h = h, w
 	}
+
 	if gid.FlippedHorizontally() {
 		m.Scale(-1, 1)
 	}
 	if gid.FlippedVertically() {
 		m.Scale(1, -1)
 	}
+
 	m.Translate(w/2, h/2)
 }
 
@@ -174,6 +180,7 @@ func layerView(toWorld geom.Matrix, viewRect geom.Rect) geom.Rect {
 	if !toWorld.IsInvertible() {
 		return geom.Rect{}
 	}
+
 	toWorld.Invert()
 	return geom.TransformRect(toWorld, viewRect)
 }

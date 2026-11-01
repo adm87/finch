@@ -5,9 +5,11 @@ import (
 
 	"github.com/yohamta/donburi"
 
-	"github.com/adm87/finch/pkg/application"
+	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/data"
 	"github.com/adm87/finch/pkg/errs"
+	"github.com/adm87/finch/pkg/images"
+	"github.com/adm87/finch/pkg/logger"
 	"github.com/adm87/finch/pkg/rendering"
 	"github.com/adm87/finch/pkg/transform"
 	"github.com/adm87/finch/pkg/world"
@@ -17,40 +19,31 @@ import (
 var tiledTypes = []string{"tmx", "tsx", "tx"}
 
 type Plugin struct {
-	config   *Config
 	maps     *Maps
 	renderer rendering.AdapterID
 }
 
-func NewPlugin(cfg *Config) *Plugin {
-	return &Plugin{config: cfg}
-}
-
-func (p *Plugin) Name() string {
-	return "tiled"
-}
-
-func (p *Plugin) Init(app *application.Application) error {
-	if p.config == nil {
-		return errs.ArgumentNil("config")
+// NewPlugin registers the Tiled importer and renderer.
+func NewPlugin(cfg *Config, as *assets.Assets, dataCache *data.Cache, imageCache *images.Cache,
+	pipeline *rendering.Pipeline, log logger.Logger,
+) (*Plugin, error) {
+	if cfg == nil {
+		return nil, errs.ArgumentNil("config")
 	}
-	if err := p.config.Validate(); err != nil {
-		return err
+	if err := cfg.Validate(); err != nil {
+		return nil, err
 	}
 
-	cache := app.Cache()
-	assets := app.Assets()
-	pipeline := app.RenderPipeline()
+	maps := NewMaps(as, dataCache, imageCache, cfg, log)
 
-	p.maps = NewMaps(assets, cache.Data(), cache.Images(), p.config, app.Logger())
-
-	rendererID, err := pipeline.RegisterRenderer(NewTileMapRenderer(p.maps, cache.Images()))
+	renderer, err := pipeline.RegisterRenderer(NewTileMapRenderer(maps, imageCache))
 	if err != nil {
-		return fmt.Errorf("register renderer: %w", err)
+		return nil, fmt.Errorf("register renderer: %w", err)
 	}
-	p.renderer = rendererID
-
-	return assets.RegisterImporter(data.NewImporter(cache.Data()), tiledTypes)
+	if err := as.RegisterImporter(data.NewImporter(dataCache), tiledTypes); err != nil {
+		return nil, err
+	}
+	return &Plugin{maps: maps, renderer: renderer}, nil
 }
 
 func (p *Plugin) Maps() *Maps {

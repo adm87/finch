@@ -5,7 +5,6 @@ import (
 )
 
 type RunOptions struct {
-	Startup        []Startup
 	WorldDrawers   Drawers
 	OverlayDrawers Drawers
 	Logger         logger.Logger
@@ -19,13 +18,6 @@ type RunOption func(*RunOptions)
 func DefaultRunOptions() *RunOptions {
 	return &RunOptions{
 		Logger: logger.N,
-	}
-}
-
-// WithStartup adds functions that run once, in order, before the first update.
-func WithStartup(startup ...Startup) RunOption {
-	return func(ro *RunOptions) {
-		ro.Startup = append(ro.Startup, startup...)
 	}
 }
 
@@ -50,8 +42,7 @@ func WithLateUpdate(systems ...System) RunOption {
 	}
 }
 
-// WithWorldDrawers adds drawers for the screen buffer. Setting any replaces the
-// default, which draws the app's render pipeline.
+// WithWorldDrawers adds drawers for the screen buffer, run when there's a camera.
 func WithWorldDrawers(drawers ...Drawer) RunOption {
 	return func(ro *RunOptions) {
 		ro.WorldDrawers = append(ro.WorldDrawers, drawers...)

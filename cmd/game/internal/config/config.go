@@ -9,22 +9,22 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/adm87/finch/pkg/application"
 	"github.com/adm87/finch/pkg/assets"
+	"github.com/adm87/finch/pkg/display"
 	"github.com/adm87/finch/pkg/engine"
 	"github.com/adm87/finch/pkg/errs"
 )
 
 type GameConfig struct {
-	Bundles     []assets.AssetBundle `yaml:"bundles"`
-	Engine      engine.Config        `yaml:"engine"`
-	Application application.Config   `yaml:"application"`
+	Bundles []assets.AssetBundle `yaml:"bundles"`
+	Engine  engine.Config        `yaml:"engine"`
+	Screen  display.Config       `yaml:"screen"`
 }
 
 func Default() *GameConfig {
 	return &GameConfig{
-		Application: *application.DefaultConfig(),
-		Engine:      *engine.DefaultConfig(),
+		Screen: *display.DefaultConfig(),
+		Engine: *engine.DefaultConfig(),
 	}
 }
 
