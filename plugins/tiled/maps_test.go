@@ -126,20 +126,20 @@ func newMaps(t *testing.T) (*tiled.Plugin, *assets.Assets, *images.Cache) {
 func TestLoadLoadsEverythingItRefersTo(t *testing.T) {
 	maps, as, ic := newMaps(t)
 
-	handle, err := maps.Load("level", tiled.LoadModeDynamic)
+	handle, err := maps.Load("level")
 	require.NoError(t, err)
 	for _, f := range mapFiles {
 		require.True(t, as.Loaded(f), f)
 	}
 
-	again, err := maps.Load("level", tiled.LoadModeDynamic)
+	again, err := maps.Load("level")
 	require.NoError(t, err)
 	require.Equal(t, handle, again)
 
 	info, err := maps.Map(handle)
 	require.NoError(t, err)
 	require.Len(t, info.Tilesets, 2)
-	require.Equal(t, "tilesets/terrain.tsx", info.Map.Tilesets[0].Source)
+	require.Equal(t, "../tilesets/terrain.tsx", info.Map.Tilesets[0].Source) // as written in the file
 	require.Len(t, info.Layers, 1)
 	require.Equal(t, []tmx.GID{2, 3}, info.Layers[0].GIDs)
 
@@ -167,40 +167,38 @@ func TestLoadLoadsEverythingItRefersTo(t *testing.T) {
 	require.False(t, ok)
 }
 
-func TestLoadRequiredNeedsFilesLoaded(t *testing.T) {
-	maps, as, _ := newMaps(t)
-
-	_, err := maps.Load("level", tiled.LoadModeRequired)
-	require.ErrorIs(t, err, errs.ErrInvalidOperation)
-
-	require.NoError(t, as.Load(mapFS, mapFiles...))
-	handle, err := maps.Load("level", tiled.LoadModeRequired)
-	require.NoError(t, err)
-
-	// Nothing was owned, so clearing keeps the files.
-	require.NoError(t, maps.Unload("level", tiled.UnloadModeIfOwned))
-	require.True(t, as.Loaded("maps/level.tmx"))
-	_, err = maps.Map(handle)
-	require.True(t, errs.IsNotFound(err))
-}
-
 func TestUnloadUnloadsWhatItLoaded(t *testing.T) {
 	maps, as, _ := newMaps(t)
 
-	_, err := maps.Load("level", tiled.LoadModeDynamic)
+	_, err := maps.Load("level")
 	require.NoError(t, err)
-	require.NoError(t, maps.Unload("level", tiled.UnloadModeIfOwned))
+	require.NoError(t, maps.Unload("level"))
 
 	for _, f := range mapFiles {
 		require.False(t, as.Loaded(f), f)
 	}
-	require.True(t, errs.IsNotFound(maps.Unload("level", tiled.UnloadModeKeep)))
+	require.True(t, errs.IsNotFound(maps.Unload("level")))
+}
+
+func TestUnloadKeepsFilesItDidNotLoad(t *testing.T) {
+	maps, as, _ := newMaps(t)
+	require.NoError(t, as.Load(mapFS, mapFiles...))
+
+	handle, err := maps.Load("level")
+	require.NoError(t, err)
+	require.NoError(t, maps.Unload("level"))
+
+	for _, f := range mapFiles {
+		require.True(t, as.Loaded(f), f)
+	}
+	_, err = maps.Map(handle)
+	require.True(t, errs.IsNotFound(err))
 }
 
 func TestLoadFailureUnloadsWhatItLoaded(t *testing.T) {
 	maps, as, _ := newMaps(t)
 
-	_, err := maps.Load("broken", tiled.LoadModeDynamic)
+	_, err := maps.Load("broken")
 	require.True(t, errs.IsNotFound(err))
 	require.False(t, as.Loaded("broken/level.tmx"))
 }

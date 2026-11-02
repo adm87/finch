@@ -14,26 +14,6 @@ import (
 
 const libraryKind = "aseprite library"
 
-// LoadMode controls whether Load may load missing content.
-type LoadMode int
-
-const (
-	// LoadModeRequired fails if the library's content isn't already loaded.
-	LoadModeRequired LoadMode = iota
-	// LoadModeDynamic loads the library's content if it isn't loaded.
-	LoadModeDynamic
-)
-
-// UnloadMode controls whether Unload unloads the library's content.
-type UnloadMode int
-
-const (
-	// UnloadModeKeep leaves the content loaded.
-	UnloadModeKeep UnloadMode = iota
-	// UnloadModeIfOwned unloads the content only if Load loaded it.
-	UnloadModeIfOwned
-)
-
 // Handle uniquely identifies an Aseprite library.
 type Handle uint64
 
@@ -45,8 +25,9 @@ type LibraryInfo struct {
 	owned       bool
 }
 
-// Load builds the named library from the config, or returns it if it's already loaded.
-func (p *Plugin) Load(name string, mode LoadMode) (Handle, error) {
+// Load builds the named library from the config, loading its content if it
+// isn't loaded yet, or returns it if it's already loaded.
+func (p *Plugin) Load(name string) (Handle, error) {
 	if handle, exists := p.libraries.Lookup(name); exists {
 		return handle, nil
 	}
@@ -58,9 +39,6 @@ func (p *Plugin) Load(name string, mode LoadMode) (Handle, error) {
 
 	owned := false
 	if !p.isLibraryLoaded(library) {
-		if mode == LoadModeRequired {
-			return 0, errs.InvalidOperation(fmt.Sprintf("library %q is not loaded and mode is LoadModeRequired", name))
-		}
 		if err := p.loadLibrary(library); err != nil && !errs.IsAlreadyExists(err) {
 			return 0, fmt.Errorf("load library %q: %w", name, err)
 		}
@@ -83,7 +61,8 @@ func (p *Plugin) Load(name string, mode LoadMode) (Handle, error) {
 	return p.libraries.Insert(name, info)
 }
 
-func (p *Plugin) Unload(name string, mode UnloadMode) error {
+// Unload forgets the library and unloads its content if its Load loaded it.
+func (p *Plugin) Unload(name string) error {
 	handle, exists := p.libraries.Lookup(name)
 	if !exists {
 		return errs.NotFound(libraryKind, name)
@@ -94,7 +73,7 @@ func (p *Plugin) Unload(name string, mode UnloadMode) error {
 		return fmt.Errorf("unload library %q: %w", name, err)
 	}
 
-	if mode != UnloadModeIfOwned || !info.owned {
+	if !info.owned {
 		return nil
 	}
 

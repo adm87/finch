@@ -14,28 +14,9 @@ const mapKind = "tiled map"
 // Handle uniquely identifies a Tiled map.
 type Handle uint64
 
-// LoadMode controls whether Load may load missing files.
-type LoadMode uint8
-
-const (
-	// LoadModeRequired fails if any of the map's files isn't already loaded.
-	LoadModeRequired LoadMode = iota
-	// LoadModeDynamic loads the map's files that aren't loaded.
-	LoadModeDynamic
-)
-
-// UnloadMode controls whether Unload unloads the map's files.
-type UnloadMode int
-
-const (
-	// UnloadModeKeep leaves the files loaded.
-	UnloadModeKeep UnloadMode = iota
-	// UnloadModeIfOwned unloads the files Load loaded.
-	UnloadModeIfOwned
-)
-
-// Load builds the named map from the config, or returns it if it's already loaded.
-func (p *Plugin) Load(name string, mode LoadMode) (Handle, error) {
+// Load builds the named map from the config, loading any of its files that
+// aren't loaded yet, or returns it if it's already loaded.
+func (p *Plugin) Load(name string) (Handle, error) {
 	if handle, exists := p.maps.Lookup(name); exists {
 		return handle, nil
 	}
@@ -49,8 +30,13 @@ func (p *Plugin) Load(name string, mode LoadMode) (Handle, error) {
 		return 0, fmt.Errorf("map %q: %w", name, err)
 	}
 
-	l := &mapLoader{plugin: p, fsys: fsys, mode: mode, tilesets: make(map[assets.Asset]*tmx.Tileset)}
-	info, err := l.load(cfg.TMX)
+	l := &mapLoader{
+		plugin:    p,
+		fsys:      fsys,
+		tilesets:  make(map[string]*tmx.Tileset),
+		templates: make(map[string]struct{}),
+	}
+	info, err := l.load(cfg.TMX.String())
 	if err != nil {
 		return 0, fmt.Errorf("map %q: %w", name, errors.Join(err, p.unload(l.owned)))
 	}
@@ -59,7 +45,8 @@ func (p *Plugin) Load(name string, mode LoadMode) (Handle, error) {
 	return p.maps.Insert(name, info)
 }
 
-func (p *Plugin) Unload(name string, mode UnloadMode) error {
+// Unload forgets the map and unloads the files its Load loaded.
+func (p *Plugin) Unload(name string) error {
 	handle, exists := p.maps.Lookup(name)
 	if !exists {
 		return errs.NotFound(mapKind, name)
@@ -70,9 +57,6 @@ func (p *Plugin) Unload(name string, mode UnloadMode) error {
 		return fmt.Errorf("unload map %q: %w", name, err)
 	}
 
-	if mode != UnloadModeIfOwned {
-		return nil
-	}
 	if err := p.unload(info.owned); err != nil {
 		return fmt.Errorf("unload map %q: %w", name, err)
 	}
