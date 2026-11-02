@@ -3,38 +3,14 @@ package game
 import (
 	"fmt"
 
-	"github.com/adm87/finch/pkg/errs"
-	"github.com/adm87/finch/pkg/images"
+	"github.com/adm87/finch/pkg/assets"
 )
 
-// LoadBundles loads each bundle's images, maps and libraries from its source.
-// Loading a bundle twice reuses what's already loaded.
-func (g *Game) LoadBundles(names ...string) error {
-	for _, name := range names {
-		if err := g.loadBundle(name); err != nil {
-			return fmt.Errorf("bundle %q: %w", name, err)
-		}
-	}
-	return nil
-}
-
-func (g *Game) loadBundle(name string) error {
-	bundle, ok := g.bundles[name]
-	if !ok {
-		return errs.NotFound("bundle", name)
-	}
-
-	if err := images.Load(g.resources, g.images, bundle.Source, bundle.Images...); err != nil {
-		return err
-	}
-	for _, m := range bundle.Maps {
-		if _, err := g.tiled.Load(bundle.Source, m); err != nil {
-			return err
-		}
-	}
-	for _, lib := range bundle.Libraries {
-		if _, err := g.aseprite.Load(bundle.Source, lib); err != nil {
-			return err
+// LoadBundles loads the bundles that stay loaded for the whole session.
+func (g *Game) LoadBundles(bundles []assets.AssetBundle) error {
+	for _, bundle := range bundles {
+		if err := bundle.Load(g.assets); err != nil {
+			return fmt.Errorf("load bundle from %q: %w", bundle.FileSystem, err)
 		}
 	}
 	return nil

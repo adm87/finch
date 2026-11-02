@@ -15,20 +15,8 @@ engine:
     resolution_scale: 0.5
     screen_filter: 0
 
-# Content loaded together from one source: "embedded" (built into the binary)
-# or "disk" (content/resources).
+# Bundles loaded when the game starts. They stay loaded for the whole session.
 bundles:
-  startup:
-    source: embedded
-    images:
-      - images/default_10x10.png
-  gym:
-    source: disk
-    maps:
-      - gym04
-    libraries:
-      - captain
-
-# Bundles loaded before the first scene. They stay loaded for the whole session.
-startup:
-  - startup
+  - filesystem: images
+    assets:
+      - default_10x10.png

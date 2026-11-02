@@ -4,11 +4,13 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/errs"
 )
 
 type MapConfig struct {
-	TMX string `yaml:"tmx"`
+	FileSystem assets.FileSystem `yaml:"filesystem"`
+	TMX        assets.Asset      `yaml:"tmx"`
 }
 
 // Config lists maps by name.
@@ -23,6 +25,9 @@ func DefaultConfig() *Config {
 func (c Config) Validate() error {
 	var errList []error
 	for name, m := range c.Maps {
+		if m.FileSystem == "" {
+			errList = append(errList, errs.Argument("filesystem", fmt.Sprintf("map %q needs a file system", name)))
+		}
 		if m.TMX == "" {
 			errList = append(errList, errs.Argument("tmx", fmt.Sprintf("map %q needs a .tmx file", name)))
 		}

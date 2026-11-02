@@ -3,93 +3,60 @@ package tiled
 import (
 	"fmt"
 	"image"
+	"io/fs"
 	"path"
 	"strconv"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
+	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/images"
-	"github.com/adm87/finch/pkg/resource"
 	"github.com/adm87/finch/plugins/tiled/tmx"
 )
 
-// mapLoader builds one map's info from one source. A map only names the files
-// it needs once it's parsed, so it loads in stages: the map, its templates,
-// its tilesets, then their images.
+// mapLoader builds one map's info, recording the files it had to load.
 type mapLoader struct {
-	plugin *Plugin
-	src    resource.Source
+	plugin   *Plugin
+	fsys     fs.FS
+	tilesets map[assets.Asset]*tmx.Tileset // parsed once per map
+	owned    []assets.Asset
+	mode     LoadMode
 }
 
-func (l *mapLoader) load(name string) (MapInfo, error) {
-	maps, err := loadAll(l, []string{name}, parse[tmx.Map])
+func (l *mapLoader) load(asset assets.Asset) (MapInfo, error) {
+	tm, err := parseAsset[tmx.Map](l, asset)
 	if err != nil {
 		return MapInfo{}, err
 	}
-	tm := maps[name]
 	if tm.Orientation != tmx.Orthogonal {
 		return MapInfo{}, errs.NotSupported(fmt.Sprintf("%s maps", tm.Orientation))
 	}
 
-	refs := distinct(mapRefs(tm, path.Dir(name)))
-
-	// Templates name tilesets of their own, so they're read first.
-	templates, err := loadAll(l, withExt(refs, ".tx"), parse[tmx.Template])
-	if err != nil {
+	refs := distinct(mapRefs(tm, path.Dir(asset.String())))
+	if err := l.require(refs...); err != nil {
 		return MapInfo{}, err
-	}
-	tilesetNames := withExt(refs, ".tsx")
-	for txName, tx := range templates {
-		tilesetNames = append(tilesetNames, templateRefs(tx, path.Dir(txName))...)
-	}
-
-	tilesets, err := loadAll(l, distinct(tilesetNames), parse[tmx.Tileset])
-	if err != nil {
-		return MapInfo{}, err
-	}
-	for tsName, ts := range tilesets {
-		tilesetRefs(ts, path.Dir(tsName))
-	}
-
-	// External tilesets cover the templates' too, so objects can be drawn later.
-	var imageNames []string
-	for _, ts := range tilesets {
-		imageNames = append(imageNames, tilesetImageNames(ts)...)
-	}
-	for _, mt := range tm.Tilesets {
-		if mt.Embedded != nil {
-			imageNames = append(imageNames, tilesetImageNames(mt.Embedded)...)
-		}
-	}
-	if err := images.Load(l.plugin.resources, l.plugin.images, l.src, distinct(imageNames)...); err != nil {
-		return MapInfo{}, err
-	}
-
-	external := make(map[string]TilesetInfo, len(tilesets))
-	for tsName, ts := range tilesets {
-		info, err := l.tilesetImages(ts)
-		if err != nil {
-			return MapInfo{}, fmt.Errorf("tileset %q: %w", ts.Name, err)
-		}
-		external[tsName] = info
 	}
 
 	info := MapInfo{Map: tm, Tilesets: make([]TilesetInfo, 0, len(tm.Tilesets))}
 	for _, mt := range tm.Tilesets {
-		ts, ok := external[mt.Source]
-		if mt.Embedded != nil {
-			if ts, err = l.tilesetImages(mt.Embedded); err != nil {
-				return MapInfo{}, fmt.Errorf("tileset %q: %w", mt.Embedded.Name, err)
-			}
-		} else if !ok {
-			return MapInfo{}, errs.NotFound("tileset", mt.Source)
+		ts, err := l.mapTileset(mt)
+		if err != nil {
+			return MapInfo{}, err
 		}
-		ts.FirstGID = mt.FirstGID
 		info.Tilesets = append(info.Tilesets, ts)
 	}
 	info.overdraw = overdraw(tm, info.Tilesets)
+
+	for _, ref := range refs {
+		if ref.Type() != "tx" {
+			continue
+		}
+		if err := l.template(ref); err != nil {
+			return MapInfo{}, err
+		}
+	}
 
 	layers, err := decodeLayers(tm)
 	if err != nil {
@@ -99,7 +66,53 @@ func (l *mapLoader) load(name string) (MapInfo, error) {
 	return info, nil
 }
 
-// tilesetImages looks up the tileset's images and slices sheets into tiles.
+func (l *mapLoader) mapTileset(mt tmx.MapTileset) (TilesetInfo, error) {
+	ts := mt.Embedded
+	if ts == nil {
+		var err error
+		if ts, err = l.tileset(assets.Asset(mt.Source)); err != nil {
+			return TilesetInfo{}, err
+		}
+	}
+
+	info, err := l.tilesetImages(ts)
+	if err != nil {
+		return TilesetInfo{}, fmt.Errorf("tileset %q: %w", ts.Name, err)
+	}
+	info.FirstGID = mt.FirstGID
+	return info, nil
+}
+
+// tileset parses a .tsx file and loads its images.
+func (l *mapLoader) tileset(asset assets.Asset) (*tmx.Tileset, error) {
+	if ts, ok := l.tilesets[asset]; ok {
+		return ts, nil
+	}
+	ts, err := parseAsset[tmx.Tileset](l, asset)
+	if err != nil {
+		return nil, err
+	}
+	if err := l.require(tilesetRefs(ts, path.Dir(asset.String()))...); err != nil {
+		return nil, err
+	}
+	l.tilesets[asset] = ts
+	return ts, nil
+}
+
+// template loads a template's tileset, so it's ready when objects are spawned.
+func (l *mapLoader) template(asset assets.Asset) error {
+	tx, err := parseAsset[tmx.Template](l, asset)
+	if err != nil {
+		return err
+	}
+	for _, ref := range templateRefs(tx, path.Dir(asset.String())) {
+		if _, err := l.tileset(ref); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (l *mapLoader) tilesetImages(ts *tmx.Tileset) (TilesetInfo, error) {
 	info := TilesetInfo{Tileset: ts}
 	if ts.Image != nil {
@@ -146,63 +159,60 @@ func (l *mapLoader) image(img *tmx.Image) (images.Handle, error) {
 	if img.Source == "" {
 		return 0, errs.NotSupported("images embedded as data")
 	}
-	handle, ok := l.plugin.images.Lookup(resource.Key(l.src, img.Source))
-	if !ok {
+	handle, exists := l.plugin.images.Lookup(img.Source)
+	if !exists {
 		return 0, errs.NotFound("image", img.Source)
 	}
 	return handle, nil
 }
 
-// loadAll reads and parses names from the loader's source with a throwaway
-// resource.Loader, failing if any of them fails.
-func loadAll[T any](l *mapLoader, names []string, decode func([]byte) (*T, error)) (map[string]*T, error) {
-	ld := resource.NewLoader(l.plugin.resources, decode)
-	ld.Queue(l.src, names...)
-	results := ld.Load()
-	if err := resource.Err(results); err != nil {
-		return nil, err
+// require loads the assets that aren't loaded, or fails in LoadModeRequired.
+func (l *mapLoader) require(refs ...assets.Asset) error {
+	var missing []assets.Asset
+	for _, ref := range refs {
+		if !l.plugin.assets.Loaded(ref) {
+			missing = append(missing, ref)
+		}
 	}
-	out := make(map[string]*T, len(results))
-	for _, r := range results {
-		out[r.Name] = r.Value
+	if len(missing) == 0 {
+		return nil
 	}
-	return out, nil
+	if l.mode == LoadModeRequired {
+		return errs.InvalidOperation(fmt.Sprintf("%v not loaded and mode is LoadModeRequired", missing))
+	}
+
+	err := l.plugin.assets.Load(l.fsys, missing...)
+
+	// Load keeps going after a failure, so own whatever made it in.
+	for _, ref := range missing {
+		if l.plugin.assets.Loaded(ref) {
+			l.owned = append(l.owned, ref)
+		}
+	}
+	return err
 }
 
-func parse[T any, PT interface {
+// parseAsset loads asset if needed and parses its bytes from the data cache.
+func parseAsset[T any, PT interface {
 	*T
 	tmx.Validator
-}](raw []byte) (*T, error) {
+}](l *mapLoader, asset assets.Asset) (*T, error) {
+	if err := l.require(asset); err != nil {
+		return nil, err
+	}
+	handle, exists := l.plugin.data.Lookup(asset.String())
+	if !exists {
+		return nil, errs.NotFound("data", asset.String())
+	}
+	raw, err := l.plugin.data.Get(handle)
+	if err != nil {
+		return nil, fmt.Errorf("%q: %w", asset, err)
+	}
 	value, err := tmx.Parse[T, PT](raw)
 	if err != nil {
-		return nil, errs.Format("tiled file", "invalid").Wrap(err)
+		return nil, errs.Format(asset.String(), "invalid tiled file").Wrap(err)
 	}
 	return value, nil
-}
-
-// tilesetImageNames lists the image files a tileset draws from. Images
-// embedded as data have no file and are reported when the tileset is built.
-func tilesetImageNames(ts *tmx.Tileset) []string {
-	var names []string
-	if ts.Image != nil && ts.Image.Source != "" {
-		names = append(names, ts.Image.Source)
-	}
-	for _, t := range ts.Tiles {
-		if t.Image != nil && t.Image.Source != "" {
-			names = append(names, t.Image.Source)
-		}
-	}
-	return names
-}
-
-func withExt(names []string, ext string) []string {
-	var out []string
-	for _, name := range names {
-		if path.Ext(name) == ext {
-			out = append(out, name)
-		}
-	}
-	return out
 }
 
 // sheetRects cuts a tileset image so frame i is local tile i. Older files

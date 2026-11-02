@@ -16,7 +16,6 @@ const (
 var files embed.FS
 
 var (
-	Assets  = mustSub(files, "assets") // configs/ and images/, as a resource source
 	Configs = mustSub(files, "assets/configs")
 	Images  = mustSub(files, "assets/images")
 )

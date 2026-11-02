@@ -3,11 +3,12 @@ package tiled
 import (
 	"path"
 
+	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/plugins/tiled/tmx"
 )
 
-func mapRefs(m *tmx.Map, dir string) []string {
-	var refs []string
+func mapRefs(m *tmx.Map, dir string) []assets.Asset {
+	var refs []assets.Asset
 	for i := range m.Tilesets {
 		ts := &m.Tilesets[i]
 		if ts.Embedded != nil {
@@ -31,7 +32,7 @@ func mapRefs(m *tmx.Map, dir string) []string {
 	return refs
 }
 
-func tilesetRefs(ts *tmx.Tileset, dir string) []string {
+func tilesetRefs(ts *tmx.Tileset, dir string) []assets.Asset {
 	refs := appendImageRef(nil, dir, ts.Image)
 	for i := range ts.Tiles {
 		refs = appendImageRef(refs, dir, ts.Tiles[i].Image)
@@ -39,7 +40,7 @@ func tilesetRefs(ts *tmx.Tileset, dir string) []string {
 	return refs
 }
 
-func templateRefs(t *tmx.Template, dir string) []string {
+func templateRefs(t *tmx.Template, dir string) []assets.Asset {
 	if t.Tileset == nil {
 		return nil
 	}
@@ -47,26 +48,26 @@ func templateRefs(t *tmx.Template, dir string) []string {
 }
 
 // appendImageRef skips images embedded as data, which have no file.
-func appendImageRef(refs []string, dir string, img *tmx.Image) []string {
+func appendImageRef(refs []assets.Asset, dir string, img *tmx.Image) []assets.Asset {
 	if img == nil {
 		return refs
 	}
 	return appendRef(refs, dir, &img.Source)
 }
 
-// appendRef rewrites ref to its resolved path, so it can be read from the
-// plugin's file system as is.
-func appendRef(refs []string, dir string, ref *string) []string {
+// appendRef rewrites ref to its resolved path, so lookups after import can use
+// it as is.
+func appendRef(refs []assets.Asset, dir string, ref *string) []assets.Asset {
 	if *ref == "" {
 		return refs
 	}
 	*ref = path.Join(dir, *ref)
-	return append(refs, *ref)
+	return append(refs, assets.Asset(*ref))
 }
 
 // distinct drops repeated refs, keeping the order they were found in.
-func distinct(refs []string) []string {
-	seen := make(map[string]struct{}, len(refs))
+func distinct(refs []assets.Asset) []assets.Asset {
+	seen := make(map[assets.Asset]struct{}, len(refs))
 	out := refs[:0]
 	for _, ref := range refs {
 		if _, ok := seen[ref]; ok {

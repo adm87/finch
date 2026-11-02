@@ -5,16 +5,18 @@ import (
 
 	"github.com/go-openapi/testify/require"
 
+	"github.com/adm87/finch/pkg/assets"
+	"github.com/adm87/finch/pkg/data"
 	"github.com/adm87/finch/pkg/errs"
+	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/logger"
 	"github.com/adm87/finch/pkg/rendering"
-	"github.com/adm87/finch/pkg/resource"
 	"github.com/adm87/finch/plugins/tiled"
 )
 
 func TestNewPluginChecksTheConfig(t *testing.T) {
 	newPlugin := func(cfg *tiled.Config) (*tiled.Plugin, error) {
-		return tiled.NewPlugin(cfg, resource.New(), rendering.NewPipeline(), logger.N)
+		return tiled.NewPlugin(cfg, assets.NewAssets(), data.NewCache(), images.NewCache(), rendering.NewPipeline(), logger.N)
 	}
 
 	_, err := newPlugin(nil)
