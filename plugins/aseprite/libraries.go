@@ -3,7 +3,6 @@ package aseprite
 import (
 	"encoding/json"
 	"fmt"
-	"io/fs"
 
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/images"
@@ -34,19 +33,17 @@ func (p *Plugin) Load(src resource.Source, name string) (Handle, error) {
 	if err != nil {
 		return 0, err
 	}
-	fsys, err := p.sources.FS(src)
+	atlas, err := p.loadAtlas(src, library.Atlas)
 	if err != nil {
 		return 0, fmt.Errorf("library %q: %w", name, err)
 	}
 
-	atlas, err := p.decodeAtlas(fsys, library.Atlas)
-	if err != nil {
+	if err := images.Load(p.resources, p.images, src, library.Image); err != nil {
 		return 0, fmt.Errorf("library %q: %w", name, err)
 	}
-
-	imageHandle, err := p.images.Load(resource.Key(src, library.Image), fsys, library.Image)
-	if err != nil {
-		return 0, fmt.Errorf("library %q: %w", name, err)
+	imageHandle, ok := p.images.Lookup(resource.Key(src, library.Image))
+	if !ok {
+		return 0, errs.NotFound("image", library.Image)
 	}
 	if err := p.images.SliceFrames(imageHandle, atlas.Frames.FrameRects()); err != nil {
 		return 0, fmt.Errorf("slice image %q: %w", library.Image, err)
@@ -82,19 +79,15 @@ func (p *Plugin) getLibraryConfig(name string) (*LibraryConfig, error) {
 	return &library, nil
 }
 
-func (p *Plugin) decodeAtlas(fsys fs.FS, name string) (*Atlas, error) {
-	raw, err := fs.ReadFile(fsys, name)
-	if err != nil {
-		return nil, fmt.Errorf("read %q: %w", name, err)
+func (p *Plugin) loadAtlas(src resource.Source, name string) (*Atlas, error) {
+	l := resource.NewLoader(p.resources, decodeAtlas)
+	l.Queue(src, name)
+	results := l.Load()
+	if err := resource.Err(results); err != nil {
+		return nil, err
 	}
 
-	var atlas *Atlas
-	if err := json.Unmarshal(raw, &atlas); err != nil {
-		return nil, errs.Format(name, "invalid aseprite json").Wrap(err)
-	}
-	if atlas == nil {
-		return nil, errs.Format(name, "atlas is empty")
-	}
+	atlas := results[0].Value
 	if dropped := atlas.DropMissingTags(); len(dropped) > 0 {
 		p.logger.Warn("dropping missing tags", logger.String("atlas", name), logger.Strings("tags", dropped))
 	}
@@ -103,5 +96,16 @@ func (p *Plugin) decodeAtlas(fsys fs.FS, name string) (*Atlas, error) {
 	}
 
 	atlas.fitTagsToFrames()
+	return atlas, nil
+}
+
+func decodeAtlas(raw []byte) (*Atlas, error) {
+	var atlas *Atlas
+	if err := json.Unmarshal(raw, &atlas); err != nil {
+		return nil, errs.Format("aseprite json", "invalid").Wrap(err)
+	}
+	if atlas == nil {
+		return nil, errs.Format("aseprite json", "atlas is empty")
+	}
 	return atlas, nil
 }

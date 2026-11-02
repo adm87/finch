@@ -37,7 +37,12 @@ func Boot() error {
 		return err
 	}
 
-	g, err := game.New(cfgs, newSources(resourcesRoot), l)
+	res, err := newResources(resourcesRoot)
+	if err != nil {
+		return err
+	}
+
+	g, err := game.New(cfgs, res, l)
 	if err != nil {
 		return err
 	}
@@ -80,9 +85,13 @@ func loadConfig[T any](fsys fs.FS, path string, cfg *T) error {
 	return nil
 }
 
-func newSources(root string) *resource.Loader {
-	return resource.NewLoader(map[resource.Source]fs.FS{
-		embeddedSource: embedded.Assets,
-		diskSource:     resources.New(root),
-	})
+func newResources(root string) (*resource.Resources, error) {
+	res := resource.New()
+	if err := res.Mount(embeddedSource, embedded.Assets); err != nil {
+		return nil, err
+	}
+	if err := res.Mount(diskSource, resources.New(root)); err != nil {
+		return nil, err
+	}
+	return res, nil
 }

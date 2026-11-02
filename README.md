@@ -33,7 +33,7 @@ go run -tags finch_dev ./cmd/game
 - `pkg/` is the engine core:
   - `engine` runs the game loop, the update phases and drawing.
   - `world` is the entity world with a spatial index.
-  - `resource` maps source names to file systems, so bundles can load from disk, the binary or anywhere else.
+  - `resource` mounts named sources (disk, the binary or anywhere else) and reads files from them, so loaders don't care where a file comes from.
   - The rest are smaller building blocks: `images`, `rendering`, `transform`, `display`, `hashgrid`, `slotmap` and `errs`.
 - `plugins/` connects third-party tools:
   - `aseprite` handles sprite sheets and animation.

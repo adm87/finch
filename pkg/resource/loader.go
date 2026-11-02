@@ -1,35 +1,84 @@
 package resource
 
 import (
-	"io/fs"
-	"maps"
-
-	"github.com/adm87/finch/pkg/errs"
+	"errors"
+	"fmt"
 )
 
-// Source names a file system that resources are read from.
-type Source string
-
-// Loader resolves sources to the file systems behind them.
-type Loader struct {
-	sources map[Source]fs.FS
+// Request is a set of files to read from one source.
+type Request struct {
+	Source Source
+	Names  []string
 }
 
-func NewLoader(sources map[Source]fs.FS) *Loader {
-	return &Loader{sources: maps.Clone(sources)}
+// Result is one file a Loader read, or the error that stopped it.
+type Result[T any] struct {
+	Value  T
+	Err    error
+	Source Source
+	Name   string
 }
 
-// FS returns the file system src refers to.
-func (l *Loader) FS(src Source) (fs.FS, error) {
-	fsys, ok := l.sources[src]
-	if !ok {
-		return nil, errs.NotFound("source", string(src))
+// Loader reads queued files and decodes each into a T. It holds nothing once
+// Load returns, so make one per batch and throw it away.
+type Loader[T any] struct {
+	res    *Resources
+	decode func([]byte) (T, error)
+	queue  []Request
+}
+
+func NewLoader[T any](res *Resources, decode func([]byte) (T, error)) *Loader[T] {
+	return &Loader[T]{res: res, decode: decode}
+}
+
+func (l *Loader[T]) Queue(src Source, names ...string) {
+	l.queue = append(l.queue, Request{Source: src, Names: names})
+}
+
+// Load reads and decodes everything queued, in order. A file queued twice is
+// read once. Every file gets a result, so one failure doesn't stop the rest.
+func (l *Loader[T]) Load() []Result[T] {
+	seen := make(map[string]struct{})
+	var results []Result[T]
+	for _, req := range l.queue {
+		for _, name := range req.Names {
+			key := Key(req.Source, name)
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			results = append(results, l.load(req.Source, name))
+		}
 	}
-	return fsys, nil
+	l.queue = nil
+	return results
 }
 
-// Key names a file by its source and path, so the same path in two sources
-// stays two resources.
-func Key(src Source, name string) string {
-	return string(src) + ":" + name
+func (l *Loader[T]) load(src Source, name string) Result[T] {
+	r := Result[T]{Source: src, Name: name}
+	raw, err := l.res.ReadFile(src, name)
+	if err != nil {
+		r.Err = err
+		return r
+	}
+	if r.Value, err = l.decode(raw); err != nil {
+		r.Err = fmt.Errorf("decode %s: %w", Key(src, name), err)
+	}
+	return r
+}
+
+// Bytes decodes a file as its raw bytes.
+func Bytes(raw []byte) ([]byte, error) {
+	return raw, nil
+}
+
+// Err joins the errors in results, or returns nil if every file loaded.
+func Err[T any](results []Result[T]) error {
+	var errList []error
+	for _, r := range results {
+		if r.Err != nil {
+			errList = append(errList, r.Err)
+		}
+	}
+	return errors.Join(errList...)
 }

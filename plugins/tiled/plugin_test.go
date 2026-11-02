@@ -14,7 +14,7 @@ import (
 
 func TestNewPluginChecksTheConfig(t *testing.T) {
 	newPlugin := func(cfg *tiled.Config) (*tiled.Plugin, error) {
-		return tiled.NewPlugin(cfg, resource.NewLoader(nil), rendering.NewPipeline(), logger.N)
+		return tiled.NewPlugin(cfg, resource.New(), rendering.NewPipeline(), logger.N)
 	}
 
 	_, err := newPlugin(nil)

@@ -95,8 +95,9 @@ func newMaps(t *testing.T) *tiled.Plugin {
 		"layered":  {TMX: "layered/map.tmx"},
 		"infinite": {TMX: "infinite/map.tmx"},
 	}}
-	sources := resource.NewLoader(map[resource.Source]fs.FS{testSource: mapFS})
-	p, err := tiled.NewPlugin(cfg, sources, rendering.NewPipeline(), logger.NewLogger(io.Discard, logger.Options{}))
+	res := resource.New()
+	require.NoError(t, res.Mount(testSource, mapFS))
+	p, err := tiled.NewPlugin(cfg, res, rendering.NewPipeline(), logger.NewLogger(io.Discard, logger.Options{}))
 	require.NoError(t, err)
 	return p
 }
@@ -168,8 +169,10 @@ func TestLoadFailureKeepsNothing(t *testing.T) {
 
 func TestLoadKeepsSourcesApart(t *testing.T) {
 	cfg := &tiled.Config{Maps: map[string]tiled.MapConfig{"level": {TMX: "maps/level.tmx"}}}
-	sources := resource.NewLoader(map[resource.Source]fs.FS{"disk": mapFS, "cdn": mapFS})
-	maps, err := tiled.NewPlugin(cfg, sources, rendering.NewPipeline(), logger.N)
+	res := resource.New()
+	require.NoError(t, res.Mount("disk", mapFS))
+	require.NoError(t, res.Mount("cdn", mapFS))
+	maps, err := tiled.NewPlugin(cfg, res, rendering.NewPipeline(), logger.N)
 	require.NoError(t, err)
 
 	disk, err := maps.Load("disk", "level")

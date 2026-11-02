@@ -17,7 +17,10 @@ func TestBootSequence(t *testing.T) {
 	cfgs, err := loadConfigs(embedded.Configs)
 	require.NoError(t, err)
 
-	g, err := game.New(cfgs, newSources("../../../"+resourcesRoot), logger.N)
+	res, err := newResources("../../../" + resourcesRoot)
+	require.NoError(t, err)
+
+	g, err := game.New(cfgs, res, logger.N)
 	require.NoError(t, err)
 	require.NoError(t, g.LoadBundles(cfgs.Game.Startup...))
 	require.NoError(t, g.MakeTestScene())

@@ -21,7 +21,7 @@ type Game struct {
 	screen        *display.Screen
 	view          *display.View
 	pipeline      *rendering.Pipeline
-	sources       *resource.Loader
+	resources     *resource.Resources
 	images        *images.Cache
 	bundles       map[string]Bundle
 	tiled         *tiled.Plugin
@@ -37,8 +37,8 @@ type Configs struct {
 	Aseprite *aseprite.Config
 }
 
-// New builds the engine pieces and the plugins. Bundles are loaded from sources.
-func New(cfgs Configs, sources *resource.Loader, l logger.Logger) (*Game, error) {
+// New builds the engine pieces and the plugins. Everything loads from res.
+func New(cfgs Configs, res *resource.Resources, l logger.Logger) (*Game, error) {
 	cfg := cfgs.Game
 	if err := cfg.Screen.Validate(); err != nil {
 		return nil, err
@@ -46,13 +46,13 @@ func New(cfgs Configs, sources *resource.Loader, l logger.Logger) (*Game, error)
 
 	screen := display.NewScreen(cfg.Screen.Width, cfg.Screen.Height)
 	g := &Game{
-		world:    world.NewWorld(),
-		screen:   screen,
-		view:     display.NewViewport(screen),
-		pipeline: rendering.NewPipeline(),
-		sources:  sources,
-		images:   images.NewCache(),
-		bundles:  cfg.Bundles,
+		world:     world.NewWorld(),
+		screen:    screen,
+		view:      display.NewViewport(screen),
+		pipeline:  rendering.NewPipeline(),
+		images:    images.NewCache(),
+		resources: res,
+		bundles:   cfg.Bundles,
 	}
 
 	imageRenderer, err := g.pipeline.RegisterRenderer(images.NewRenderer(g.images))
@@ -61,11 +61,11 @@ func New(cfgs Configs, sources *resource.Loader, l logger.Logger) (*Game, error)
 	}
 	g.imageRenderer = imageRenderer
 
-	if g.tiled, err = tiled.NewPlugin(cfgs.Tiled, sources, g.pipeline, l); err != nil {
+	if g.tiled, err = tiled.NewPlugin(cfgs.Tiled, res, g.pipeline, l); err != nil {
 		return nil, fmt.Errorf("create tiled plugin: %w", err)
 	}
 
-	if g.aseprite, err = aseprite.NewPlugin(cfgs.Aseprite, sources, g.images, l); err != nil {
+	if g.aseprite, err = aseprite.NewPlugin(cfgs.Aseprite, res, g.images, l); err != nil {
 		return nil, fmt.Errorf("create aseprite plugin: %w", err)
 	}
 

@@ -3,7 +3,6 @@ package tiled
 import (
 	"fmt"
 	"image"
-	"io/fs"
 	"path"
 	"strconv"
 
@@ -16,43 +15,81 @@ import (
 	"github.com/adm87/finch/plugins/tiled/tmx"
 )
 
-// mapLoader builds one map's info from one source.
+// mapLoader builds one map's info from one source. A map only names the files
+// it needs once it's parsed, so it loads in stages: the map, its templates,
+// its tilesets, then their images.
 type mapLoader struct {
-	plugin   *Plugin
-	fsys     fs.FS
-	tilesets map[string]*tmx.Tileset // parsed once per map
-	src      resource.Source
+	plugin *Plugin
+	src    resource.Source
 }
 
 func (l *mapLoader) load(name string) (MapInfo, error) {
-	tm, err := parseFile[tmx.Map](l, name)
+	maps, err := loadAll(l, []string{name}, parse[tmx.Map])
 	if err != nil {
 		return MapInfo{}, err
 	}
+	tm := maps[name]
 	if tm.Orientation != tmx.Orthogonal {
 		return MapInfo{}, errs.NotSupported(fmt.Sprintf("%s maps", tm.Orientation))
 	}
 
 	refs := distinct(mapRefs(tm, path.Dir(name)))
 
+	// Templates name tilesets of their own, so they're read first.
+	templates, err := loadAll(l, withExt(refs, ".tx"), parse[tmx.Template])
+	if err != nil {
+		return MapInfo{}, err
+	}
+	tilesetNames := withExt(refs, ".tsx")
+	for txName, tx := range templates {
+		tilesetNames = append(tilesetNames, templateRefs(tx, path.Dir(txName))...)
+	}
+
+	tilesets, err := loadAll(l, distinct(tilesetNames), parse[tmx.Tileset])
+	if err != nil {
+		return MapInfo{}, err
+	}
+	for tsName, ts := range tilesets {
+		tilesetRefs(ts, path.Dir(tsName))
+	}
+
+	// External tilesets cover the templates' too, so objects can be drawn later.
+	var imageNames []string
+	for _, ts := range tilesets {
+		imageNames = append(imageNames, tilesetImageNames(ts)...)
+	}
+	for _, mt := range tm.Tilesets {
+		if mt.Embedded != nil {
+			imageNames = append(imageNames, tilesetImageNames(mt.Embedded)...)
+		}
+	}
+	if err := images.Load(l.plugin.resources, l.plugin.images, l.src, distinct(imageNames)...); err != nil {
+		return MapInfo{}, err
+	}
+
+	external := make(map[string]TilesetInfo, len(tilesets))
+	for tsName, ts := range tilesets {
+		info, err := l.tilesetImages(ts)
+		if err != nil {
+			return MapInfo{}, fmt.Errorf("tileset %q: %w", ts.Name, err)
+		}
+		external[tsName] = info
+	}
+
 	info := MapInfo{Map: tm, Tilesets: make([]TilesetInfo, 0, len(tm.Tilesets))}
 	for _, mt := range tm.Tilesets {
-		ts, err := l.mapTileset(mt)
-		if err != nil {
-			return MapInfo{}, err
+		ts, ok := external[mt.Source]
+		if mt.Embedded != nil {
+			if ts, err = l.tilesetImages(mt.Embedded); err != nil {
+				return MapInfo{}, fmt.Errorf("tileset %q: %w", mt.Embedded.Name, err)
+			}
+		} else if !ok {
+			return MapInfo{}, errs.NotFound("tileset", mt.Source)
 		}
+		ts.FirstGID = mt.FirstGID
 		info.Tilesets = append(info.Tilesets, ts)
 	}
 	info.overdraw = overdraw(tm, info.Tilesets)
-
-	for _, ref := range refs {
-		if path.Ext(ref) != ".tx" {
-			continue
-		}
-		if err := l.template(ref); err != nil {
-			return MapInfo{}, err
-		}
-	}
 
 	layers, err := decodeLayers(tm)
 	if err != nil {
@@ -62,56 +99,7 @@ func (l *mapLoader) load(name string) (MapInfo, error) {
 	return info, nil
 }
 
-func (l *mapLoader) mapTileset(mt tmx.MapTileset) (TilesetInfo, error) {
-	ts := mt.Embedded
-	if ts == nil {
-		var err error
-		if ts, err = l.tileset(mt.Source); err != nil {
-			return TilesetInfo{}, err
-		}
-	}
-
-	info, err := l.tilesetImages(ts)
-	if err != nil {
-		return TilesetInfo{}, fmt.Errorf("tileset %q: %w", ts.Name, err)
-	}
-	info.FirstGID = mt.FirstGID
-	return info, nil
-}
-
-// tileset parses a .tsx file and resolves its image paths.
-func (l *mapLoader) tileset(name string) (*tmx.Tileset, error) {
-	if ts, ok := l.tilesets[name]; ok {
-		return ts, nil
-	}
-	ts, err := parseFile[tmx.Tileset](l, name)
-	if err != nil {
-		return nil, err
-	}
-	tilesetRefs(ts, path.Dir(name))
-	l.tilesets[name] = ts
-	return ts, nil
-}
-
-// template loads a template's tileset and images, so they're ready when
-// objects are spawned.
-func (l *mapLoader) template(name string) error {
-	tx, err := parseFile[tmx.Template](l, name)
-	if err != nil {
-		return err
-	}
-	for _, ref := range templateRefs(tx, path.Dir(name)) {
-		ts, err := l.tileset(ref)
-		if err != nil {
-			return err
-		}
-		if _, err := l.tilesetImages(ts); err != nil {
-			return fmt.Errorf("tileset %q: %w", ts.Name, err)
-		}
-	}
-	return nil
-}
-
+// tilesetImages looks up the tileset's images and slices sheets into tiles.
 func (l *mapLoader) tilesetImages(ts *tmx.Tileset) (TilesetInfo, error) {
 	info := TilesetInfo{Tileset: ts}
 	if ts.Image != nil {
@@ -158,23 +146,63 @@ func (l *mapLoader) image(img *tmx.Image) (images.Handle, error) {
 	if img.Source == "" {
 		return 0, errs.NotSupported("images embedded as data")
 	}
-	return l.plugin.images.Load(resource.Key(l.src, img.Source), l.fsys, img.Source)
+	handle, ok := l.plugin.images.Lookup(resource.Key(l.src, img.Source))
+	if !ok {
+		return 0, errs.NotFound("image", img.Source)
+	}
+	return handle, nil
 }
 
-// parseFile reads name from the loader's source and parses it.
-func parseFile[T any, PT interface {
+// loadAll reads and parses names from the loader's source with a throwaway
+// resource.Loader, failing if any of them fails.
+func loadAll[T any](l *mapLoader, names []string, decode func([]byte) (*T, error)) (map[string]*T, error) {
+	ld := resource.NewLoader(l.plugin.resources, decode)
+	ld.Queue(l.src, names...)
+	results := ld.Load()
+	if err := resource.Err(results); err != nil {
+		return nil, err
+	}
+	out := make(map[string]*T, len(results))
+	for _, r := range results {
+		out[r.Name] = r.Value
+	}
+	return out, nil
+}
+
+func parse[T any, PT interface {
 	*T
 	tmx.Validator
-}](l *mapLoader, name string) (*T, error) {
-	raw, err := fs.ReadFile(l.fsys, name)
-	if err != nil {
-		return nil, fmt.Errorf("read %q: %w", name, err)
-	}
+}](raw []byte) (*T, error) {
 	value, err := tmx.Parse[T, PT](raw)
 	if err != nil {
-		return nil, errs.Format(name, "invalid tiled file").Wrap(err)
+		return nil, errs.Format("tiled file", "invalid").Wrap(err)
 	}
 	return value, nil
+}
+
+// tilesetImageNames lists the image files a tileset draws from. Images
+// embedded as data have no file and are reported when the tileset is built.
+func tilesetImageNames(ts *tmx.Tileset) []string {
+	var names []string
+	if ts.Image != nil && ts.Image.Source != "" {
+		names = append(names, ts.Image.Source)
+	}
+	for _, t := range ts.Tiles {
+		if t.Image != nil && t.Image.Source != "" {
+			names = append(names, t.Image.Source)
+		}
+	}
+	return names
+}
+
+func withExt(names []string, ext string) []string {
+	var out []string
+	for _, name := range names {
+		if path.Ext(name) == ext {
+			out = append(out, name)
+		}
+	}
+	return out
 }
 
 // sheetRects cuts a tileset image so frame i is local tile i. Older files

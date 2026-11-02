@@ -14,7 +14,8 @@ import (
 
 func TestNewPluginChecksTheConfig(t *testing.T) {
 	newPlugin := func(cfg *aseprite.Config) (*aseprite.Plugin, error) {
-		return aseprite.NewPlugin(cfg, resource.NewLoader(nil), images.NewCache(), logger.N)
+		res := resource.New()
+		return aseprite.NewPlugin(cfg, res, images.NewCache(), logger.N)
 	}
 
 	_, err := newPlugin(nil)

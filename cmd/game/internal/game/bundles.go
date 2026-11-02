@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/adm87/finch/pkg/errs"
-	"github.com/adm87/finch/pkg/resource"
+	"github.com/adm87/finch/pkg/images"
 )
 
 // LoadBundles loads each bundle's images, maps and libraries from its source.
@@ -24,14 +24,8 @@ func (g *Game) loadBundle(name string) error {
 		return errs.NotFound("bundle", name)
 	}
 
-	fsys, err := g.sources.FS(bundle.Source)
-	if err != nil {
+	if err := images.Load(g.resources, g.images, bundle.Source, bundle.Images...); err != nil {
 		return err
-	}
-	for _, img := range bundle.Images {
-		if _, err := g.images.Load(resource.Key(bundle.Source, img), fsys, img); err != nil {
-			return err
-		}
 	}
 	for _, m := range bundle.Maps {
 		if _, err := g.tiled.Load(bundle.Source, m); err != nil {
