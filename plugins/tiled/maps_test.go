@@ -98,39 +98,48 @@ var mapFS = fstest.MapFS{
 </map>`)},
 }
 
+// mapFiles are the files level.tmx uses.
 var mapFiles = []assets.Asset{
-	"maps/level.tmx", "maps/crate.tx",
+	"maps/level.tmx",
 	"tilesets/terrain.tsx", "tilesets/terrain.png",
-	"tilesets/crates.tsx", "tilesets/crates.png",
 	"maps/props/rock.png",
 }
 
+// newMaps loads every file in mapFS, so maps only need building.
 func newMaps(t *testing.T) (*tiled.Plugin, *assets.Assets, *images.Cache) {
+	t.Helper()
+	maps, as, ic := newEmptyMaps(t)
+
+	var all []assets.Asset
+	for name := range mapFS {
+		all = append(all, assets.Asset(name))
+	}
+	require.NoError(t, as.Load(mapFS, all...))
+	return maps, as, ic
+}
+
+func newEmptyMaps(t *testing.T) (*tiled.Plugin, *assets.Assets, *images.Cache) {
 	t.Helper()
 	as := assets.NewAssets()
 	dc, ic := data.NewCache(), images.NewCache()
-	require.NoError(t, as.RegisterFileSystem("test", mapFS))
 	require.NoError(t, as.RegisterImporter(blankImporter{cache: ic}, []string{"png"}))
 
 	cfg := &tiled.Config{Maps: map[string]tiled.MapConfig{
-		"level":    {FileSystem: "test", TMX: "maps/level.tmx"},
-		"broken":   {FileSystem: "test", TMX: "broken/level.tmx"},
-		"layered":  {FileSystem: "test", TMX: "layered/map.tmx"},
-		"infinite": {FileSystem: "test", TMX: "infinite/map.tmx"},
+		"level":    {TMX: "maps/level.tmx"},
+		"broken":   {TMX: "broken/level.tmx"},
+		"layered":  {TMX: "layered/map.tmx"},
+		"infinite": {TMX: "infinite/map.tmx"},
 	}}
 	p, err := tiled.NewPlugin(cfg, as, dc, ic, rendering.NewPipeline(), logger.NewLogger(io.Discard, logger.Options{}))
 	require.NoError(t, err)
 	return p, as, ic
 }
 
-func TestLoadLoadsEverythingItRefersTo(t *testing.T) {
-	maps, as, ic := newMaps(t)
+func TestLoadBuildsTheMap(t *testing.T) {
+	maps, _, ic := newMaps(t)
 
 	handle, err := maps.Load("level")
 	require.NoError(t, err)
-	for _, f := range mapFiles {
-		require.True(t, as.Loaded(f), f)
-	}
 
 	again, err := maps.Load("level")
 	require.NoError(t, err)
@@ -167,38 +176,43 @@ func TestLoadLoadsEverythingItRefersTo(t *testing.T) {
 	require.False(t, ok)
 }
 
-func TestUnloadUnloadsWhatItLoaded(t *testing.T) {
-	maps, as, _ := newMaps(t)
+func TestLoadNeedsItsFilesLoaded(t *testing.T) {
+	maps, as, _ := newEmptyMaps(t)
 
 	_, err := maps.Load("level")
-	require.NoError(t, err)
-	require.NoError(t, maps.Unload("level"))
+	require.True(t, errs.IsNotFound(err))
+	require.ErrorContains(t, err, "maps/level.tmx")
 
-	for _, f := range mapFiles {
-		require.False(t, as.Loaded(f), f)
-	}
-	require.True(t, errs.IsNotFound(maps.Unload("level")))
+	// Every file but one image.
+	require.NoError(t, as.Load(mapFS, mapFiles[:len(mapFiles)-1]...))
+	_, err = maps.Load("level")
+	require.True(t, errs.IsNotFound(err))
+	require.ErrorContains(t, err, "maps/props/rock.png")
+
+	require.NoError(t, as.Load(mapFS, mapFiles[len(mapFiles)-1]))
+	_, err = maps.Load("level")
+	require.NoError(t, err)
 }
 
-func TestUnloadKeepsFilesItDidNotLoad(t *testing.T) {
+func TestUnloadForgetsTheMapButKeepsItsFiles(t *testing.T) {
 	maps, as, _ := newMaps(t)
-	require.NoError(t, as.Load(mapFS, mapFiles...))
 
 	handle, err := maps.Load("level")
 	require.NoError(t, err)
 	require.NoError(t, maps.Unload("level"))
 
+	_, err = maps.Map(handle)
+	require.True(t, errs.IsNotFound(err))
 	for _, f := range mapFiles {
 		require.True(t, as.Loaded(f), f)
 	}
-	_, err = maps.Map(handle)
-	require.True(t, errs.IsNotFound(err))
+	require.True(t, errs.IsNotFound(maps.Unload("level")))
 }
 
-func TestLoadFailureUnloadsWhatItLoaded(t *testing.T) {
-	maps, as, _ := newMaps(t)
+func TestLoadFailsForAMissingTileset(t *testing.T) {
+	maps, _, _ := newMaps(t)
 
 	_, err := maps.Load("broken")
 	require.True(t, errs.IsNotFound(err))
-	require.False(t, as.Loaded("broken/level.tmx"))
+	require.ErrorContains(t, err, "broken/missing.tsx")
 }

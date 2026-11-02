@@ -20,3 +20,11 @@ bundles:
   - filesystem: images
     assets:
       - default_10x10.png
+  # gym04 and everything it refers to. Tiled maps don't load their own files.
+  - filesystem: tiled
+    assets:
+      - gym04.tmx
+      - tilesets/terrain.tsx
+      - tilesets/trees.tsx
+      - images/terrain.png
+      - images/trees.png

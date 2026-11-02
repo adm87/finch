@@ -17,7 +17,6 @@ var tiledTypes = []string{"tmx", "tsx", "tx"}
 
 type Plugin struct {
 	logger   logger.Logger
-	assets   *assets.Assets
 	data     *data.Cache
 	images   *images.Cache
 	config   *Config
@@ -25,7 +24,7 @@ type Plugin struct {
 	renderer rendering.AdapterID
 }
 
-// NewPlugin registers the Tiled importer and renderer.
+// NewPlugin registers the Tiled importer with assets, and the renderer.
 func NewPlugin(
 	cfg *Config,
 	assets *assets.Assets,
@@ -43,7 +42,6 @@ func NewPlugin(
 
 	p := &Plugin{
 		logger: log.Named("tiled"),
-		assets: assets,
 		data:   dataCache,
 		images: imageCache,
 		config: cfg,

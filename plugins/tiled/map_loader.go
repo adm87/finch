@@ -3,24 +3,18 @@ package tiled
 import (
 	"fmt"
 	"image"
-	"io/fs"
 	"path"
 
-	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/errs"
 	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/plugins/tiled/tmx"
 )
 
-// mapLoader builds one map's info. It follows the files the map refers to,
-// loading each one just before it's parsed and recording the ones it loaded.
-// Paths in the files are relative to the file they're in.
+// mapLoader builds one map's info from files that are already loaded. Paths in
+// the files are relative to the file they're in.
 type mapLoader struct {
-	plugin    *Plugin
-	fsys      fs.FS
-	tilesets  map[string]*tmx.Tileset // parsed once per map, by path
-	templates map[string]struct{}
-	owned     []assets.Asset
+	plugin   *Plugin
+	tilesets map[string]*tmx.Tileset // parsed once per map, by path
 }
 
 func (l *mapLoader) load(name string) (MapInfo, error) {
@@ -31,36 +25,16 @@ func (l *mapLoader) load(name string) (MapInfo, error) {
 	if tm.Orientation != tmx.Orthogonal {
 		return MapInfo{}, errs.NotSupported(fmt.Sprintf("%s maps", tm.Orientation))
 	}
-	dir := path.Dir(name)
 
 	info := MapInfo{Map: tm, Tilesets: make([]TilesetInfo, 0, len(tm.Tilesets))}
 	for _, mt := range tm.Tilesets {
-		ts, err := l.mapTileset(mt, dir)
+		ts, err := l.mapTileset(mt, path.Dir(name))
 		if err != nil {
 			return MapInfo{}, err
 		}
 		info.Tilesets = append(info.Tilesets, ts)
 	}
 	info.overdraw = overdraw(tm, info.Tilesets)
-
-	for layer := range tm.Layers.All() {
-		if layer.Image != nil {
-			if err := l.require(imageRefs(dir, layer.Image.Image)...); err != nil {
-				return MapInfo{}, err
-			}
-		}
-		if layer.Objects == nil {
-			continue
-		}
-		for _, obj := range layer.Objects.Objects {
-			if obj.Template == "" {
-				continue
-			}
-			if err := l.template(path.Join(dir, obj.Template)); err != nil {
-				return MapInfo{}, err
-			}
-		}
-	}
 
 	layers, err := decodeLayers(tm)
 	if err != nil {
@@ -90,7 +64,6 @@ func (l *mapLoader) mapTileset(mt tmx.MapTileset, dir string) (TilesetInfo, erro
 	return info, nil
 }
 
-// tileset parses a .tsx file and loads its images.
 func (l *mapLoader) tileset(name string) (*tmx.Tileset, error) {
 	if ts, ok := l.tilesets[name]; ok {
 		return ts, nil
@@ -99,36 +72,12 @@ func (l *mapLoader) tileset(name string) (*tmx.Tileset, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := l.require(tilesetImageRefs(ts, path.Dir(name))...); err != nil {
-		return nil, err
-	}
 	l.tilesets[name] = ts
 	return ts, nil
 }
 
-// template loads a template's tileset, so it's ready when objects are spawned.
-func (l *mapLoader) template(name string) error {
-	if _, ok := l.templates[name]; ok {
-		return nil
-	}
-	tx, err := parse[tmx.Template](l, name)
-	if err != nil {
-		return err
-	}
-	l.templates[name] = struct{}{}
-	if tx.Tileset == nil || tx.Tileset.Source == "" {
-		return nil
-	}
-	_, err = l.tileset(path.Join(path.Dir(name), tx.Tileset.Source))
-	return err
-}
-
-// tilesetImages loads the tileset's images and slices sheets into tiles.
+// tilesetImages finds the tileset's images and slices sheets into tiles.
 func (l *mapLoader) tilesetImages(ts *tmx.Tileset, dir string) (TilesetInfo, error) {
-	if err := l.require(tilesetImageRefs(ts, dir)...); err != nil {
-		return TilesetInfo{}, err
-	}
-
 	info := TilesetInfo{Tileset: ts}
 	if ts.Image != nil {
 		handle, err := l.image(ts.Image, dir)
@@ -177,45 +126,19 @@ func (l *mapLoader) image(img *tmx.Image, dir string) (images.Handle, error) {
 	name := path.Join(dir, img.Source)
 	handle, exists := l.plugin.images.Lookup(name)
 	if !exists {
-		return 0, errs.NotFound("image", name)
+		return 0, errs.NotFound("loaded image", name)
 	}
 	return handle, nil
 }
 
-// require loads the assets that aren't loaded yet and owns them.
-func (l *mapLoader) require(refs ...assets.Asset) error {
-	var missing []assets.Asset
-	for _, ref := range refs {
-		if !l.plugin.assets.Loaded(ref) {
-			missing = append(missing, ref)
-		}
-	}
-	if len(missing) == 0 {
-		return nil
-	}
-
-	err := l.plugin.assets.Load(l.fsys, missing...)
-
-	// Load keeps going after a failure, so own whatever made it in.
-	for _, ref := range missing {
-		if l.plugin.assets.Loaded(ref) {
-			l.owned = append(l.owned, ref)
-		}
-	}
-	return err
-}
-
-// parse loads a Tiled file if needed and parses its bytes from the data cache.
+// parse parses a loaded Tiled file from the data cache.
 func parse[T any, PT interface {
 	*T
 	tmx.Validator
 }](l *mapLoader, name string) (*T, error) {
-	if err := l.require(assets.Asset(name)); err != nil {
-		return nil, err
-	}
 	handle, exists := l.plugin.data.Lookup(name)
 	if !exists {
-		return nil, errs.NotFound("data", name)
+		return nil, errs.NotFound("loaded tiled file", name)
 	}
 	raw, err := l.plugin.data.Get(handle)
 	if err != nil {
@@ -226,23 +149,6 @@ func parse[T any, PT interface {
 		return nil, errs.Format(name, "invalid tiled file").Wrap(err)
 	}
 	return value, nil
-}
-
-// tilesetImageRefs lists the image files a tileset draws from.
-func tilesetImageRefs(ts *tmx.Tileset, dir string) []assets.Asset {
-	refs := imageRefs(dir, ts.Image)
-	for _, t := range ts.Tiles {
-		refs = append(refs, imageRefs(dir, t.Image)...)
-	}
-	return refs
-}
-
-// imageRefs is the image's file, if it has one. Images embedded as data don't.
-func imageRefs(dir string, img *tmx.Image) []assets.Asset {
-	if img == nil || img.Source == "" {
-		return nil
-	}
-	return []assets.Asset{assets.Asset(path.Join(dir, img.Source))}
 }
 
 // sheetRects cuts a tileset image so frame i is local tile i. Older files

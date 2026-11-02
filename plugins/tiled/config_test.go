@@ -13,13 +13,12 @@ func TestConfigValidate(t *testing.T) {
 	require.NoError(t, tiled.DefaultConfig().Validate())
 
 	valid := tiled.Config{Maps: map[string]tiled.MapConfig{
-		"gym04": {FileSystem: "assets", TMX: "tiled/gym04.tmx"},
+		"gym04": {TMX: "gym04.tmx"},
 	}}
 	require.NoError(t, valid.Validate())
 
 	missing := tiled.Config{Maps: map[string]tiled.MapConfig{"gym04": {}}}
 	err := missing.Validate()
 	require.ErrorIs(t, err, errs.ErrArgument)
-	require.ErrorContains(t, err, `map "gym04" needs a file system`)
 	require.ErrorContains(t, err, `map "gym04" needs a .tmx file`)
 }
