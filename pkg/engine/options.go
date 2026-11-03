@@ -6,6 +6,7 @@ type options struct {
 	updater      Updater
 	fixedUpdater Updater
 	laterUpdater Updater
+	config       Config
 }
 
 type Option func(*options)
@@ -17,6 +18,7 @@ func defaultOptions() options {
 		updater:      UpdaterFunc(noopUpdate),
 		fixedUpdater: UpdaterFunc(noopUpdate),
 		laterUpdater: UpdaterFunc(noopUpdate),
+		config:       DefaultConfig(),
 	}
 }
 
@@ -62,5 +64,11 @@ func WithLaterUpdater(laterUpdater Updater) Option {
 	}
 	return func(o *options) {
 		o.laterUpdater = laterUpdater
+	}
+}
+
+func WithConfig(config Config) Option {
+	return func(o *options) {
+		o.config = config
 	}
 }

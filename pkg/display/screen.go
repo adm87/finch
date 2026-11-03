@@ -23,7 +23,10 @@ type Screen struct {
 	dirty           bool
 }
 
-func NewScreen(width, height int) *Screen {
+func NewScreen(width, height int, resolutionScale float64) *Screen {
+	if resolutionScale <= 0 {
+		panic("display: resolution scale must be positive")
+	}
 	s := &Screen{
 		buffer: ebiten.NewImage(width, height),
 		visible: geom.Rect{
@@ -32,7 +35,7 @@ func NewScreen(width, height int) *Screen {
 		},
 		scale:           1,
 		deviceScale:     1,
-		resolutionScale: 1,
+		resolutionScale: resolutionScale,
 		dirty:           true,
 	}
 	s.options.Filter = ebiten.FilterNearest
@@ -71,14 +74,6 @@ func (s *Screen) Resize(width, height int) {
 // at full resolution and 0.5 at half.
 func (s *Screen) ResolutionScale() float64 {
 	return s.resolutionScale
-}
-
-func (s *Screen) SetResolutionScale(scale float64) {
-	if scale <= 0 || scale == s.resolutionScale {
-		return
-	}
-	s.resolutionScale = scale
-	s.dirty = true
 }
 
 func (s *Screen) Filter() ebiten.Filter {

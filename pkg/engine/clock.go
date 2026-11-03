@@ -1,37 +1,28 @@
 package engine
 
-import "time"
-
-const (
-	maxDelta       = time.Second
-	maxAccumulated = time.Second
-)
-
-// clock measures the time between updates and how many fixed steps are due.
+// clock counts updates and works out how many fixed steps are due. Ebitengine
+// runs Update at a fixed TPS, so game time is just the tick count.
 type clock struct {
-	last        time.Time
-	dt          time.Duration
-	fixedDT     time.Duration
-	accumulated time.Duration
-	fixedSteps  int
+	tick      int64
+	tickRate  int64
+	fixedRate int64
+	dt        float64 // seconds per update
+	fixedDT   float64 // seconds per fixed step
 }
 
-func (c *clock) tick() {
-	now := time.Now()
-	c.fixedSteps = 0
-
-	if c.last.IsZero() {
-		c.last = now
-		c.dt = 0
-		return
+func newClock(tickRate, fixedRate int) clock {
+	tickRate, fixedRate = max(tickRate, 1), max(fixedRate, 1)
+	return clock{
+		tickRate:  int64(tickRate),
+		fixedRate: int64(fixedRate),
+		dt:        1 / float64(tickRate),
+		fixedDT:   1 / float64(fixedRate),
 	}
+}
 
-	c.dt = min(max(now.Sub(c.last), 0), maxDelta)
-	c.last = now
-
-	c.accumulated = min(c.accumulated+c.dt, maxAccumulated)
-	for c.accumulated >= c.fixedDT {
-		c.accumulated -= c.fixedDT
-		c.fixedSteps++
-	}
+// advance moves on one tick and returns how many fixed steps are now due.
+func (c *clock) advance() int {
+	prev := c.tick * c.fixedRate / c.tickRate
+	c.tick++
+	return int(c.tick*c.fixedRate/c.tickRate - prev)
 }

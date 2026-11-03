@@ -1,11 +1,21 @@
 package internal
 
 import (
+	"bytes"
+	"errors"
+	"fmt"
+	"io"
+	"io/fs"
+
+	"go.yaml.in/yaml/v3"
+
+	"github.com/adm87/finch/cmd/finch-game/internal/game"
 	"github.com/adm87/finch/cmd/finch-game/internal/game/assets"
 	"github.com/adm87/finch/cmd/finch-game/internal/game/draw"
 	"github.com/adm87/finch/cmd/finch-game/internal/game/effects"
 	"github.com/adm87/finch/cmd/finch-game/internal/game/scene"
 	"github.com/adm87/finch/cmd/finch-game/internal/game/update"
+	"github.com/adm87/finch/content/embedded"
 	"github.com/adm87/finch/pkg/display"
 	"github.com/adm87/finch/pkg/ecs"
 	"github.com/adm87/finch/pkg/ecs/render"
@@ -14,9 +24,25 @@ import (
 )
 
 func Boot() error {
+	engineConfig := engine.DefaultConfig()
+	if err := loadConfig(embedded.Configs, embedded.EngineConfigPath, &engineConfig); err != nil {
+		return err
+	}
+	gameConfig := game.DefaultConfig()
+	if err := loadConfig(embedded.Configs, embedded.GameConfigPath, &gameConfig); err != nil {
+		return err
+	}
+	return boot(engineConfig, gameConfig)
+}
+
+func boot(engineConfig engine.Config, gameConfig game.Config) error {
 	renderPipeline := render.NewPipeline()
 	world := ecs.NewWorld(renderPipeline)
-	screen := display.NewScreen(400, 300)
+	screen := display.NewScreen(
+		gameConfig.Screen.Width,
+		gameConfig.Screen.Height,
+		gameConfig.Screen.ResolutionScale,
+	)
 
 	spriteKind := renderPipeline.Register(sprite.NewAdapter(assets.NewImages()))
 	scene.LoadTest(world, spriteKind, screen.Visible(), 50)
@@ -35,9 +61,23 @@ func Boot() error {
 	updater := update.New(world, vignette, crt)
 
 	return engine.Run(
+		engine.WithConfig(engineConfig),
 		engine.WithDrawer(drawer.Pipeline()),
 		engine.WithUpdater(updater.UpdatePhase()),
 		engine.WithLaterUpdater(updater.LaterPhase()),
 		engine.WithDisplay(screen),
 	)
+}
+
+func loadConfig(fsys fs.FS, path string, config any) error {
+	data, err := fs.ReadFile(fsys, path)
+	if err != nil {
+		return err
+	}
+	dec := yaml.NewDecoder(bytes.NewReader(data))
+	dec.KnownFields(true)
+	if err := dec.Decode(config); err != nil && !errors.Is(err, io.EOF) {
+		return fmt.Errorf("%s: %w", path, err)
+	}
+	return nil
 }

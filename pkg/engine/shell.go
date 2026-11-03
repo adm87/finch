@@ -13,20 +13,17 @@ type shell struct {
 }
 
 func (s *shell) Update() error {
-	s.clock.tick()
+	steps := s.clock.advance()
 
-	dt := s.clock.dt.Seconds()
-	fdt := s.clock.fixedDT.Seconds()
-
-	if err := s.updater.Update(dt); err != nil {
+	if err := s.updater.Update(s.clock.dt); err != nil {
 		return err
 	}
-	for range s.clock.fixedSteps {
-		if err := s.fixedUpdater.Update(fdt); err != nil {
+	for range steps {
+		if err := s.fixedUpdater.Update(s.clock.fixedDT); err != nil {
 			return err
 		}
 	}
-	if err := s.laterUpdater.Update(dt); err != nil {
+	if err := s.laterUpdater.Update(s.clock.dt); err != nil {
 		return err
 	}
 

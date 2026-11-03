@@ -1,51 +1,56 @@
 package engine
 
 import (
+	"slices"
 	"testing"
-	"time"
 )
 
-const testFixedDT = time.Second / 60
-
-func TestClockFirstTickHasNoDelta(t *testing.T) {
-	c := clock{fixedDT: testFixedDT}
-	c.tick()
-
-	if c.dt != 0 || c.fixedSteps != 0 {
-		t.Errorf("dt = %v, fixedSteps = %d, want 0 and 0", c.dt, c.fixedSteps)
+func TestClockFixedSteps(t *testing.T) {
+	tests := []struct {
+		name                string
+		tickRate, fixedRate int
+		want                []int
+	}{
+		{"same rate", 60, 60, []int{1, 1, 1, 1}},
+		{"half rate", 60, 30, []int{0, 1, 0, 1}},
+		{"double rate", 60, 120, []int{2, 2, 2, 2}},
+		{"uneven rate", 60, 50, []int{0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := newClock(tt.tickRate, tt.fixedRate)
+			got := make([]int, len(tt.want))
+			for i := range got {
+				got[i] = c.advance()
+			}
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("fixed steps = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 
-func TestClockAccumulatesFixedSteps(t *testing.T) {
-	c := clock{fixedDT: testFixedDT, last: time.Now().Add(-40 * time.Millisecond)}
-	c.tick()
-
-	if c.fixedSteps != 2 {
-		t.Errorf("fixedSteps = %d, want 2", c.fixedSteps)
+func TestClockStepsMatchRateOverASecond(t *testing.T) {
+	c := newClock(60, 50)
+	var steps int
+	for range 60 {
+		steps += c.advance()
 	}
-	// The leftover carries into the next tick.
-	if c.accumulated <= 0 || c.accumulated >= testFixedDT {
-		t.Errorf("accumulated = %v, want between 0 and %v", c.accumulated, testFixedDT)
+	if steps != 50 {
+		t.Errorf("fixed steps in one second = %d, want 50", steps)
 	}
 }
 
-func TestClockClampsLongFrames(t *testing.T) {
-	c := clock{fixedDT: testFixedDT, last: time.Now().Add(-5 * time.Second)}
-	c.tick()
-
-	if c.dt != maxDelta {
-		t.Errorf("dt = %v, want %v", c.dt, maxDelta)
-	}
-	if want := int(maxAccumulated / testFixedDT); c.fixedSteps != want {
-		t.Errorf("fixedSteps = %d, want %d", c.fixedSteps, want)
+func TestClockDeltas(t *testing.T) {
+	c := newClock(60, 120)
+	if c.dt != 1.0/60 || c.fixedDT != 1.0/120 {
+		t.Errorf("dt = %v, fixedDT = %v, want %v and %v", c.dt, c.fixedDT, 1.0/60, 1.0/120)
 	}
 }
 
-func TestClockIgnoresTimeGoingBackwards(t *testing.T) {
-	c := clock{fixedDT: testFixedDT, last: time.Now().Add(time.Hour)}
-	c.tick()
-
-	if c.dt != 0 || c.fixedSteps != 0 {
-		t.Errorf("dt = %v, fixedSteps = %d, want 0 and 0", c.dt, c.fixedSteps)
+func TestClockRejectsZeroRates(t *testing.T) {
+	c := newClock(0, 0)
+	if got := c.advance(); got != 1 {
+		t.Errorf("fixed steps = %d, want 1", got)
 	}
 }

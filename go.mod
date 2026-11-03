@@ -5,6 +5,7 @@ go 1.27.1
 require (
 	github.com/hajimehoshi/ebiten/v2 v2.10.5
 	github.com/yohamta/donburi v1.15.8
+	go.yaml.in/yaml/v3 v3.0.6
 )
 
 require (

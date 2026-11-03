@@ -19,14 +19,14 @@ func nearRect(a, b geom.Rect) bool {
 }
 
 func TestNewScreenDrawsNearest(t *testing.T) {
-	s := NewScreen(320, 180)
+	s := NewScreen(320, 180, 1)
 	if got := s.Filter(); got != ebiten.FilterNearest {
 		t.Errorf("Filter() = %v, want FilterNearest", got)
 	}
 }
 
 func TestScreenFitScalesToTheWindow(t *testing.T) {
-	s := NewScreen(320, 180)
+	s := NewScreen(320, 180, 1)
 
 	if w, h := s.fit(1280, 720); w != 1280 || h != 720 {
 		t.Errorf("fit() = (%v, %v), want (1280, 720)", w, h)
@@ -54,7 +54,7 @@ func TestScreenFitCropsToFillTheWindow(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := NewScreen(320, 180)
+			s := NewScreen(320, 180, 1)
 			s.fit(tt.width, tt.height)
 
 			got := s.Visible()
@@ -70,7 +70,7 @@ func TestScreenFitCropsToFillTheWindow(t *testing.T) {
 }
 
 func TestScreenTransformMatchesBufferToWindow(t *testing.T) {
-	s := NewScreen(320, 180)
+	s := NewScreen(320, 180, 1)
 	s.fit(1280, 800)
 
 	for _, p := range [][2]float64{{0, 0}, {16, 0}, {100, 90}, {320, 180}} {
@@ -85,7 +85,7 @@ func TestScreenTransformMatchesBufferToWindow(t *testing.T) {
 }
 
 func TestScreenFitIgnoresAnEmptyWindow(t *testing.T) {
-	s := NewScreen(320, 180)
+	s := NewScreen(320, 180, 1)
 	s.fit(1280, 720)
 	s.fit(0, 0)
 
@@ -98,7 +98,7 @@ func TestScreenFitIgnoresAnEmptyWindow(t *testing.T) {
 }
 
 func TestScreenResizeRefitsTheSameWindow(t *testing.T) {
-	s := NewScreen(320, 180)
+	s := NewScreen(320, 180, 1)
 	s.fit(1280, 720)
 
 	s.Resize(640, 360)
@@ -113,7 +113,7 @@ func TestScreenResizeRefitsTheSameWindow(t *testing.T) {
 }
 
 func TestScreenResizeToTheSameSizeKeepsTheBuffer(t *testing.T) {
-	s := NewScreen(320, 180)
+	s := NewScreen(320, 180, 1)
 	buffer := s.buffer
 
 	s.Resize(320, 180)
@@ -123,20 +123,21 @@ func TestScreenResizeToTheSameSizeKeepsTheBuffer(t *testing.T) {
 	}
 }
 
-func TestScreenSetResolutionScaleIgnoresNonPositive(t *testing.T) {
-	s := NewScreen(320, 180)
-
-	s.SetResolutionScale(0.5)
-	s.SetResolutionScale(0)
-	s.SetResolutionScale(-1)
-
-	if got := s.ResolutionScale(); got != 0.5 {
-		t.Errorf("ResolutionScale() = %v, want 0.5", got)
+func TestNewScreenRejectsNonPositiveResolutionScale(t *testing.T) {
+	for _, scale := range []float64{0, -1} {
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Errorf("NewScreen with resolution scale %v did not panic", scale)
+				}
+			}()
+			NewScreen(320, 180, scale)
+		}()
 	}
 }
 
 func TestScreenPresentDrawsIntoTheBuffer(t *testing.T) {
-	s := NewScreen(320, 180)
+	s := NewScreen(320, 180, 1)
 
 	var got *ebiten.Image
 	inner := engine.DrawerFunc(func(target *ebiten.Image) { got = target })

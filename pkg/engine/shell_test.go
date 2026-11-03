@@ -4,7 +4,6 @@ import (
 	"errors"
 	"slices"
 	"testing"
-	"time"
 )
 
 func recordUpdate(calls *[]string, name string, err error) Updater {
@@ -17,7 +16,7 @@ func recordUpdate(calls *[]string, name string, err error) Updater {
 func TestShellUpdateRunsPhasesInOrder(t *testing.T) {
 	var calls []string
 	s := &shell{
-		clock:        clock{fixedDT: testFixedDT, last: time.Now().Add(-40 * time.Millisecond)},
+		clock:        newClock(60, 120),
 		updater:      recordUpdate(&calls, "update", nil),
 		fixedUpdater: recordUpdate(&calls, "fixed", nil),
 		laterUpdater: recordUpdate(&calls, "later", nil),
@@ -49,7 +48,7 @@ func TestShellUpdateStopsOnError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var calls []string
 			s := &shell{
-				clock:        clock{fixedDT: testFixedDT, last: time.Now().Add(-40 * time.Millisecond)},
+				clock:        newClock(60, 120),
 				updater:      recordUpdate(&calls, "update", tt.update),
 				fixedUpdater: recordUpdate(&calls, "fixed", tt.fixed),
 				laterUpdater: recordUpdate(&calls, "later", tt.late),

@@ -40,3 +40,15 @@ func TestOptionsRejectNil(t *testing.T) {
 		})
 	}
 }
+
+func TestWithConfig(t *testing.T) {
+	config := DefaultConfig()
+	config.Clock.TickRate = 30
+
+	o := defaultOptions()
+	WithConfig(config)(&o)
+
+	if o.config != config {
+		t.Errorf("config = %+v, want %+v", o.config, config)
+	}
+}
