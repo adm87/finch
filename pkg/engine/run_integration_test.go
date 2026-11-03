@@ -10,7 +10,7 @@ import (
 	"github.com/adm87/finch/pkg/engine"
 )
 
-func TestRunDrawsAndStops(t *testing.T) {
+func TestIntegrationRunDrawsAndStops(t *testing.T) {
 	var updates, draws int
 
 	err := engine.Run(

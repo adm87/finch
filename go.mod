@@ -2,7 +2,10 @@ module github.com/adm87/finch
 
 go 1.27.1
 
-require github.com/hajimehoshi/ebiten/v2 v2.10.5
+require (
+	github.com/hajimehoshi/ebiten/v2 v2.10.5
+	github.com/yohamta/donburi v1.15.8
+)
 
 require (
 	github.com/ebitengine/gomobile v0.0.0-20260820040257-d11f821a26a6 // indirect

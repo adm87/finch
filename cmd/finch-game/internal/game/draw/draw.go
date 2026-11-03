@@ -1,45 +1,54 @@
 package draw
 
 import (
-	"image/color"
+	"strconv"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 
 	"github.com/adm87/finch/pkg/display"
+	"github.com/adm87/finch/pkg/ecs"
+	"github.com/adm87/finch/pkg/ecs/render"
 	"github.com/adm87/finch/pkg/engine"
+	"github.com/adm87/finch/pkg/post"
 )
 
 type Drawer struct {
-	screen *display.Screen
+	world    *ecs.World
+	screen   *display.Screen
+	vignette *ebiten.Shader
 }
 
-func New(screen *display.Screen) *Drawer {
+func New(world *ecs.World, screen *display.Screen, vignette *ebiten.Shader) *Drawer {
 	return &Drawer{
-		screen: screen,
+		world:    world,
+		screen:   screen,
+		vignette: vignette,
 	}
 }
 
 func (d *Drawer) Pipeline() engine.Drawer {
 	return engine.DrawPipeline(
 		d.drawWorld(),
-		// TODO: Add post-processing pass
+		post.Shader(d.vignette, map[string]any{"Strength": float32(1)}),
 		d.screen.Present(),
 		// TODO: Add UI pass
-		// TODO: Add debug pass
+		d.debugFPS(),
 	)
 }
 
 func (d *Drawer) drawWorld() engine.DrawerFunc {
 	return func(target *ebiten.Image) {
-		visible := d.screen.Visible()
+		// TODO: Get the view from a camera
+		d.world.Render(target, render.View{Bounds: d.screen.Visible()})
+	}
+}
 
-		minX, minY := visible.Min()
-		maxX, maxY := visible.Max()
-
-		vector.FillRect(target, float32(minX), float32(minY), 20, 20, color.RGBA{R: 255, A: 255}, false)
-		vector.FillRect(target, float32(maxX-20), float32(minY), 20, 20, color.RGBA{G: 255, A: 255}, false)
-		vector.FillRect(target, float32(minX), float32(maxY-20), 20, 20, color.RGBA{B: 255, A: 255}, false)
-		vector.FillRect(target, float32(maxX-20), float32(maxY-20), 20, 20, color.RGBA{R: 255, G: 255, A: 255}, false)
+func (d *Drawer) debugFPS() engine.DrawPass {
+	return func(inner engine.Drawer) engine.Drawer {
+		return engine.DrawerFunc(func(target *ebiten.Image) {
+			inner.Draw(target)
+			ebitenutil.DebugPrint(target, "FPS: "+strconv.Itoa(int(ebiten.ActualFPS())))
+		})
 	}
 }
