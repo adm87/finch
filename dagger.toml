@@ -1,0 +1,18 @@
+[modules.go]
+source = "dagger.io/go"
+
+[modules.golangci-lint]
+source = "dagger.io/go/golangci-lint"
+
+[modules.go-sdk]
+source = "dagger.io/sdk/go"
+
+[sdks.go]
+module = "go-sdk"
+
+[modules.finch-dev]
+source = ".dagger/modules/finch-dev"
+
+[sdks.go.scopes.".dagger/modules/finch-dev"]
+is-module = true
+name = "finch-dev"

@@ -112,8 +112,7 @@ func (s *Screen) WindowToBuffer(x, y float64) (float64, float64) {
 	return x/s.scale + s.visible.X, y/s.scale + s.visible.Y
 }
 
-// Present draws the passes before it into the buffer, then scales the buffer
-// onto the target.
+// Present draws the passes before it into the buffer, then draws the buffer into the target.
 func (s *Screen) Present() engine.DrawPass {
 	return func(inner engine.Drawer) engine.Drawer {
 		return engine.DrawerFunc(func(target *ebiten.Image) {

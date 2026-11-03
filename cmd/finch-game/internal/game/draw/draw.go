@@ -23,7 +23,10 @@ func New(screen *display.Screen) *Drawer {
 func (d *Drawer) Pipeline() engine.Drawer {
 	return engine.DrawPipeline(
 		d.drawWorld(),
+		// TODO: Add post-processing pass
 		d.screen.Present(),
+		// TODO: Add UI pass
+		// TODO: Add debug pass
 	)
 }
 

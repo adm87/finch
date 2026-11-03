@@ -14,8 +14,6 @@ func (f DrawerFunc) Draw(target *ebiten.Image) {
 	f(target)
 }
 
-func noopDraw(_ *ebiten.Image) {}
-
 // DrawPass wraps a Drawer to draw before, after, or around it.
 type DrawPass func(Drawer) Drawer
 
@@ -26,3 +24,5 @@ func DrawPipeline(drawer Drawer, passes ...DrawPass) Drawer {
 	}
 	return drawer
 }
+
+func noopDraw(_ *ebiten.Image) {}

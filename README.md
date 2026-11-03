@@ -1,61 +1,39 @@
 # finch
 
-A small 2D game engine in Go, built on [Ebiten](https://ebitengine.org) for the window, drawing and input, and [Donburi](https://github.com/yohamta/donburi) for entities and components. The repo also has a test game that runs on it.
+A small 2D game engine in Go, built on [Ebitengine](https://ebitengine.org) for the window, drawing and input. The repo also has a test game that runs on it.
 
 ## Running
 
-Run from the repo root. The game looks for `content/resources/assets` relative to where it's started.
-
 ```bash
-go run ./cmd/finch
+go run ./cmd/finch-game
 ```
 
-For debug logging with file and line numbers, use the dev build:
-
-```bash
-go run -tags finch_dev ./cmd/finch
-```
-
-## Controls
-
-| Key | Does |
-|---|---|
-| W A S D | Move |
-| Up / Down | Zoom |
-| 1 | Show entity bounds |
-| 2 | Show FPS |
-| 3 | Show partition cells |
-| 4 | Show the world origin |
-| Esc | Quit |
+Press Esc to quit.
 
 ## Layout
 
 - `pkg/` is the engine core:
-  - `application` holds the assets, caches, screen, view, world, render pipeline and plugins.
-  - `engine` runs the game loop, the update phases and drawing.
-  - `world` is the entity world with a spatial index.
-  - The rest are smaller building blocks: `assets`, `images`, `data`, `rendering`, `transform`, `display`, `hashgrid`, `slotmap` and `errs`.
-- `plugins/` connects third-party tools:
-  - `aseprite` handles sprite sheets and animation.
-  - `tiled` is for maps, and is still in progress.
-
-  Plugins can use `pkg/`, but `pkg/` never imports `plugins/`. A test checks that.
-- `cmd/finch` is the test game.
-- `content/` holds the game's assets and its embedded config files.
+  - `engine` runs the game loop: the update phases (update, fixed update, later update), drawing and layout. A frame is drawn by a pipeline of draw passes.
+  - `display` holds the screen buffer the game draws into, scaled to fill the window.
+  - `geom` has the geometry types.
+- `cmd/finch-game` is the test game.
+- `.dagger/` holds the Dagger module that runs the checks in Linux containers.
 
 ## Development
 
-```bash
-go test ./...
-```
+The Makefile wraps the common commands.
 
-```bash
-golangci-lint run ./...
-```
+| Command | Does |
+|---|---|
+| `make test` | Runs the unit tests |
+| `make lint` | Runs `betteralign -apply`, then `golangci-lint` |
+| `make cover` | Writes a coverage report for `pkg/` and opens it in the browser |
+| `make test-integration` | Runs the integration tests locally (they open a window) |
+| `make check` | Runs every Dagger check silently: tests, lint, generated-code checks and the integration tests |
+| `make check-integration` | Runs only the integration check, with output |
+| `make check-verbose` | Runs every Dagger check with plain-text output |
 
-```bash
-betteralign -apply ./...
-```
+Integration tests use the `integration` build tag. The Dagger checks need [Dagger](https://dagger.io) and a running Docker engine, and run the integration tests on a virtual display (Xvfb).
 
 ## License
 
