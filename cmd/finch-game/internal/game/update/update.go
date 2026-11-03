@@ -4,6 +4,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
+	"github.com/adm87/finch/cmd/finch-game/internal/game/shuffle"
 	"github.com/adm87/finch/pkg/ecs"
 	"github.com/adm87/finch/pkg/engine"
 )
@@ -21,12 +22,20 @@ func New(world *ecs.World) *Updater {
 func (u *Updater) UpdatePhase() engine.Updater {
 	return engine.UpdatePhase{
 		quit(),
+		u.shuffle(),
 	}
 }
 
 func (u *Updater) LaterPhase() engine.Updater {
 	return engine.UpdatePhase{
 		u.syncWorld(),
+	}
+}
+
+func (u *Updater) shuffle() engine.UpdaterFunc {
+	return func(dt float64) error {
+		shuffle.Update(u.world.Donburi(), dt)
+		return nil
 	}
 }
 

@@ -3,6 +3,7 @@ package scene
 import (
 	"math"
 
+	"github.com/adm87/finch/cmd/finch-game/internal/game/shuffle"
 	"github.com/adm87/finch/pkg/ecs"
 	"github.com/adm87/finch/pkg/ecs/render"
 	"github.com/adm87/finch/pkg/ecs/sprite"
@@ -14,7 +15,7 @@ import (
 func LoadTest(world *ecs.World, spriteKind render.Kind, area geom.Rect, count int) {
 	w := world.Donburi()
 	for i := range count {
-		e := w.Entry(w.Create(render.Component, sprite.Component, transform.Component))
+		e := w.Entry(w.Create(render.Component, sprite.Component, transform.Component, shuffle.Component))
 
 		render.Component.Get(e).SetKind(spriteKind)
 		sprite.Component.Get(e).SetAnchor(0.5, 0.5)
@@ -23,6 +24,13 @@ func LoadTest(world *ecs.World, spriteKind render.Kind, area geom.Rect, count in
 		n := float64(i + 1)
 		_, fx := math.Modf(n * 0.7548776662466927)
 		_, fy := math.Modf(n * 0.5698402909980532)
-		transform.Component.Get(e).SetPosition(area.X+fx*area.Width, area.Y+fy*area.Height)
+		x, y := area.X+fx*area.Width, area.Y+fy*area.Height
+		transform.Component.Get(e).SetPosition(x, y)
+
+		s := shuffle.Component.Get(e)
+		s.SetHome(x, y)
+		s.SetRadius(3 + 4*fy)
+		s.SetSpeed(1 + 2*fx)
+		s.SetPhase(n)
 	}
 }

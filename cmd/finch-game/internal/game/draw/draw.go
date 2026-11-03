@@ -6,32 +6,35 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 
+	"github.com/adm87/finch/cmd/finch-game/internal/game/effects"
 	"github.com/adm87/finch/pkg/display"
 	"github.com/adm87/finch/pkg/ecs"
 	"github.com/adm87/finch/pkg/ecs/render"
 	"github.com/adm87/finch/pkg/engine"
-	"github.com/adm87/finch/pkg/post"
 )
 
 type Drawer struct {
 	world    *ecs.World
 	screen   *display.Screen
-	vignette *ebiten.Shader
+	vignette *effects.Vignette
+	crt      *effects.CRT
 }
 
-func New(world *ecs.World, screen *display.Screen, vignette *ebiten.Shader) *Drawer {
+func New(world *ecs.World, screen *display.Screen, vignette *effects.Vignette, crt *effects.CRT) *Drawer {
 	return &Drawer{
 		world:    world,
 		screen:   screen,
 		vignette: vignette,
+		crt:      crt,
 	}
 }
 
 func (d *Drawer) Pipeline() engine.Drawer {
 	return engine.DrawPipeline(
 		d.drawWorld(),
-		post.Shader(d.vignette, map[string]any{"Strength": float32(1)}),
+		d.vignette.Pass(),
 		d.screen.Present(),
+		d.crt.Pass(),
 		// TODO: Add UI pass
 		d.debugFPS(),
 	)

@@ -12,6 +12,8 @@ func Run(opts ...Option) error {
 		opt(&o)
 	}
 
+	ebiten.SetFullscreen(true)
+
 	return ebiten.RunGame(&shell{
 		clock:        clock{fixedDT: time.Second / time.Duration(max(60, 1))},
 		display:      o.display,

@@ -1,0 +1,39 @@
+//kage:unit pixels
+
+package main
+
+// Time is seconds since the game started.
+var Time float
+
+// Lines is how many scanlines cover the screen. Matching the buffer height
+// puts one scanline on each game pixel.
+var Lines float
+
+func Fragment(dst vec4, src vec2, color vec4) vec4 {
+	origin := imageSrc0Origin()
+	size := imageSrc0Size()
+	uv := (src - origin) / size
+
+	// Bulge the image like curved glass; anything pushed off the edge is black.
+	c := uv*2 - 1
+	c *= 1 + dot(c, c)*vec2(0.03, 0.04)
+	uv = c*0.5 + 0.5
+	if uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1 {
+		return vec4(0, 0, 0, 1)
+	}
+
+	// Split the colour channels a little, like a misaligned tube.
+	p := origin + uv*size
+	shift := vec2(1, 0)
+	r := imageSrc0At(p + shift).r
+	g := imageSrc0At(p).g
+	b := imageSrc0At(p - shift).b
+	col := vec3(r, g, b)
+
+	scan := 0.75 + 0.25*cos(uv.y*Lines*2*3.14159)
+	bar := 1 + 0.1*(1-smoothstep(0, 0.06, abs(uv.y-fract(Time*0.15))))
+	flicker := 1 + 0.015*sin(Time*110)
+	edge := pow(16*uv.x*uv.y*(1-uv.x)*(1-uv.y), 0.2)
+
+	return vec4(col*scan*bar*flicker*edge, 1)
+}

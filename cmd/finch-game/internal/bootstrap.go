@@ -21,17 +21,22 @@ func Boot() error {
 	spriteKind := renderPipeline.Register(sprite.NewAdapter(assets.NewImages()))
 	scene.LoadTest(world, spriteKind, screen.Visible(), 50)
 
-	vignette, err := effects.Vignette()
+	vignette, err := effects.NewVignette(1)
 	if err != nil {
 		return err
 	}
 
-	drawer := draw.New(world, screen, vignette)
+	crt, err := effects.NewCRT(screen.Visible().Height)
+	if err != nil {
+		return err
+	}
+
+	drawer := draw.New(world, screen, vignette, crt)
 	updater := update.New(world)
 
 	return engine.Run(
 		engine.WithDrawer(drawer.Pipeline()),
-		engine.WithUpdater(updater.UpdatePhase()),
+		engine.WithUpdater(engine.UpdatePhase{updater.UpdatePhase(), crt}),
 		engine.WithLaterUpdater(updater.LaterPhase()),
 		engine.WithDisplay(screen),
 	)
