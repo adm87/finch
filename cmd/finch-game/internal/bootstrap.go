@@ -32,11 +32,11 @@ func Boot() error {
 	}
 
 	drawer := draw.New(world, screen, vignette, crt)
-	updater := update.New(world)
+	updater := update.New(world, vignette, crt)
 
 	return engine.Run(
 		engine.WithDrawer(drawer.Pipeline()),
-		engine.WithUpdater(engine.UpdatePhase{updater.UpdatePhase(), crt}),
+		engine.WithUpdater(updater.UpdatePhase()),
 		engine.WithLaterUpdater(updater.LaterPhase()),
 		engine.WithDisplay(screen),
 	)

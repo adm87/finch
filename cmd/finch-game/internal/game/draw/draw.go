@@ -32,10 +32,10 @@ func New(world *ecs.World, screen *display.Screen, vignette *effects.Vignette, c
 func (d *Drawer) Pipeline() engine.Drawer {
 	return engine.DrawPipeline(
 		d.drawWorld(),
-		d.vignette.Pass(),
-		d.screen.Present(),
-		d.crt.Pass(),
-		// TODO: Add UI pass
+		d.drawVignette(),
+		d.drawToScreen(),
+		d.drawCRT(),
+		d.drawUI(),
 		d.debugFPS(),
 	)
 }
@@ -45,6 +45,27 @@ func (d *Drawer) drawWorld() engine.DrawerFunc {
 		// TODO: Get the view from a camera
 		d.world.Render(target, render.View{Bounds: d.screen.Visible()})
 	}
+}
+
+func (d *Drawer) drawUI() engine.DrawPass {
+	return func(inner engine.Drawer) engine.Drawer {
+		return engine.DrawerFunc(func(target *ebiten.Image) {
+			inner.Draw(target)
+			// TODO: Draw UI elements here
+		})
+	}
+}
+
+func (d *Drawer) drawVignette() engine.DrawPass {
+	return d.vignette.Pass()
+}
+
+func (d *Drawer) drawCRT() engine.DrawPass {
+	return d.crt.Pass()
+}
+
+func (d *Drawer) drawToScreen() engine.DrawPass {
+	return d.screen.Present()
 }
 
 func (d *Drawer) debugFPS() engine.DrawPass {
