@@ -7,17 +7,17 @@ import (
 )
 
 func Run(opts ...Option) error {
-	options := DefaultOptions()
+	o := defaultOptions()
 	for _, opt := range opts {
-		opt(&options)
+		opt(&o)
 	}
 
 	return ebiten.RunGame(&shell{
 		clock:        clock{fixedDT: time.Second / time.Duration(max(60, 1))},
-		display:      options.display,
-		drawer:       options.drawer,
-		updater:      options.updater,
-		fixedUpdater: options.fixedUpdater,
-		laterUpdater: options.laterUpdater,
+		display:      o.display,
+		drawer:       o.drawer,
+		updater:      o.updater,
+		fixedUpdater: o.fixedUpdater,
+		laterUpdater: o.laterUpdater,
 	})
 }

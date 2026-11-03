@@ -1,6 +1,6 @@
 package engine
 
-type Options struct {
+type options struct {
 	display      Display
 	drawer       Drawer
 	updater      Updater
@@ -8,10 +8,10 @@ type Options struct {
 	laterUpdater Updater
 }
 
-type Option func(*Options)
+type Option func(*options)
 
-func DefaultOptions() Options {
-	return Options{
+func defaultOptions() options {
+	return options{
 		display:      DisplayFunc(noopLayout),
 		drawer:       DrawerFunc(noopDraw),
 		updater:      UpdaterFunc(noopUpdate),
@@ -21,31 +21,46 @@ func DefaultOptions() Options {
 }
 
 func WithDisplay(display Display) Option {
-	return func(o *Options) {
+	if display == nil {
+		panic("engine: nil display")
+	}
+	return func(o *options) {
 		o.display = display
 	}
 }
 
 func WithDrawer(drawer Drawer) Option {
-	return func(o *Options) {
+	if drawer == nil {
+		panic("engine: nil drawer")
+	}
+	return func(o *options) {
 		o.drawer = drawer
 	}
 }
 
 func WithUpdater(updater Updater) Option {
-	return func(o *Options) {
+	if updater == nil {
+		panic("engine: nil updater")
+	}
+	return func(o *options) {
 		o.updater = updater
 	}
 }
 
 func WithFixedUpdater(fixedUpdater Updater) Option {
-	return func(o *Options) {
+	if fixedUpdater == nil {
+		panic("engine: nil fixedUpdater")
+	}
+	return func(o *options) {
 		o.fixedUpdater = fixedUpdater
 	}
 }
 
 func WithLaterUpdater(laterUpdater Updater) Option {
-	return func(o *Options) {
+	if laterUpdater == nil {
+		panic("engine: nil laterUpdater")
+	}
+	return func(o *options) {
 		o.laterUpdater = laterUpdater
 	}
 }

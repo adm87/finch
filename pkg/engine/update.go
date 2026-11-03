@@ -1,12 +1,11 @@
 package engine
 
-// Updater is an interface that defines a type that can update the game state.
+// Updater advances the game state by dt seconds.
 type Updater interface {
 	Update(dt float64) error
 }
 
-// UpdaterFunc is a function type that implements the Updater interface.
-// It allows a function to be used as an Updater by defining an Update method that calls the function.
+// UpdaterFunc adapts a function to an Updater.
 type UpdaterFunc func(dt float64) error
 
 func (f UpdaterFunc) Update(dt float64) error {
