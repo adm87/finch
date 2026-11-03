@@ -15,7 +15,7 @@ import (
 	"github.com/adm87/finch/pkg/geom"
 )
 
-// Ebitengine copies draws made outside a running game, so allocations are only measured inside a frame.
+// Ebitengine copies draws made before the game runs, so this has to measure inside a frame.
 func TestIntegrationAdapterDrawAllocs(t *testing.T) {
 	w := donburi.NewWorld()
 	p := render.NewPipeline()

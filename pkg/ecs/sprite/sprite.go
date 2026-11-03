@@ -29,7 +29,7 @@ func (s *Sprite) Color() ebiten.ColorScale {
 	return s.color
 }
 
-// Anchor is the pivot as a fraction of the image size; 0.5, 0.5 is the centre.
+// Anchor is the pivot as a fraction of the image size, so 0.5, 0.5 is the centre.
 func (s *Sprite) Anchor() (x, y float64) {
 	return s.anchorX, s.anchorY
 }

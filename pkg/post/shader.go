@@ -6,9 +6,9 @@ import (
 	"github.com/adm87/finch/pkg/engine"
 )
 
-// Shader draws the frame into an offscreen image, then onto the target through
-// shader. The frame is the shader's first source image. uniforms is read on
-// every draw, so changes to it show on the next frame.
+// Shader runs the frame through shader. Earlier passes draw into an offscreen
+// image, which becomes the shader's first source image. Changes to uniforms
+// show up on the next frame.
 func Shader(shader *ebiten.Shader, uniforms map[string]any) engine.DrawPass {
 	if shader == nil {
 		panic("post: nil shader")

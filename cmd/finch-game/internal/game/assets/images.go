@@ -8,7 +8,7 @@ import (
 
 var missingColor = color.RGBA{R: 128, A: 255, B: 128}
 
-// Images is a placeholder image store until real assets load.
+// Images stands in for an asset store until we have one.
 type Images struct {
 	missing *ebiten.Image
 }
@@ -19,7 +19,7 @@ func NewImages() *Images {
 	return &Images{missing: missing}
 }
 
-// Image returns the missing texture for every handle.
+// Image always returns the missing texture.
 func (i *Images) Image(_ uint64) *ebiten.Image {
 	return i.missing
 }

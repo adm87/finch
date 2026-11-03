@@ -2,7 +2,7 @@ package render
 
 import "github.com/yohamta/donburi"
 
-// Kind routes an entity to a registered Adapter. The zero Kind has no adapter.
+// Kind picks which adapter draws an entity. Zero means none.
 type Kind int
 
 type Renderer struct {
@@ -47,12 +47,12 @@ func (r *Renderer) SetVisible(visible bool) {
 	r.visible = visible
 }
 
-// SetLayer sets the draw layer. Layers outside the int8 range are clamped when sorted.
+// SetLayer sets the draw layer. Layers are clamped to int8 when sorting.
 func (r *Renderer) SetLayer(layer int) {
 	r.layer = layer
 }
 
-// SetDepth sets the order within a layer. Depths outside the int16 range are clamped when sorted.
+// SetDepth orders entities within a layer. Depths are clamped to int16 when sorting.
 func (r *Renderer) SetDepth(depth int) {
 	r.depth = depth
 }

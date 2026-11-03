@@ -12,7 +12,7 @@ type Transform struct {
 	angle         float64
 	matrix        ebiten.GeoM
 	version       uint64
-	matrixVersion uint64 // version the matrix was built from
+	matrixVersion uint64 // version when the matrix was last built
 }
 
 var Component = donburi.NewComponentType[Transform](Transform{
@@ -26,7 +26,7 @@ func Get(e *donburi.Entry) (*Transform, bool) {
 	return nil, false
 }
 
-// Update rebuilds the matrix of every transform that changed since it was last built.
+// Update rebuilds matrices for transforms that changed.
 func Update(w donburi.World) {
 	for e := range Component.Iter(w) {
 		t := Component.Get(e)
@@ -54,7 +54,7 @@ func (t *Transform) Angle() float64 {
 	return t.angle
 }
 
-// Matrix is the transform as of the last Update.
+// Matrix is only current after Update.
 func (t *Transform) Matrix() ebiten.GeoM {
 	return t.matrix
 }
@@ -94,7 +94,7 @@ func (t *Transform) SetAngle(angle float64) {
 	}
 }
 
-// local scales and rotates around the origin, then moves to the position.
+// local scales and rotates around the origin, then moves into position.
 func local(t *Transform) ebiten.GeoM {
 	var m ebiten.GeoM
 	m.Translate(-t.ox, -t.oy)

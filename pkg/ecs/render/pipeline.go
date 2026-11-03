@@ -7,36 +7,36 @@ import (
 	"github.com/yohamta/donburi"
 )
 
-// Adapter draws one kind of renderable entity.
+// Adapter draws one kind of entity.
 type Adapter interface {
-	// AppendJobs appends the entry's jobs inside the view to jobs and returns
-	// the extended slice. An entry can have more than one job.
+	// AppendJobs adds the entry's jobs that fall inside the view.
+	// An entry can have any number of jobs.
 	AppendJobs(e *donburi.Entry, view *View, jobs []Job) []Job
 
-	// Draw draws a single job to target through the view.
+	// Draw draws one job.
 	Draw(target *ebiten.Image, view *View, job *Job)
 }
 
-// Job is one draw, ordered by layer, then depth.
+// Job is a single draw, sorted by layer and then depth.
 type Job struct {
 	Entry *donburi.Entry
 	Layer int
 	Depth int
-	Index int // adapter-defined: which part of the entry
+	Index int // which part of the entry; up to the adapter
 	kind  Kind
 }
 
 type Pipeline struct {
 	adapters []Adapter
 	queue    queue
-	view     View // kept here so passing &view to adapters doesn't allocate
+	view     View // lives here so taking its address doesn't allocate
 }
 
 func NewPipeline() *Pipeline {
 	return &Pipeline{}
 }
 
-// Register adds an adapter and returns the Kind that routes entities to it.
+// Register adds an adapter and returns its Kind.
 func (p *Pipeline) Register(a Adapter) Kind {
 	if a == nil {
 		panic("render: nil adapter")
@@ -48,8 +48,8 @@ func (p *Pipeline) Register(a Adapter) Kind {
 	return Kind(len(p.adapters))
 }
 
-// Draw draws the visible entries through the view in layer and depth order.
-// Every entry must have a Renderer.
+// Draw sorts the visible entries by layer and depth, then draws them.
+// Every entry needs a Renderer.
 func (p *Pipeline) Draw(target *ebiten.Image, view View, entries []*donburi.Entry) {
 	p.view = view
 	q := &p.queue

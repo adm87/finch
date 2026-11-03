@@ -19,7 +19,7 @@ func LoadTest(world *ecs.World, spriteKind render.Kind, area geom.Rect, count in
 		render.Component.Get(e).SetKind(spriteKind)
 		sprite.Component.Get(e).SetAnchor(0.5, 0.5)
 
-		// R2 sequence: evenly scattered points without a random source.
+		// The R2 sequence spreads sprites out evenly, and it's the same every run.
 		n := float64(i + 1)
 		_, fx := math.Modf(n * 0.7548776662466927)
 		_, fy := math.Modf(n * 0.5698402909980532)

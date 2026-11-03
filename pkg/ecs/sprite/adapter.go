@@ -9,12 +9,12 @@ import (
 	"github.com/adm87/finch/pkg/geom"
 )
 
-// Images resolves a sprite handle to its image, or nil if there is none.
+// Images looks up a sprite's image. It returns nil for unknown handles.
 type Images interface {
 	Image(handle uint64) *ebiten.Image
 }
 
-// Adapter draws entities that have a Sprite and a Transform.
+// Adapter draws entities with a Sprite and a Transform.
 type Adapter struct {
 	images Images
 	op     ebiten.DrawImageOptions
@@ -59,7 +59,7 @@ func (a *Adapter) Draw(target *ebiten.Image, view *render.View, job *render.Job)
 	target.DrawImage(img, &a.op)
 }
 
-// bounds is the world-space box around the sprite's image after its transform.
+// bounds is the sprite's box in world space.
 func bounds(s *Sprite, t *transform.Transform, img *ebiten.Image) geom.Rect {
 	size := img.Bounds().Size()
 	w, h := float64(size.X), float64(size.Y)

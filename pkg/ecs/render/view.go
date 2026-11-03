@@ -6,8 +6,8 @@ import (
 	"github.com/adm87/finch/pkg/geom"
 )
 
-// View is what a camera sees.
+// View is the camera's view of the world.
 type View struct {
-	Matrix ebiten.GeoM // world to target
-	Bounds geom.Rect   // world-space area to draw; anything outside is culled
+	Matrix ebiten.GeoM // world space to target
+	Bounds geom.Rect   // what the camera can see; everything else is culled
 }

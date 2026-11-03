@@ -2,7 +2,7 @@
 
 package main
 
-// Strength scales how dark the corners get; 0 is off.
+// Strength is how dark the corners get. 0 turns it off.
 var Strength float
 
 func Fragment(dst vec4, src vec2, color vec4) vec4 {

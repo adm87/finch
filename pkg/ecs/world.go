@@ -31,12 +31,13 @@ func (w *World) Donburi() donburi.World {
 	return w.donburi
 }
 
-// Sync rebuilds derived data, such as transform matrices, after the frame's updates.
+// Sync brings derived data, like transform matrices, up to date.
+// Call it after the frame's updates.
 func (w *World) Sync() {
 	transform.Update(w.donburi)
 }
 
-// Render draws the entities inside the view to target.
+// Render draws everything inside the view to target.
 func (w *World) Render(target *ebiten.Image, view render.View) {
 	w.drawables = w.drawables[:0]
 	for e := range w.renderers.Iter(w.donburi) {
