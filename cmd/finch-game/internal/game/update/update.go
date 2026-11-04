@@ -24,7 +24,8 @@ func New(world *ecs.World, vignette *effects.Vignette, crt *effects.CRT) *Update
 	}
 }
 
-func (u *Updater) UpdatePhase() engine.Updater {
+// Main runs once per update, before the fixed steps.
+func (u *Updater) Main() engine.Updater {
 	return engine.UpdatePhase{
 		quit(),
 		u.toggleEffects(),
@@ -33,7 +34,8 @@ func (u *Updater) UpdatePhase() engine.Updater {
 	}
 }
 
-func (u *Updater) LaterPhase() engine.Updater {
+// Later runs once per update, after the fixed steps.
+func (u *Updater) Later() engine.Updater {
 	return engine.UpdatePhase{
 		u.syncWorld(),
 	}

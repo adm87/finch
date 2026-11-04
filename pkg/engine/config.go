@@ -1,5 +1,6 @@
 package engine
 
+// Config holds the engine settings Run applies at startup.
 type Config struct {
 	Window     WindowConfig `yaml:"window"`
 	Clock      ClockConfig  `yaml:"clock"`
@@ -18,6 +19,8 @@ type ClockConfig struct {
 	FixedRate int `yaml:"fixed_rate"` // fixed steps per second
 }
 
+// DefaultConfig is the config Run uses when none is given. Decode config files
+// onto it so missing keys keep their defaults.
 func DefaultConfig() Config {
 	return Config{
 		Window: WindowConfig{

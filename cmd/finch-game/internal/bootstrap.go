@@ -63,8 +63,8 @@ func boot(engineConfig engine.Config, gameConfig game.Config) error {
 	return engine.Run(
 		engine.WithConfig(engineConfig),
 		engine.WithDrawer(drawer.Pipeline()),
-		engine.WithUpdater(updater.UpdatePhase()),
-		engine.WithLaterUpdater(updater.LaterPhase()),
+		engine.WithUpdater(updater.Main()),
+		engine.WithLaterUpdater(updater.Later()),
 		engine.WithDisplay(screen),
 	)
 }

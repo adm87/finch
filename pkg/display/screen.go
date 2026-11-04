@@ -1,3 +1,4 @@
+// Package display scales the game's screen buffer to fit the window.
 package display
 
 import (

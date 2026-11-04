@@ -12,6 +12,6 @@ func (f DisplayFunc) Layout(outsideWidth, outsideHeight float64) (layoutWidth, l
 	return f(outsideWidth, outsideHeight)
 }
 
-func noopLayout(outsideWidth, outsideHeight float64) (layoutWidth, layoutHeight float64) {
+func noopLayout(outsideWidth, outsideHeight float64) (float64, float64) {
 	return outsideWidth, outsideHeight
 }

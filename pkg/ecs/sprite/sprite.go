@@ -1,3 +1,4 @@
+// Package sprite draws entities that have a Sprite and a Transform.
 package sprite
 
 import (
@@ -5,6 +6,7 @@ import (
 	"github.com/yohamta/donburi"
 )
 
+// Sprite is an image drawn at an entity's transform.
 type Sprite struct {
 	handle  uint64
 	anchorX float64
@@ -13,13 +15,6 @@ type Sprite struct {
 }
 
 var Component = donburi.NewComponentType[Sprite]()
-
-func Get(e *donburi.Entry) (*Sprite, bool) {
-	if e.HasComponent(Component) {
-		return Component.Get(e), true
-	}
-	return nil, false
-}
 
 func (s *Sprite) Handle() uint64 {
 	return s.handle

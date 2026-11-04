@@ -115,13 +115,3 @@ func TestMatrixScalesAndRotatesAroundOrigin(t *testing.T) {
 		})
 	}
 }
-
-func TestGet(t *testing.T) {
-	w := donburi.NewWorld()
-	if _, ok := Get(newEntry(w)); !ok {
-		t.Error("Get on an entity with a Transform returned false")
-	}
-	if _, ok := Get(w.Entry(w.Create(donburi.NewTag()))); ok {
-		t.Error("Get on an entity without a Transform returned true")
-	}
-}

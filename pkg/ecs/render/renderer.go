@@ -16,13 +16,6 @@ var Component = donburi.NewComponentType[Renderer](Renderer{
 	visible: true,
 })
 
-func Get(e *donburi.Entry) (*Renderer, bool) {
-	if e.HasComponent(Component) {
-		return Component.Get(e), true
-	}
-	return nil, false
-}
-
 func (r *Renderer) Kind() Kind {
 	return r.kind
 }

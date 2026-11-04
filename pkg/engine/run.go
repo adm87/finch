@@ -1,9 +1,12 @@
+// Package engine runs the game loop: update phases, drawing and layout.
 package engine
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
+// Run opens the window and runs the game until an updater returns an error.
+// Return ebiten.Termination to quit cleanly.
 func Run(opts ...Option) error {
 	o := defaultOptions()
 	for _, opt := range opts {

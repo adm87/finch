@@ -1,6 +1,9 @@
 package effects
 
-import _ "embed"
+import (
+	_ "embed"
+	"fmt"
+)
 
 //go:embed vignette.kage
 var vignetteSrc []byte
@@ -13,7 +16,7 @@ type Vignette struct {
 func NewVignette(strength float64) (*Vignette, error) {
 	p, err := newPass(vignetteSrc, map[string]any{"Strength": float32(strength)})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("vignette shader: %w", err)
 	}
 	return &Vignette{pass: p}, nil
 }

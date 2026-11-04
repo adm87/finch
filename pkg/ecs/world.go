@@ -1,3 +1,4 @@
+// Package ecs holds the game world and runs its built-in systems.
 package ecs
 
 import (
@@ -9,6 +10,7 @@ import (
 	"github.com/adm87/finch/pkg/ecs/transform"
 )
 
+// World owns the entities and draws them through a render pipeline.
 type World struct {
 	donburi   donburi.World
 	pipeline  *render.Pipeline

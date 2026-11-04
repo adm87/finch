@@ -1,3 +1,4 @@
+// Package transform gives entities a position, scale, origin and rotation.
 package transform
 
 import (
@@ -5,6 +6,7 @@ import (
 	"github.com/yohamta/donburi"
 )
 
+// Transform places an entity in the world. Its matrix is rebuilt by Update.
 type Transform struct {
 	x, y          float64
 	sx, sy        float64
@@ -18,13 +20,6 @@ type Transform struct {
 var Component = donburi.NewComponentType[Transform](Transform{
 	sx: 1, sy: 1, version: 1,
 })
-
-func Get(e *donburi.Entry) (*Transform, bool) {
-	if e.HasComponent(Component) {
-		return Component.Get(e), true
-	}
-	return nil, false
-}
 
 // Update rebuilds matrices for transforms that changed.
 func Update(w donburi.World) {

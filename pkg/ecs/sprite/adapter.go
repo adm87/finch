@@ -30,10 +30,10 @@ func NewAdapter(images Images) *Adapter {
 }
 
 func (a *Adapter) AppendJobs(e *donburi.Entry, view *render.View, jobs []render.Job) []render.Job {
-	s, ok := Get(e)
-	if !ok || !e.HasComponent(transform.Component) {
+	if !e.HasComponent(Component) || !e.HasComponent(transform.Component) {
 		return jobs
 	}
+	s := Component.Get(e)
 	img := a.images.Image(s.handle)
 	if img == nil || !bounds(s, transform.Component.Get(e), img).Intersects(view.Bounds) {
 		return jobs

@@ -1,6 +1,9 @@
 package effects
 
-import _ "embed"
+import (
+	_ "embed"
+	"fmt"
+)
 
 //go:embed crt.kage
 var crtSrc []byte
@@ -14,7 +17,7 @@ type CRT struct {
 func NewCRT(lines float64) (*CRT, error) {
 	p, err := newPass(crtSrc, map[string]any{"Lines": float32(lines), "Time": float32(0)})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("crt shader: %w", err)
 	}
 	return &CRT{pass: p}, nil
 }

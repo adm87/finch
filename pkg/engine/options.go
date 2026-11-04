@@ -9,6 +9,7 @@ type options struct {
 	config       Config
 }
 
+// Option configures Run.
 type Option func(*options)
 
 func defaultOptions() options {

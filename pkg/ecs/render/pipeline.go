@@ -1,3 +1,5 @@
+// Package render sorts entities by layer and depth and hands each one to the
+// adapter that knows how to draw it.
 package render
 
 import (
@@ -26,6 +28,7 @@ type Job struct {
 	kind  Kind
 }
 
+// Pipeline draws entities through the adapters registered with it.
 type Pipeline struct {
 	adapters []Adapter
 	queue    queue
