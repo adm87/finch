@@ -86,11 +86,11 @@ func (s *Screen) SetFilter(filter ebiten.Filter) {
 
 // Layout takes the window size from Ebiten and returns it in window pixels.
 func (s *Screen) Layout(outsideWidth, outsideHeight float64) (float64, float64) {
+	deviceScale := s.deviceScale
 	if m := ebiten.Monitor(); m != nil {
-		s.deviceScale = m.DeviceScaleFactor()
+		deviceScale = m.DeviceScaleFactor()
 	}
-	scale := s.pixelScale()
-	return s.fit(outsideWidth*scale, outsideHeight*scale)
+	return s.layout(outsideWidth, outsideHeight, deviceScale)
 }
 
 // CursorPosition is the mouse position in window pixels.
@@ -116,6 +116,13 @@ func (s *Screen) Present() engine.DrawPass {
 			target.DrawImage(s.buffer, &s.options)
 		})
 	}
+}
+
+// layout is Layout without the monitor, so tests can pick the device scale.
+func (s *Screen) layout(outsideWidth, outsideHeight, deviceScale float64) (float64, float64) {
+	s.deviceScale = deviceScale
+	scale := s.pixelScale()
+	return s.fit(outsideWidth*scale, outsideHeight*scale)
 }
 
 func (s *Screen) fit(windowWidth, windowHeight float64) (float64, float64) {

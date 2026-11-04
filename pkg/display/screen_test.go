@@ -69,6 +69,46 @@ func TestScreenFitCropsToFillTheWindow(t *testing.T) {
 	}
 }
 
+func TestScreenLayoutScalesByDeviceAndResolution(t *testing.T) {
+	tests := []struct {
+		name                         string
+		deviceScale, resolutionScale float64
+		wantW, wantH, wantScale      float64
+	}{
+		{"standard display", 1, 1, 640, 360, 2},
+		{"high-DPI display", 2, 1, 1280, 720, 4},
+		{"high-DPI at half resolution", 2, 0.5, 640, 360, 2},
+		{"standard display at half resolution", 1, 0.5, 320, 180, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := NewScreen(320, 180, tt.resolutionScale)
+
+			if w, h := s.layout(640, 360, tt.deviceScale); w != tt.wantW || h != tt.wantH {
+				t.Errorf("layout() = (%v, %v), want (%v, %v)", w, h, tt.wantW, tt.wantH)
+			}
+			if got := s.Scale(); got != tt.wantScale {
+				t.Errorf("Scale() = %v, want %v", got, tt.wantScale)
+			}
+			if w, h := s.WindowSize(); w != tt.wantW || h != tt.wantH {
+				t.Errorf("WindowSize() = (%v, %v), want (%v, %v)", w, h, tt.wantW, tt.wantH)
+			}
+		})
+	}
+}
+
+func TestScreenLayoutRefitsWhenDeviceScaleChanges(t *testing.T) {
+	s := NewScreen(320, 180, 1)
+	s.layout(640, 360, 1)
+
+	// Same window, but dragged onto a high-DPI monitor.
+	s.layout(640, 360, 2)
+
+	if got := s.Scale(); got != 4 {
+		t.Errorf("Scale() = %v, want 4", got)
+	}
+}
+
 func TestScreenTransformMatchesBufferToWindow(t *testing.T) {
 	s := NewScreen(320, 180, 1)
 	s.fit(1280, 800)

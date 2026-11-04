@@ -1,4 +1,4 @@
-.PHONY: align lint test test-integration cover check check-integration check-verbose
+.PHONY: align lint test test-integration cover bench check check-integration check-verbose
 
 ## Local
 
@@ -17,6 +17,9 @@ test-integration:
 cover:
 	go test -coverprofile=cover.out ./pkg/...
 	go tool cover -html=cover.out
+
+bench:
+	go test -run '^$$' -bench . -benchmem ./pkg/...
 
 ## Dagger
 
