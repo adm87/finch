@@ -21,13 +21,6 @@ func (i images) Image(handle uint64) *ebiten.Image {
 	return i[handle]
 }
 
-func newSprite(w donburi.World, handle uint64, x, y float64) *donburi.Entry {
-	e := w.Entry(w.Create(render.Component, sprite.Component, transform.Component))
-	sprite.Component.Get(e).SetHandle(handle)
-	transform.Component.Get(e).SetPosition(x, y)
-	return e
-}
-
 func TestAdapterAppendJobs(t *testing.T) {
 	w := donburi.NewWorld()
 	a := sprite.NewAdapter(images{nil, ebiten.NewImage(2, 2)})
@@ -61,4 +54,11 @@ func TestAdapterAppendJobs(t *testing.T) {
 			}
 		})
 	}
+}
+
+func newSprite(w donburi.World, handle uint64, x, y float64) *donburi.Entry {
+	e := w.Entry(w.Create(render.Component, sprite.Component, transform.Component))
+	sprite.Component.Get(e).SetHandle(handle)
+	transform.Component.Get(e).SetPosition(x, y)
+	return e
 }

@@ -21,18 +21,6 @@ var Component = donburi.NewComponentType[Transform](Transform{
 	sx: 1, sy: 1, version: 1,
 })
 
-// Update rebuilds matrices for transforms that changed.
-func Update(w donburi.World) {
-	for e := range Component.Iter(w) {
-		t := Component.Get(e)
-		if t.matrixVersion == t.version {
-			continue
-		}
-		t.matrix = local(t)
-		t.matrixVersion = t.version
-	}
-}
-
 func (t *Transform) Position() (x, y float64) {
 	return t.x, t.y
 }
@@ -86,6 +74,18 @@ func (t *Transform) SetAngle(angle float64) {
 	if t.angle != angle {
 		t.angle = angle
 		t.version++
+	}
+}
+
+// Update rebuilds matrices for transforms that changed.
+func Update(w donburi.World) {
+	for e := range Component.Iter(w) {
+		t := Component.Get(e)
+		if t.matrixVersion == t.version {
+			continue
+		}
+		t.matrix = local(t)
+		t.matrixVersion = t.version
 	}
 }
 

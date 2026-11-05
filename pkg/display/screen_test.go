@@ -10,14 +10,6 @@ import (
 	"github.com/adm87/finch/pkg/geom"
 )
 
-func near(a, b float64) bool {
-	return math.Abs(a-b) < 1e-9
-}
-
-func nearRect(a, b geom.Rect) bool {
-	return near(a.X, b.X) && near(a.Y, b.Y) && near(a.Width, b.Width) && near(a.Height, b.Height)
-}
-
 func TestNewScreenDrawsNearest(t *testing.T) {
 	s := NewScreen(320, 180, 1)
 	if got := s.Filter(); got != ebiten.FilterNearest {
@@ -187,4 +179,12 @@ func TestScreenPresentDrawsIntoTheBuffer(t *testing.T) {
 	if got != s.buffer {
 		t.Error("passes before Present did not draw into the buffer")
 	}
+}
+
+func near(a, b float64) bool {
+	return math.Abs(a-b) < 1e-9
+}
+
+func nearRect(a, b geom.Rect) bool {
+	return near(a.X, b.X) && near(a.Y, b.Y) && near(a.Width, b.Width) && near(a.Height, b.Height)
 }

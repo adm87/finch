@@ -7,19 +7,6 @@ import (
 	"github.com/yohamta/donburi"
 )
 
-func newEntry(w donburi.World) *donburi.Entry {
-	return w.Entry(w.Create(Component))
-}
-
-func apply(t *Transform, x, y float64) (float64, float64) {
-	m := t.Matrix()
-	return m.Apply(x, y)
-}
-
-func near(a, b float64) bool {
-	return math.Abs(a-b) < 1e-9
-}
-
 func TestSettersBumpVersionOnlyOnChange(t *testing.T) {
 	tests := []struct {
 		name string
@@ -114,4 +101,17 @@ func TestMatrixScalesAndRotatesAroundOrigin(t *testing.T) {
 			}
 		})
 	}
+}
+
+func newEntry(w donburi.World) *donburi.Entry {
+	return w.Entry(w.Create(Component))
+}
+
+func apply(t *Transform, x, y float64) (float64, float64) {
+	m := t.Matrix()
+	return m.Apply(x, y)
+}
+
+func near(a, b float64) bool {
+	return math.Abs(a-b) < 1e-9
 }

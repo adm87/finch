@@ -9,9 +9,6 @@ type options struct {
 	config       Config
 }
 
-// Option configures Run.
-type Option func(*options)
-
 func defaultOptions() options {
 	return options{
 		display:      DisplayFunc(noopLayout),
@@ -22,6 +19,9 @@ func defaultOptions() options {
 		config:       DefaultConfig(),
 	}
 }
+
+// Option configures Run.
+type Option func(*options)
 
 func WithDisplay(display Display) Option {
 	if display == nil {

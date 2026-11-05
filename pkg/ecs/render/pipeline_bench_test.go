@@ -18,19 +18,6 @@ func (noop) AppendJobs(e *donburi.Entry, _ *View, jobs []Job) []Job {
 
 func (noop) Draw(*ebiten.Image, *View, *Job) {}
 
-func benchEntries(n int, order func(i int) (layer, depth int)) (*Pipeline, []*donburi.Entry) {
-	w := donburi.NewWorld()
-	p := NewPipeline()
-	kind := p.Register(noop{})
-
-	entries := make([]*donburi.Entry, n)
-	for i := range entries {
-		layer, depth := order(i)
-		entries[i] = newEntry(w, kind, layer, depth)
-	}
-	return p, entries
-}
-
 func BenchmarkPipelineDraw(b *testing.B) {
 	orders := []struct {
 		name  string
@@ -51,4 +38,17 @@ func BenchmarkPipelineDraw(b *testing.B) {
 			})
 		}
 	}
+}
+
+func benchEntries(n int, order func(i int) (layer, depth int)) (*Pipeline, []*donburi.Entry) {
+	w := donburi.NewWorld()
+	p := NewPipeline()
+	kind := p.Register(noop{})
+
+	entries := make([]*donburi.Entry, n)
+	for i := range entries {
+		layer, depth := order(i)
+		entries[i] = newEntry(w, kind, layer, depth)
+	}
+	return p, entries
 }

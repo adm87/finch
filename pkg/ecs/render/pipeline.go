@@ -9,6 +9,15 @@ import (
 	"github.com/yohamta/donburi"
 )
 
+// Job is a single draw, sorted by layer and then depth.
+type Job struct {
+	Entry *donburi.Entry
+	Layer int
+	Depth int
+	Index int // which part of the entry; up to the adapter
+	kind  Kind
+}
+
 // Adapter draws one kind of entity.
 type Adapter interface {
 	// AppendJobs adds the entry's jobs that fall inside the view.
@@ -17,15 +26,6 @@ type Adapter interface {
 
 	// Draw draws one job.
 	Draw(target *ebiten.Image, view *View, job *Job)
-}
-
-// Job is a single draw, sorted by layer and then depth.
-type Job struct {
-	Entry *donburi.Entry
-	Layer int
-	Depth int
-	Index int // which part of the entry; up to the adapter
-	kind  Kind
 }
 
 // Pipeline draws entities through the adapters registered with it.

@@ -21,15 +21,6 @@ func (a *recorder) Draw(_ *ebiten.Image, _ *View, j *Job) {
 	a.drawn = append(a.drawn, j.Entry)
 }
 
-func newEntry(w donburi.World, kind Kind, layer, depth int) *donburi.Entry {
-	e := w.Entry(w.Create(Component))
-	r := Component.Get(e)
-	r.SetKind(kind)
-	r.SetLayer(layer)
-	r.SetDepth(depth)
-	return e
-}
-
 func TestPipelineDrawOrder(t *testing.T) {
 	w := donburi.NewWorld()
 	p := NewPipeline()
@@ -106,4 +97,13 @@ func TestKeyOrder(t *testing.T) {
 			}
 		})
 	}
+}
+
+func newEntry(w donburi.World, kind Kind, layer, depth int) *donburi.Entry {
+	e := w.Entry(w.Create(Component))
+	r := Component.Get(e)
+	r.SetKind(kind)
+	r.SetLayer(layer)
+	r.SetDepth(depth)
+	return e
 }

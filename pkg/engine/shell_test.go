@@ -6,13 +6,6 @@ import (
 	"testing"
 )
 
-func recordUpdate(calls *[]string, name string, err error) Updater {
-	return UpdaterFunc(func(float64) error {
-		*calls = append(*calls, name)
-		return err
-	})
-}
-
 func TestShellUpdateRunsPhasesInOrder(t *testing.T) {
 	var calls []string
 	s := &shell{
@@ -75,4 +68,11 @@ func TestShellLayoutUsesDisplay(t *testing.T) {
 	if w, h := s.Layout(100, 50); w != 200 || h != 100 {
 		t.Errorf("Layout() = (%v, %v), want (200, 100)", w, h)
 	}
+}
+
+func recordUpdate(calls *[]string, name string, err error) Updater {
+	return UpdaterFunc(func(float64) error {
+		*calls = append(*calls, name)
+		return err
+	})
 }
