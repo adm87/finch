@@ -1,4 +1,17 @@
-screen:
-  width: 640
-  height: 360
-  resolution_scale: 1
+engine:
+  ebiten:
+    window:
+      title: "Finch Game"
+      width: 1280
+      height: 720
+      resizable: true
+    fullscreen: false
+  clock:
+    tick_rate: 60
+    fixed_rate: 60
+
+display:
+  screen:
+    width: 640
+    height: 360
+    resolution_scale: 1

@@ -24,25 +24,17 @@ import (
 )
 
 func Boot() error {
-	engineConfig := engine.DefaultConfig()
-	if err := loadConfig(embedded.Configs, embedded.EngineConfigPath, &engineConfig); err != nil {
+	config := game.DefaultConfig()
+	if err := loadConfig(embedded.Configs, embedded.GameConfigPath, &config); err != nil {
 		return err
 	}
-	gameConfig := game.DefaultConfig()
-	if err := loadConfig(embedded.Configs, embedded.GameConfigPath, &gameConfig); err != nil {
-		return err
-	}
-	return boot(engineConfig, gameConfig)
+	return boot(config)
 }
 
-func boot(engineConfig engine.Config, gameConfig game.Config) error {
+func boot(config game.Config) error {
 	renderPipeline := render.NewPipeline()
 	world := ecs.NewWorld(renderPipeline)
-	screen := display.NewScreen(
-		gameConfig.Screen.Width,
-		gameConfig.Screen.Height,
-		gameConfig.Screen.ResolutionScale,
-	)
+	screen := display.NewScreen(&config.Display.Screen)
 
 	spriteKind := renderPipeline.Register(sprite.NewAdapter(assets.NewImages()))
 	scene.LoadTest(world, spriteKind, screen.Visible(), 50)
@@ -61,7 +53,7 @@ func boot(engineConfig engine.Config, gameConfig game.Config) error {
 	updater := update.New(world, vignette, crt)
 
 	return engine.Run(
-		engine.WithConfig(engineConfig),
+		engine.WithConfig(config.Engine),
 		engine.WithDrawer(drawer.Pipeline()),
 		engine.WithUpdater(updater.Main()),
 		engine.WithLaterUpdater(updater.Later()),

@@ -1,23 +1,20 @@
 package game
 
-type ScreenConfig struct {
-	Width           int     `yaml:"width"`
-	Height          int     `yaml:"height"`
-	ResolutionScale float64 `yaml:"resolution_scale"`
-}
+import (
+	"github.com/adm87/finch/pkg/display"
+	"github.com/adm87/finch/pkg/engine"
+)
 
 type Config struct {
-	Screen ScreenConfig `yaml:"screen"`
+	Engine  engine.Config  `yaml:"engine"`
+	Display display.Config `yaml:"display"`
 }
 
 // DefaultConfig is the game's config before game.yaml is applied. Decode the
 // file onto it so missing keys keep their defaults.
 func DefaultConfig() Config {
 	return Config{
-		Screen: ScreenConfig{
-			Width:           400,
-			Height:          300,
-			ResolutionScale: 1,
-		},
+		Engine:  engine.DefaultConfig(),
+		Display: display.DefaultConfig(),
 	}
 }

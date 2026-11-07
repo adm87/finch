@@ -13,7 +13,7 @@ func Run(opts ...Option) error {
 		opt(&o)
 	}
 
-	initializeEbiten(o.config)
+	initializeEbiten(o.config.Ebiten, o.config.Clock.TickRate)
 
 	return ebiten.RunGame(&shell{
 		clock: newClock(
@@ -28,8 +28,8 @@ func Run(opts ...Option) error {
 	})
 }
 
-func initializeEbiten(config Config) {
-	ebiten.SetTPS(max(config.Clock.TickRate, 1))
+func initializeEbiten(config EbitenConfig, tickRate int) {
+	ebiten.SetTPS(max(tickRate, 1))
 	ebiten.SetWindowTitle(config.Window.Title)
 	ebiten.SetWindowSize(config.Window.Width, config.Window.Height)
 
@@ -38,5 +38,5 @@ func initializeEbiten(config Config) {
 		mode = ebiten.WindowResizingModeEnabled
 	}
 	ebiten.SetWindowResizingMode(mode)
-	ebiten.SetFullscreen(config.Fullscreen)
+	ebiten.SetFullscreen(config.FullScreen)
 }
