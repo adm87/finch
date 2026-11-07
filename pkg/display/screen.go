@@ -8,6 +8,7 @@ import (
 
 	"github.com/adm87/finch/pkg/engine"
 	"github.com/adm87/finch/pkg/geom"
+	"github.com/adm87/finch/pkg/hexcolor"
 )
 
 // Screen is the buffer the game draws into. It's scaled to fill the window,
@@ -22,6 +23,7 @@ type Screen struct {
 	windowWidth     float64
 	windowHeight    float64
 	dirty           bool
+	clearColor      hexcolor.Color
 }
 
 func NewScreen(config *ScreenConfig) *Screen {
@@ -38,6 +40,7 @@ func NewScreen(config *ScreenConfig) *Screen {
 		deviceScale:     1,
 		resolutionScale: config.ResolutionScale,
 		dirty:           true,
+		clearColor:      config.ClearColor,
 	}
 	s.options.Filter = ebiten.FilterNearest
 	return s
@@ -112,7 +115,7 @@ func (s *Screen) WindowToBuffer(x, y float64) (float64, float64) {
 func (s *Screen) Present() engine.DrawPass {
 	return func(inner engine.Drawer) engine.Drawer {
 		return engine.DrawerFunc(func(target *ebiten.Image) {
-			s.buffer.Clear()
+			s.buffer.Fill(hexcolor.ToRGBA(s.clearColor))
 			inner.Draw(s.buffer)
 			target.DrawImage(s.buffer, &s.options)
 		})

@@ -1,11 +1,9 @@
 package draw
 
 import (
-	"strconv"
-
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 
+	"github.com/adm87/finch/cmd/finch-game/internal/debug"
 	"github.com/adm87/finch/cmd/finch-game/internal/game/effects"
 	"github.com/adm87/finch/pkg/display"
 	"github.com/adm87/finch/pkg/ecs"
@@ -36,7 +34,7 @@ func (d *Drawer) Pipeline() engine.Drawer {
 		d.drawToScreen(),
 		d.drawCRT(),
 		d.drawUI(),
-		d.debugFPS(),
+		debug.DrawInfo(),
 	)
 }
 
@@ -66,13 +64,4 @@ func (d *Drawer) drawCRT() engine.DrawPass {
 
 func (d *Drawer) drawToScreen() engine.DrawPass {
 	return d.screen.Present()
-}
-
-func (d *Drawer) debugFPS() engine.DrawPass {
-	return func(inner engine.Drawer) engine.Drawer {
-		return engine.DrawerFunc(func(target *ebiten.Image) {
-			inner.Draw(target)
-			ebitenutil.DebugPrint(target, "FPS: "+strconv.Itoa(int(ebiten.ActualFPS())))
-		})
-	}
 }

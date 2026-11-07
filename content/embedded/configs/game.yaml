@@ -14,4 +14,5 @@ display:
   screen:
     width: 640
     height: 360
-    resolution_scale: 1
+    resolution_scale: 1.0
+    clear_color: "#6495EDFF"
