@@ -56,7 +56,6 @@ func boot(config game.Config) error {
 		engine.WithConfig(config.Engine),
 		engine.WithDrawer(drawer.Pipeline()),
 		engine.WithUpdater(updater.Main()),
-		engine.WithLaterUpdater(updater.Later()),
 		engine.WithDisplay(screen),
 	)
 }

@@ -31,12 +31,6 @@ func (u *Updater) Main() engine.Updater {
 		u.toggleEffects(),
 		u.shuffle(),
 		u.crt,
-	}
-}
-
-// Later runs once per update, after the fixed steps.
-func (u *Updater) Later() engine.Updater {
-	return engine.UpdatePhase{
 		u.syncWorld(),
 	}
 }
@@ -48,7 +42,6 @@ func (u *Updater) shuffle() engine.UpdaterFunc {
 	}
 }
 
-// 1 toggles the vignette, 2 toggles the CRT.
 func (u *Updater) toggleEffects() engine.UpdaterFunc {
 	return func(_ float64) error {
 		if inpututil.IsKeyJustPressed(ebiten.Key1) {
