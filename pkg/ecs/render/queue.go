@@ -1,29 +1,47 @@
 package render
 
-import "math"
+import (
+	"slices"
 
-// Sort key layout, top bit down: layer (8), depth (16), kind (8), job index (32).
-const (
-	layerShift = 56
-	depthShift = 40
-	kindShift  = 32
-	indexMask  = 1<<32 - 1
-	maxKinds   = 1<<8 - 1
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
-type queue struct {
+const indexMask = 0xffffffff
+
+// Command holds the information needed to draw an image in a certain layer and depth.
+type Command struct {
+	Image   *ebiten.Image
+	Options ebiten.DrawImageOptions
+	Layer   int16
+	Depth   int16
+}
+
+// Queue holds the draw commands for a frame, sorted by layer and depth.
+type Queue struct {
+	cmds []Command
 	keys []uint64
-	jobs []Job
 }
 
-func (q *queue) reset() {
+// Push adds a draw command to the queue.
+func (q *Queue) Push(c Command) {
+	q.keys = append(q.keys, key(c.Layer, c.Depth, len(q.cmds)))
+	q.cmds = append(q.cmds, c)
+}
+
+func (q *Queue) flush(target *ebiten.Image) {
+	slices.Sort(q.keys)
+	for _, k := range q.keys {
+		c := q.cmds[k&indexMask]
+		target.DrawImage(c.Image, &c.Options)
+	}
+	q.cmds = q.cmds[:0]
 	q.keys = q.keys[:0]
-	q.jobs = q.jobs[:0]
 }
 
-// Layer and depth are offset so negative values sort before positive ones.
-func key(j *Job, index int) uint64 {
-	layer := uint64(min(max(j.Layer, math.MinInt8), math.MaxInt8) - math.MinInt8)
-	depth := uint64(min(max(j.Depth, math.MinInt16), math.MaxInt16) - math.MinInt16)
-	return layer<<layerShift | depth<<depthShift | uint64(j.kind)<<kindShift | uint64(index) //nolint:gosec // kind and index are both bounded
+// key packs layer, depth, and index into a uint64 for sorting.
+func key(layer int16, depth int16, index int) uint64 {
+	l := uint64(uint16(layer))
+	d := uint64(uint16(depth))
+	i := uint64(uint32(index))
+	return (l << 48) | (d << 32) | i
 }

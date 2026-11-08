@@ -114,7 +114,7 @@ func (s *Screen) WindowToBuffer(x, y float64) (float64, float64) {
 // Present draws the passes before it into the buffer, then draws the buffer into the target.
 func (s *Screen) Present() engine.DrawPass {
 	return func(inner engine.Drawer) engine.Drawer {
-		return engine.DrawerFunc(func(target *ebiten.Image) {
+		return engine.DrawFunc(func(target *ebiten.Image) {
 			s.buffer.Fill(hexcolor.ToRGBA(s.clearColor))
 			inner.Draw(s.buffer)
 			target.DrawImage(s.buffer, &s.options)

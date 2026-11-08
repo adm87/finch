@@ -47,7 +47,7 @@ func (p *pass) Pass() engine.DrawPass {
 	p.used = true
 
 	return func(inner engine.Drawer) engine.Drawer {
-		return engine.DrawerFunc(func(target *ebiten.Image) {
+		return engine.DrawFunc(func(target *ebiten.Image) {
 			if !p.enabled {
 				inner.Draw(target)
 				return

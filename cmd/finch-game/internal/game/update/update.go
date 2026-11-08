@@ -11,16 +11,14 @@ import (
 )
 
 type Updater struct {
-	world    *ecs.World
-	vignette *effects.Vignette
-	crt      *effects.CRT
+	world *ecs.World
+	crt   *effects.CRT
 }
 
-func New(world *ecs.World, vignette *effects.Vignette, crt *effects.CRT) *Updater {
+func New(world *ecs.World, crt *effects.CRT) *Updater {
 	return &Updater{
-		world:    world,
-		vignette: vignette,
-		crt:      crt,
+		world: world,
+		crt:   crt,
 	}
 }
 
@@ -45,9 +43,6 @@ func (u *Updater) shuffle() engine.UpdaterFunc {
 func (u *Updater) toggleEffects() engine.UpdaterFunc {
 	return func(_ float64) error {
 		if inpututil.IsKeyJustPressed(ebiten.Key1) {
-			u.vignette.Toggle()
-		}
-		if inpututil.IsKeyJustPressed(ebiten.Key2) {
 			u.crt.Toggle()
 		}
 		return nil

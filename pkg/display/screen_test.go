@@ -172,7 +172,7 @@ func TestScreenPresentDrawsIntoTheBuffer(t *testing.T) {
 	s := NewScreen(&ScreenConfig{Width: 320, Height: 180, ResolutionScale: 1})
 
 	var got *ebiten.Image
-	inner := engine.DrawerFunc(func(target *ebiten.Image) { got = target })
+	inner := engine.DrawFunc(func(target *ebiten.Image) { got = target })
 
 	s.Present()(inner).Draw(ebiten.NewImage(1280, 720))
 

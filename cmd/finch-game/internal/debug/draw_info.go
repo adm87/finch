@@ -38,7 +38,7 @@ func DrawInfo() engine.DrawPass {
 		info.lastAllocs = info.samples[1].Value.Uint64()
 		info.lastGCs = info.samples[2].Value.Uint64()
 
-		return engine.DrawerFunc(func(target *ebiten.Image) {
+		return engine.DrawFunc(func(target *ebiten.Image) {
 			begin := time.Now()
 			inner.Draw(target)
 

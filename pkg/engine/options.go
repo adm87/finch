@@ -12,7 +12,7 @@ type options struct {
 func defaultOptions() options {
 	return options{
 		display:      DisplayFunc(noopLayout),
-		drawer:       DrawerFunc(noopDraw),
+		drawer:       DrawFunc(noopDraw),
 		updater:      UpdaterFunc(noopUpdate),
 		fixedUpdater: UpdaterFunc(noopUpdate),
 		laterUpdater: UpdaterFunc(noopUpdate),

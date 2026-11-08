@@ -12,12 +12,11 @@ import (
 )
 
 // LoadTest scatters count sprites across area.
-func LoadTest(world *ecs.World, spriteKind render.Kind, area geom.Rect, count int) {
+func LoadTest(world *ecs.World, area geom.Rect, count int) {
 	w := world.Donburi()
 	for i := range count {
 		e := w.Entry(w.Create(render.Component, sprite.Component, transform.Component, shuffle.Component))
 
-		render.Component.Get(e).SetKind(spriteKind)
 		sprite.Component.Get(e).SetAnchor(0.5, 0.5)
 
 		// The R2 sequence spreads sprites out evenly, and it's the same every run.

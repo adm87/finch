@@ -7,17 +7,17 @@ type Drawer interface {
 	Draw(target *ebiten.Image)
 }
 
-// DrawerFunc adapts a function to a Drawer.
-type DrawerFunc func(target *ebiten.Image)
+// DrawFunc adapts a function to a Drawer.
+type DrawFunc func(target *ebiten.Image)
 
-func (f DrawerFunc) Draw(target *ebiten.Image) {
+func (f DrawFunc) Draw(target *ebiten.Image) {
 	f(target)
 }
 
 // DrawPass wraps a Drawer to draw before, after, or around it.
 type DrawPass func(Drawer) Drawer
 
-// DrawPipeline wraps drawer in each pass in order, so the last pass is outermost.
+// DrawPipeline wraps drawer in each pass in order.
 func DrawPipeline(drawer Drawer, passes ...DrawPass) Drawer {
 	for _, pass := range passes {
 		drawer = pass(drawer)

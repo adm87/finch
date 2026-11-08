@@ -1,83 +1,52 @@
-// Package render sorts entities by layer and depth and hands each one to the
-// adapter that knows how to draw it.
+// Package render turns entities into draw commands and draws them
+// in layer and depth order.
+//
+// Pipeline runs its adapters over the visible entries, then draws
+// the queued commands in order.
 package render
 
 import (
-	"slices"
-
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
 
-// Job is a single draw, sorted by layer and then depth.
-type Job struct {
-	Entry *donburi.Entry
-	Layer int
-	Depth int
-	Index int // which part of the entry; up to the adapter
-	kind  Kind
-}
-
-// Adapter draws one kind of entity.
+// Adapter knows how to draw entities of a certain type, and enqueues them in the render queue.
 type Adapter interface {
-	// AppendJobs adds the entry's jobs that fall inside the view.
-	// An entry can have any number of jobs.
-	AppendJobs(e *donburi.Entry, view *View, jobs []Job) []Job
-
-	// Draw draws one job.
-	Draw(target *ebiten.Image, view *View, job *Job)
+	// Enqueue adds draw commands for the given entries to the queue.
+	Enqueue(queue *Queue, entries []*donburi.Entry, view View)
 }
 
-// Pipeline draws entities through the adapters registered with it.
+// AdapterFunc adapts a function to an Adapter.
+type AdapterFunc func(queue *Queue, entries []*donburi.Entry, view View)
+
+func (f AdapterFunc) Enqueue(queue *Queue, entries []*donburi.Entry, view View) {
+	f(queue, entries, view)
+}
+
+// Pipeline draws entities in order of layer and depth, using the adapter that knows how to draw each one.
 type Pipeline struct {
 	adapters []Adapter
-	queue    queue
-	view     View // lives here so taking its address doesn't allocate
+	visible  []*donburi.Entry
+	queue    Queue
 }
 
-func NewPipeline() *Pipeline {
-	return &Pipeline{}
+func NewPipeline(adapters ...Adapter) *Pipeline {
+	return &Pipeline{adapters: adapters}
 }
 
-// Register adds an adapter and returns its Kind.
-func (p *Pipeline) Register(a Adapter) Kind {
-	if a == nil {
-		panic("render: nil adapter")
-	}
-	if len(p.adapters) == maxKinds {
-		panic("render: too many adapters")
-	}
-	p.adapters = append(p.adapters, a)
-	return Kind(len(p.adapters))
-}
-
-// Draw sorts the visible entries by layer and depth, then draws them.
-// Every entry needs a Renderer.
 func (p *Pipeline) Draw(target *ebiten.Image, view View, entries []*donburi.Entry) {
-	p.view = view
-	q := &p.queue
-	q.reset()
+	p.visible = p.visible[:0]
 
 	for _, e := range entries {
-		r := Component.Get(e)
-		if !r.visible || r.kind == 0 {
+		if !e.HasComponent(Component) || !Component.Get(e).Visible() {
 			continue
 		}
-
-		start := len(q.jobs)
-		q.jobs = p.adapters[r.kind-1].AppendJobs(e, &p.view, q.jobs)
-
-		for i := start; i < len(q.jobs); i++ {
-			j := &q.jobs[i]
-			j.kind = r.kind
-			q.keys = append(q.keys, key(j, i))
-		}
+		p.visible = append(p.visible, e)
 	}
 
-	slices.Sort(q.keys)
-
-	for _, k := range q.keys {
-		j := &q.jobs[k&indexMask]
-		p.adapters[j.kind-1].Draw(target, &p.view, j)
+	for _, a := range p.adapters {
+		a.Enqueue(&p.queue, entries, view)
 	}
+
+	p.queue.flush(target)
 }

@@ -32,25 +32,22 @@ func Boot() error {
 }
 
 func boot(config game.Config) error {
-	renderPipeline := render.NewPipeline()
+	renderPipeline := render.NewPipeline(
+		sprite.NewRenderAdapter(assets.NewImages()),
+	)
+
 	world := ecs.NewWorld(renderPipeline)
 	screen := display.NewScreen(&config.Display.Screen)
 
-	spriteKind := renderPipeline.Register(sprite.NewAdapter(assets.NewImages()))
-	scene.LoadTest(world, spriteKind, screen.Visible(), 50)
-
-	vignette, err := effects.NewVignette(1)
-	if err != nil {
-		return err
-	}
+	scene.LoadTest(world, screen.Visible(), 50)
 
 	crt, err := effects.NewCRT(screen.Visible().Height)
 	if err != nil {
 		return err
 	}
 
-	drawer := draw.New(world, screen, vignette, crt)
-	updater := update.New(world, vignette, crt)
+	drawer := draw.New(world, screen, crt)
+	updater := update.New(world, crt)
 
 	return engine.Run(
 		engine.WithConfig(config.Engine),

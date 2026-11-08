@@ -21,7 +21,7 @@ func TestIntegrationRunDrawsAndStops(t *testing.T) {
 			}
 			return nil
 		})),
-		engine.WithDrawer(engine.DrawerFunc(func(*ebiten.Image) { draws++ })),
+		engine.WithDrawer(engine.DrawFunc(func(*ebiten.Image) { draws++ })),
 	)
 	if err != nil {
 		t.Fatalf("Run() = %v", err)

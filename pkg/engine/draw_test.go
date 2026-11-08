@@ -14,14 +14,14 @@ func TestDrawPipelineWrapsInOrder(t *testing.T) {
 
 	record := func(name string) engine.DrawPass {
 		return func(inner engine.Drawer) engine.Drawer {
-			return engine.DrawerFunc(func(target *ebiten.Image) {
+			return engine.DrawFunc(func(target *ebiten.Image) {
 				calls = append(calls, name+" before")
 				inner.Draw(target)
 				calls = append(calls, name+" after")
 			})
 		}
 	}
-	base := engine.DrawerFunc(func(*ebiten.Image) {
+	base := engine.DrawFunc(func(*ebiten.Image) {
 		calls = append(calls, "base")
 	})
 
@@ -35,7 +35,7 @@ func TestDrawPipelineWrapsInOrder(t *testing.T) {
 
 func TestDrawPipelineWithoutPasses(t *testing.T) {
 	drawn := false
-	base := engine.DrawerFunc(func(*ebiten.Image) { drawn = true })
+	base := engine.DrawFunc(func(*ebiten.Image) { drawn = true })
 
 	engine.DrawPipeline(base).Draw(nil)
 
