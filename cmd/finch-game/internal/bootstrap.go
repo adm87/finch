@@ -39,7 +39,7 @@ func boot(config game.Config) error {
 	world := ecs.NewWorld(renderPipeline)
 	screen := display.NewScreen(config.Display.Screen)
 
-	scene.LoadTest(world, screen.Visible(), 50)
+	scene.Scatter(world, screen.Visible(), 50)
 
 	crt, err := effects.NewCRT(screen.Visible().Height)
 	if err != nil {

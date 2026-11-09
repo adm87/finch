@@ -1,4 +1,3 @@
-// Package hexcolor reads colours written as hex strings, like "#6495ED".
 package hexcolor
 
 import (

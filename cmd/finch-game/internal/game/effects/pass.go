@@ -6,9 +6,8 @@ import (
 	"github.com/adm87/finch/pkg/engine"
 )
 
-// pass runs the frame through a shader. Earlier passes draw into its own
-// offscreen image, which becomes the shader's first source image. When it's
-// off, earlier passes draw straight to the target.
+// pass draws everything before it into its own image, then runs that image
+// through a shader onto the target. When it's off, it stays out of the way.
 type pass struct {
 	shader  *ebiten.Shader
 	frame   *ebiten.Image
@@ -27,19 +26,11 @@ func newPass(src []byte, uniforms map[string]any) (pass, error) {
 	return p, nil
 }
 
-func (p *pass) Enabled() bool {
-	return p.enabled
-}
-
-func (p *pass) SetEnabled(enabled bool) {
-	p.enabled = enabled
-}
-
 func (p *pass) Toggle() {
 	p.enabled = !p.enabled
 }
 
-// Pass can only be used once; the effect has a single frame to draw into.
+// Pass can only be used once, since the effect has just one image to draw into.
 func (p *pass) Pass() engine.DrawPass {
 	if p.used {
 		panic("effects: pass already in a pipeline")

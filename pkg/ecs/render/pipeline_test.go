@@ -26,7 +26,7 @@ func TestPipelineDrawSkipsHidden(t *testing.T) {
 	shown := newEntry(w, 0, 0)
 	hidden := newEntry(w, 0, 0)
 	Component.Get(hidden).SetVisible(false)
-	none := w.Entry(w.Create(other)) // no Renderer
+	none := w.Entry(w.Create(other)) // no Layering
 
 	p.Draw(nil, View{}, []*donburi.Entry{shown, hidden, none})
 

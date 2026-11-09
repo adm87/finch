@@ -12,17 +12,16 @@ import (
 )
 
 type drawInfo struct {
-	start      time.Time // when the current one-second window began
-	text       string    // rebuilt once per window so drawing it doesn't allocate
+	start      time.Time // start of the current second
+	text       string    // rebuilt once a second so drawing it doesn't allocate
 	samples    []metrics.Sample
-	total      time.Duration // draw time summed over the window
+	total      time.Duration // draw time so far this second
 	frames     int
-	lastAllocs uint64 // allocated bytes and GC cycles at the window's start
+	lastAllocs uint64 // counts at the start of this second
 	lastGCs    uint64
 }
 
-// DrawInfo shows the FPS, the average CPU time spent issuing draws and its
-// share of the frame, and memory use, updated once a second.
+// DrawInfo prints FPS, CPU draw time and memory use, refreshed every second.
 func DrawInfo() engine.DrawPass {
 	return func(inner engine.Drawer) engine.Drawer {
 		info := &drawInfo{

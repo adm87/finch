@@ -1,4 +1,3 @@
-// Package sprite draws entities that have a Sprite and a Transform.
 package sprite
 
 import (

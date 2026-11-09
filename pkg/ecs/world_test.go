@@ -41,12 +41,12 @@ func TestWorldSyncRebuildsTransforms(t *testing.T) {
 	}
 }
 
-func TestWorldRenderDrawsOnlyRenderers(t *testing.T) {
+func TestWorldRenderDrawsOnlyLayered(t *testing.T) {
 	a := &recorder{}
 	w := NewWorld(render.NewPipeline(a))
 	d := w.Donburi()
 	drawn := d.Entry(d.Create(render.Component))
-	d.Create(transform.Component) // no Renderer, so never drawn
+	d.Create(transform.Component) // no Layering, so never drawn
 
 	w.Render(nil, render.View{})
 

@@ -1,4 +1,3 @@
-// Package geom has the geometry types shared across the engine.
 package geom
 
 // Rect is an axis-aligned rectangle. Its max edges are exclusive.

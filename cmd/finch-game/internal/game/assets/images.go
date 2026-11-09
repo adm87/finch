@@ -20,6 +20,6 @@ func NewImages() *Images {
 }
 
 // Get always returns the missing texture.
-func (i *Images) Get(_ uint64) *ebiten.Image {
+func (i *Images) Get(uint64) *ebiten.Image {
 	return i.missing
 }

@@ -10,8 +10,8 @@ type Config struct {
 	Display display.Config `yaml:"display"`
 }
 
-// DefaultConfig is the game's config before game.yaml is applied. Decode the
-// file onto it so missing keys keep their defaults.
+// DefaultConfig is the config before game.yaml is loaded. Keys the file
+// leaves out keep these values.
 func DefaultConfig() Config {
 	return Config{
 		Engine:  engine.DefaultConfig(),

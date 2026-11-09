@@ -25,4 +25,4 @@ func DrawPipeline(drawer Drawer, passes ...DrawPass) Drawer {
 	return drawer
 }
 
-func noopDraw(_ *ebiten.Image) {}
+func noopDraw(*ebiten.Image) {}

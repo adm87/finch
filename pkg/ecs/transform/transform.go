@@ -1,4 +1,3 @@
-// Package transform gives entities a position, scale, origin and rotation.
 package transform
 
 import (

@@ -11,8 +11,8 @@ import (
 	"github.com/adm87/finch/pkg/geom"
 )
 
-// LoadTest scatters count sprites across area.
-func LoadTest(world *ecs.World, area geom.Rect, count int) {
+// Scatter spreads count sprites across area.
+func Scatter(world *ecs.World, area geom.Rect, count int) {
 	w := world.Donburi()
 	for i := range count {
 		e := w.Entry(w.Create(render.Component, sprite.Component, transform.Component, shuffle.Component))

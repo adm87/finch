@@ -1,4 +1,3 @@
-// Package ecs holds the game world and runs its built-in systems.
 package ecs
 
 import (
@@ -14,7 +13,7 @@ import (
 type World struct {
 	donburi   donburi.World
 	pipeline  *render.Pipeline
-	renderers *donburi.Query
+	layered   *donburi.Query
 	drawables []*donburi.Entry
 }
 
@@ -23,9 +22,9 @@ func NewWorld(pipeline *render.Pipeline) *World {
 		panic("ecs: nil render pipeline")
 	}
 	return &World{
-		pipeline:  pipeline,
-		donburi:   donburi.NewWorld(),
-		renderers: donburi.NewQuery(filter.Contains(render.Component)),
+		pipeline: pipeline,
+		donburi:  donburi.NewWorld(),
+		layered:  donburi.NewQuery(filter.Contains(render.Component)),
 	}
 }
 
@@ -42,7 +41,7 @@ func (w *World) Sync() {
 // Render draws everything inside the view to target.
 func (w *World) Render(target *ebiten.Image, view render.View) {
 	w.drawables = w.drawables[:0]
-	for e := range w.renderers.Iter(w.donburi) {
+	for e := range w.layered.Iter(w.donburi) {
 		w.drawables = append(w.drawables, e)
 	}
 	w.pipeline.Draw(target, view, w.drawables)

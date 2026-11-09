@@ -1,5 +1,3 @@
-// Package shuffle is a throwaway movement for test entities: each one loops
-// around its home point so there's something moving under the effects.
 package shuffle
 
 import (
@@ -53,7 +51,7 @@ func (s *Shuffle) SetPhase(phase float64) {
 	s.phase = phase
 }
 
-// Update moves every shuffling entity along a figure-of-eight-ish loop around its home.
+// Update moves each entity in a loose figure eight around its home.
 func Update(w donburi.World, dt float64) {
 	for e := range Component.Iter(w) {
 		if !e.HasComponent(transform.Component) {

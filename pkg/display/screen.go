@@ -1,4 +1,3 @@
-// Package display scales the game's screen buffer to fit the window.
 package display
 
 import (
@@ -51,8 +50,8 @@ func (s *Screen) WindowSize() (float64, float64) {
 	return s.windowWidth, s.windowHeight
 }
 
-// Visible is the part of the buffer shown in the window, rounded out to whole
-// pixels so it includes pixels that are only partly visible.
+// Visible is the part of the buffer the window shows, rounded out to include
+// partly visible pixels.
 func (s *Screen) Visible() geom.Rect {
 	return s.visible
 }

@@ -14,8 +14,11 @@ type Images interface {
 	Get(handle uint64) *ebiten.Image
 }
 
-// NewRenderAdapter returns a render.Adapter that enqueues render commands for entities with a Sprite and a Transform.
+// NewRenderAdapter draws entities that have a Sprite and a Transform.
 func NewRenderAdapter(images Images) render.AdapterFunc {
+	if images == nil {
+		panic("sprite: nil images")
+	}
 	return render.AdapterFunc(func(queue *render.Queue, entries []*donburi.Entry, view render.View) {
 		for _, e := range entries {
 			if !e.HasComponent(Component) || !e.HasComponent(transform.Component) {

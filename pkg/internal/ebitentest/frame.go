@@ -1,4 +1,3 @@
-// Package ebitentest runs test code inside a real Ebitengine frame.
 package ebitentest
 
 import (

@@ -1,4 +1,3 @@
-// Package slotmap stores values under keys that stop working once the value is deleted.
 package slotmap
 
 import (
@@ -46,7 +45,7 @@ type SlotMap[T any] struct {
 	slots   []slot
 	values  []T      // packed so All only visits live values
 	slotOf  []uint32 // slot index of each value
-	head    uint32   // first free slot; 0 means none, so slot 0 is never used
+	head    uint32   // first free slot, or 0 for none (slot 0 is never used)
 	retired int      // slots whose version ran out
 }
 
@@ -142,8 +141,8 @@ func (s *SlotMap[T]) Delete(k Key) (T, bool) {
 // All yields in no particular order. Deleting the current key during All is safe.
 func (s *SlotMap[T]) All() iter.Seq2[Key, T] {
 	return func(yield func(Key, T) bool) {
-		// Iterate backwards so that deleting the current key doesn't affect the next iteration.
-		// Backward holds the slice it started with, so read values live in case an Insert grew it.
+		// Walk backwards, so deleting the current value only moves one already
+		// visited. Read s.values fresh each time, since an Insert may have grown it.
 		for i := range slices.Backward(s.values) {
 			if i >= len(s.values) {
 				continue

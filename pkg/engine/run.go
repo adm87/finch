@@ -1,4 +1,3 @@
-// Package engine runs the game loop: update phases, drawing and layout.
 package engine
 
 import (

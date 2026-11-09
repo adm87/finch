@@ -12,6 +12,7 @@ func (f UpdaterFunc) Update(dt float64) error {
 	return f(dt)
 }
 
+// UpdatePhase runs its updaters in order and stops at the first error.
 type UpdatePhase []Updater
 
 func (u UpdatePhase) Update(dt float64) error {
@@ -23,6 +24,6 @@ func (u UpdatePhase) Update(dt float64) error {
 	return nil
 }
 
-func noopUpdate(_ float64) error {
+func noopUpdate(float64) error {
 	return nil
 }
