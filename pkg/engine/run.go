@@ -38,5 +38,5 @@ func initializeEbiten(config EbitenConfig, tickRate int) {
 		mode = ebiten.WindowResizingModeEnabled
 	}
 	ebiten.SetWindowResizingMode(mode)
-	ebiten.SetFullscreen(config.FullScreen)
+	ebiten.SetFullscreen(config.Fullscreen)
 }

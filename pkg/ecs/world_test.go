@@ -4,7 +4,6 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 
 	"github.com/adm87/finch/pkg/ecs/render"
@@ -12,15 +11,11 @@ import (
 )
 
 type recorder struct {
-	drawn []*donburi.Entry
+	got []*donburi.Entry
 }
 
-func (a *recorder) AppendJobs(e *donburi.Entry, _ *render.View, jobs []render.Job) []render.Job {
-	return append(jobs, render.Job{Entry: e})
-}
-
-func (a *recorder) Draw(_ *ebiten.Image, _ *render.View, j *render.Job) {
-	a.drawn = append(a.drawn, j.Entry)
+func (a *recorder) Enqueue(_ *render.Queue, entries []*donburi.Entry, _ render.View) {
+	a.got = append(a.got, entries...)
 }
 
 func TestNewWorldPanicsOnNilPipeline(t *testing.T) {
@@ -47,36 +42,29 @@ func TestWorldSyncRebuildsTransforms(t *testing.T) {
 }
 
 func TestWorldRenderDrawsOnlyRenderers(t *testing.T) {
-	p := render.NewPipeline()
 	a := &recorder{}
-	kind := p.Register(a)
-
-	w := NewWorld(p)
+	w := NewWorld(render.NewPipeline(a))
 	d := w.Donburi()
 	drawn := d.Entry(d.Create(render.Component))
-	render.Component.Get(drawn).SetKind(kind)
 	d.Create(transform.Component) // no Renderer, so never drawn
 
 	w.Render(nil, render.View{})
 
-	if want := []*donburi.Entry{drawn}; !slices.Equal(a.drawn, want) {
-		t.Errorf("drawn = %v, want %v", a.drawn, want)
+	if want := []*donburi.Entry{drawn}; !slices.Equal(a.got, want) {
+		t.Errorf("adapter got %v, want %v", a.got, want)
 	}
 }
 
 func TestWorldRenderAllocs(t *testing.T) {
-	p := render.NewPipeline()
 	a := &recorder{}
-	kind := p.Register(a)
-
-	w := NewWorld(p)
+	w := NewWorld(render.NewPipeline(a))
 	d := w.Donburi()
 	for range 100 {
-		render.Component.Get(d.Entry(d.Create(render.Component))).SetKind(kind)
+		d.Create(render.Component)
 	}
 
 	frame := func() {
-		a.drawn = a.drawn[:0]
+		a.got = a.got[:0]
 		w.Render(nil, render.View{})
 	}
 	frame()

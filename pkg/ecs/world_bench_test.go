@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 
 	"github.com/adm87/finch/pkg/ecs/render"
@@ -13,22 +12,15 @@ import (
 
 type noop struct{}
 
-func (noop) AppendJobs(e *donburi.Entry, _ *render.View, jobs []render.Job) []render.Job {
-	return append(jobs, render.Job{Entry: e})
-}
-
-func (noop) Draw(*ebiten.Image, *render.View, *render.Job) {}
+func (noop) Enqueue(*render.Queue, []*donburi.Entry, render.View) {}
 
 func BenchmarkWorldRender(b *testing.B) {
 	for _, n := range []int{100, 1_000, 10_000} {
 		b.Run(fmt.Sprintf("entities=%d", n), func(b *testing.B) {
-			p := render.NewPipeline()
-			kind := p.Register(noop{})
-
-			w := NewWorld(p)
+			w := NewWorld(render.NewPipeline(noop{}))
 			d := w.Donburi()
 			for range n {
-				render.Component.Get(d.Entry(d.Create(render.Component))).SetKind(kind)
+				d.Create(render.Component)
 			}
 
 			b.ReportAllocs()

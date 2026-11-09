@@ -29,7 +29,7 @@ func LoadTest(world *ecs.World, area geom.Rect, count int) {
 		s := shuffle.Component.Get(e)
 		s.SetHome(x, y)
 		s.SetRadius(3 + 4*fy)
-		s.SetSpeed(1 + 2*fx)
+		s.SetSpeed(5)
 		s.SetPhase(n)
 	}
 }

@@ -6,13 +6,16 @@ import (
 	"github.com/adm87/finch/pkg/hexcolor"
 )
 
+// Config holds the display settings.
 type Config struct {
 	Screen ScreenConfig `yaml:"screen"`
 }
 
+// DefaultConfig is the display config before any file is applied. Decode
+// config files onto it so missing keys keep their defaults.
 func DefaultConfig() Config {
 	return Config{
-		Screen: DefaultScreenConfig(),
+		Screen: defaultScreenConfig(),
 	}
 }
 
@@ -23,7 +26,7 @@ type ScreenConfig struct {
 	ClearColor      hexcolor.Color `yaml:"clear_color"`
 }
 
-func DefaultScreenConfig() ScreenConfig {
+func defaultScreenConfig() ScreenConfig {
 	return ScreenConfig{
 		Width:           400,
 		Height:          300,

@@ -2,13 +2,13 @@
 package display
 
 import (
+	"image/color"
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/adm87/finch/pkg/engine"
 	"github.com/adm87/finch/pkg/geom"
-	"github.com/adm87/finch/pkg/hexcolor"
 )
 
 // Screen is the buffer the game draws into. It's scaled to fill the window,
@@ -23,10 +23,10 @@ type Screen struct {
 	windowWidth     float64
 	windowHeight    float64
 	dirty           bool
-	clearColor      hexcolor.Color
+	clearColor      color.RGBA
 }
 
-func NewScreen(config *ScreenConfig) *Screen {
+func NewScreen(config ScreenConfig) *Screen {
 	if config.ResolutionScale <= 0 {
 		panic("display: resolution scale must be positive")
 	}
@@ -40,7 +40,7 @@ func NewScreen(config *ScreenConfig) *Screen {
 		deviceScale:     1,
 		resolutionScale: config.ResolutionScale,
 		dirty:           true,
-		clearColor:      config.ClearColor,
+		clearColor:      color.RGBA(config.ClearColor),
 	}
 	s.options.Filter = ebiten.FilterNearest
 	return s
@@ -115,7 +115,7 @@ func (s *Screen) WindowToBuffer(x, y float64) (float64, float64) {
 func (s *Screen) Present() engine.DrawPass {
 	return func(inner engine.Drawer) engine.Drawer {
 		return engine.DrawFunc(func(target *ebiten.Image) {
-			s.buffer.Fill(hexcolor.ToRGBA(s.clearColor))
+			s.buffer.Fill(s.clearColor)
 			inner.Draw(s.buffer)
 			target.DrawImage(s.buffer, &s.options)
 		})

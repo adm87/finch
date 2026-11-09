@@ -6,7 +6,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
-	"github.com/adm87/finch/cmd/finch-game/internal/debug"
+	"github.com/adm87/finch/cmd/finch-game/internal/devinfo"
 	"github.com/adm87/finch/cmd/finch-game/internal/game/effects"
 	"github.com/adm87/finch/pkg/display"
 	"github.com/adm87/finch/pkg/ecs"
@@ -34,7 +34,7 @@ func (d *Drawer) Pipeline() engine.Drawer {
 		d.drawUI(),
 		d.drawToScreen(),
 		d.drawCRT(),
-		debug.DrawInfo(),
+		devinfo.DrawInfo(),
 	)
 }
 

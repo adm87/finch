@@ -31,6 +31,11 @@ type Pipeline struct {
 }
 
 func NewPipeline(adapters ...Adapter) *Pipeline {
+	for _, a := range adapters {
+		if a == nil {
+			panic("render: nil adapter")
+		}
+	}
 	return &Pipeline{adapters: adapters}
 }
 
@@ -45,7 +50,7 @@ func (p *Pipeline) Draw(target *ebiten.Image, view View, entries []*donburi.Entr
 	}
 
 	for _, a := range p.adapters {
-		a.Enqueue(&p.queue, entries, view)
+		a.Enqueue(&p.queue, p.visible, view)
 	}
 
 	p.queue.flush(target)

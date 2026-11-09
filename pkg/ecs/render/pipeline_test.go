@@ -1,76 +1,66 @@
 package render
 
 import (
+	"math"
 	"slices"
 	"testing"
 
-	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 )
 
+var other = donburi.NewTag()
+
 type recorder struct {
-	drawn []*donburi.Entry
+	got []*donburi.Entry
 }
 
-func (a *recorder) AppendJobs(e *donburi.Entry, _ *View, jobs []Job) []Job {
-	r := Component.Get(e)
-	return append(jobs, Job{Entry: e, Layer: r.Layer(), Depth: r.Depth()})
+func (a *recorder) Enqueue(_ *Queue, entries []*donburi.Entry, _ View) {
+	a.got = append(a.got, entries...)
 }
 
-func (a *recorder) Draw(_ *ebiten.Image, _ *View, j *Job) {
-	a.drawn = append(a.drawn, j.Entry)
-}
-
-func TestPipelineDrawOrder(t *testing.T) {
+func TestPipelineDrawSkipsHidden(t *testing.T) {
 	w := donburi.NewWorld()
-	p := NewPipeline()
 	a := &recorder{}
-	kind := p.Register(a)
+	p := NewPipeline(a)
 
-	top := newEntry(w, kind, 1, 0)
-	front := newEntry(w, kind, 0, 5)
-	back := newEntry(w, kind, 0, -5)
-	under := newEntry(w, kind, -1, 100)
-
-	p.Draw(nil, View{}, []*donburi.Entry{top, front, back, under})
-
-	want := []*donburi.Entry{under, back, front, top}
-	if !slices.Equal(a.drawn, want) {
-		t.Errorf("draw order = %v, want %v", a.drawn, want)
-	}
-}
-
-func TestPipelineDrawSkips(t *testing.T) {
-	w := donburi.NewWorld()
-	p := NewPipeline()
-	a := &recorder{}
-	kind := p.Register(a)
-
-	shown := newEntry(w, kind, 0, 0)
-	hidden := newEntry(w, kind, 0, 0)
+	shown := newEntry(w, 0, 0)
+	hidden := newEntry(w, 0, 0)
 	Component.Get(hidden).SetVisible(false)
-	none := newEntry(w, 0, 0, 0)
+	none := w.Entry(w.Create(other)) // no Renderer
 
 	p.Draw(nil, View{}, []*donburi.Entry{shown, hidden, none})
 
-	if want := []*donburi.Entry{shown}; !slices.Equal(a.drawn, want) {
-		t.Errorf("drawn = %v, want %v", a.drawn, want)
+	if want := []*donburi.Entry{shown}; !slices.Equal(a.got, want) {
+		t.Errorf("adapter got %v, want %v", a.got, want)
+	}
+}
+
+func TestPipelineDrawRunsEveryAdapter(t *testing.T) {
+	w := donburi.NewWorld()
+	var order []string
+	first := AdapterFunc(func(*Queue, []*donburi.Entry, View) { order = append(order, "first") })
+	second := AdapterFunc(func(*Queue, []*donburi.Entry, View) { order = append(order, "second") })
+	p := NewPipeline(first, second)
+
+	p.Draw(nil, View{}, []*donburi.Entry{newEntry(w, 0, 0)})
+
+	if want := []string{"first", "second"}; !slices.Equal(order, want) {
+		t.Errorf("adapters ran %v, want %v", order, want)
 	}
 }
 
 func TestPipelineDrawAllocs(t *testing.T) {
 	w := donburi.NewWorld()
-	p := NewPipeline()
 	a := &recorder{}
-	kind := p.Register(a)
+	p := NewPipeline(a)
 
 	entries := make([]*donburi.Entry, 1000)
 	for i := range entries {
-		entries[i] = newEntry(w, kind, i%3, -i)
+		entries[i] = newEntry(w, int16(i%3), int16(-i))
 	}
 
 	frame := func() {
-		a.drawn = a.drawn[:0]
+		a.got = a.got[:0]
 		p.Draw(nil, View{}, entries)
 	}
 	frame()
@@ -80,29 +70,42 @@ func TestPipelineDrawAllocs(t *testing.T) {
 	}
 }
 
+func TestNewPipelinePanicsOnNilAdapter(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Error("NewPipeline(nil) did not panic")
+		}
+	}()
+	NewPipeline(nil)
+}
+
 func TestKeyOrder(t *testing.T) {
+	type pos struct {
+		layer, depth int16
+		index        int
+	}
 	tests := []struct {
 		name string
-		a, b Job
+		a, b pos
 	}{
-		{"layer before depth", Job{Layer: -1, Depth: 100}, Job{Layer: 0, Depth: -100}},
-		{"negative depth", Job{Depth: -1}, Job{Depth: 0}},
-		{"kind within depth", Job{kind: 1}, Job{kind: 2}},
-		{"clamped layer", Job{Layer: -1000}, Job{Layer: 1000}},
+		{"layer before depth", pos{-1, 100, 0}, pos{0, -100, 0}},
+		{"negative layer", pos{-1, 0, 0}, pos{1, 0, 0}},
+		{"negative depth", pos{0, -1, 0}, pos{0, 1, 0}},
+		{"index breaks ties", pos{0, 0, 0}, pos{0, 0, 1}},
+		{"extremes", pos{math.MinInt16, math.MaxInt16, 1}, pos{math.MaxInt16, math.MinInt16, 0}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if key(&tt.a, 1) >= key(&tt.b, 0) {
+			if key(tt.a.layer, tt.a.depth, tt.a.index) >= key(tt.b.layer, tt.b.depth, tt.b.index) {
 				t.Errorf("key(%+v) >= key(%+v)", tt.a, tt.b)
 			}
 		})
 	}
 }
 
-func newEntry(w donburi.World, kind Kind, layer, depth int) *donburi.Entry {
+func newEntry(w donburi.World, layer, depth int16) *donburi.Entry {
 	e := w.Entry(w.Create(Component))
 	r := Component.Get(e)
-	r.SetKind(kind)
 	r.SetLayer(layer)
 	r.SetDepth(depth)
 	return e

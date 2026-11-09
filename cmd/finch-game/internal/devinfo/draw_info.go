@@ -1,4 +1,4 @@
-package debug
+package devinfo
 
 import (
 	"fmt"
@@ -21,8 +21,8 @@ type drawInfo struct {
 	lastGCs    uint64
 }
 
-// DrawInfo shows the FPS, the average draw time and its share of the frame,
-// and memory use, updated once a second.
+// DrawInfo shows the FPS, the average CPU time spent issuing draws and its
+// share of the frame, and memory use, updated once a second.
 func DrawInfo() engine.DrawPass {
 	return func(inner engine.Drawer) engine.Drawer {
 		info := &drawInfo{
@@ -57,7 +57,7 @@ func DrawInfo() engine.DrawPass {
 				secs := window.Seconds()
 
 				info.text = fmt.Sprintf(
-					"FPS: %.0f\nDraw: %s (%.1f%%)\nHeap: %.1f MB\nAlloc: %.1f KB/s\nGC: %.1f/s",
+					"FPS: %.0f\nDraw (CPU): %s (%.1f%%)\nHeap: %.1f MB\nAlloc: %.1f KB/s\nGC: %.1f/s",
 					ebiten.ActualFPS(),
 					avg.Round(time.Microsecond),
 					budget,

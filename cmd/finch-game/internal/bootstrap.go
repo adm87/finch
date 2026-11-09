@@ -37,7 +37,7 @@ func boot(config game.Config) error {
 	)
 
 	world := ecs.NewWorld(renderPipeline)
-	screen := display.NewScreen(&config.Display.Screen)
+	screen := display.NewScreen(config.Display.Screen)
 
 	scene.LoadTest(world, screen.Visible(), 50)
 

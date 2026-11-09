@@ -1,26 +1,29 @@
 package engine
 
+// Config holds the engine settings Run applies at startup.
 type Config struct {
 	Ebiten EbitenConfig `yaml:"ebiten"`
 	Clock  ClockConfig  `yaml:"clock"`
 }
 
+// DefaultConfig is the config Run uses when none is given. Decode config files
+// onto it so missing keys keep their defaults.
 func DefaultConfig() Config {
 	return Config{
-		Ebiten: DefaultEbitenConfig(),
-		Clock:  DefaultClockConfig(),
+		Ebiten: defaultEbitenConfig(),
+		Clock:  defaultClockConfig(),
 	}
 }
 
 type EbitenConfig struct {
 	Window     WindowConfig `yaml:"window"`
-	FullScreen bool         `yaml:"fullscreen"`
+	Fullscreen bool         `yaml:"fullscreen"`
 }
 
-func DefaultEbitenConfig() EbitenConfig {
+func defaultEbitenConfig() EbitenConfig {
 	return EbitenConfig{
-		Window:     DefaultWindowConfig(),
-		FullScreen: false,
+		Window:     defaultWindowConfig(),
+		Fullscreen: false,
 	}
 }
 
@@ -31,7 +34,7 @@ type WindowConfig struct {
 	Resizable bool   `yaml:"resizable"`
 }
 
-func DefaultWindowConfig() WindowConfig {
+func defaultWindowConfig() WindowConfig {
 	return WindowConfig{
 		Title:     "Untitled",
 		Width:     800,
@@ -45,7 +48,7 @@ type ClockConfig struct {
 	FixedRate int `yaml:"fixed_rate"` // fixed steps per second
 }
 
-func DefaultClockConfig() ClockConfig {
+func defaultClockConfig() ClockConfig {
 	return ClockConfig{
 		TickRate:  60,
 		FixedRate: 60,

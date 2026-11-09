@@ -11,14 +11,14 @@ import (
 )
 
 func TestNewScreenDrawsNearest(t *testing.T) {
-	s := NewScreen(&ScreenConfig{Width: 320, Height: 180, ResolutionScale: 1})
+	s := NewScreen(ScreenConfig{Width: 320, Height: 180, ResolutionScale: 1})
 	if got := s.Filter(); got != ebiten.FilterNearest {
 		t.Errorf("Filter() = %v, want FilterNearest", got)
 	}
 }
 
 func TestScreenFitScalesToTheWindow(t *testing.T) {
-	s := NewScreen(&ScreenConfig{Width: 320, Height: 180, ResolutionScale: 1})
+	s := NewScreen(ScreenConfig{Width: 320, Height: 180, ResolutionScale: 1})
 
 	if w, h := s.fit(1280, 720); w != 1280 || h != 720 {
 		t.Errorf("fit() = (%v, %v), want (1280, 720)", w, h)
@@ -46,7 +46,7 @@ func TestScreenFitCropsToFillTheWindow(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := NewScreen(&ScreenConfig{Width: 320, Height: 180, ResolutionScale: 1})
+			s := NewScreen(ScreenConfig{Width: 320, Height: 180, ResolutionScale: 1})
 			s.fit(tt.width, tt.height)
 
 			got := s.Visible()
@@ -74,7 +74,7 @@ func TestScreenLayoutScalesByDeviceAndResolution(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := NewScreen(&ScreenConfig{Width: 320, Height: 180, ResolutionScale: tt.resolutionScale})
+			s := NewScreen(ScreenConfig{Width: 320, Height: 180, ResolutionScale: tt.resolutionScale})
 
 			if w, h := s.layout(640, 360, tt.deviceScale); w != tt.wantW || h != tt.wantH {
 				t.Errorf("layout() = (%v, %v), want (%v, %v)", w, h, tt.wantW, tt.wantH)
@@ -90,7 +90,7 @@ func TestScreenLayoutScalesByDeviceAndResolution(t *testing.T) {
 }
 
 func TestScreenLayoutRefitsWhenDeviceScaleChanges(t *testing.T) {
-	s := NewScreen(&ScreenConfig{Width: 320, Height: 180, ResolutionScale: 1})
+	s := NewScreen(ScreenConfig{Width: 320, Height: 180, ResolutionScale: 1})
 	s.layout(640, 360, 1)
 
 	// Same window, but dragged onto a high-DPI monitor.
@@ -102,7 +102,7 @@ func TestScreenLayoutRefitsWhenDeviceScaleChanges(t *testing.T) {
 }
 
 func TestScreenTransformMatchesBufferToWindow(t *testing.T) {
-	s := NewScreen(&ScreenConfig{Width: 320, Height: 180, ResolutionScale: 1})
+	s := NewScreen(ScreenConfig{Width: 320, Height: 180, ResolutionScale: 1})
 	s.fit(1280, 800)
 
 	for _, p := range [][2]float64{{0, 0}, {16, 0}, {100, 90}, {320, 180}} {
@@ -117,7 +117,7 @@ func TestScreenTransformMatchesBufferToWindow(t *testing.T) {
 }
 
 func TestScreenFitIgnoresAnEmptyWindow(t *testing.T) {
-	s := NewScreen(&ScreenConfig{Width: 320, Height: 180, ResolutionScale: 1})
+	s := NewScreen(ScreenConfig{Width: 320, Height: 180, ResolutionScale: 1})
 	s.fit(1280, 720)
 	s.fit(0, 0)
 
@@ -130,7 +130,7 @@ func TestScreenFitIgnoresAnEmptyWindow(t *testing.T) {
 }
 
 func TestScreenResizeRefitsTheSameWindow(t *testing.T) {
-	s := NewScreen(&ScreenConfig{Width: 320, Height: 180, ResolutionScale: 1})
+	s := NewScreen(ScreenConfig{Width: 320, Height: 180, ResolutionScale: 1})
 	s.fit(1280, 720)
 
 	s.Resize(640, 360)
@@ -145,7 +145,7 @@ func TestScreenResizeRefitsTheSameWindow(t *testing.T) {
 }
 
 func TestScreenResizeToTheSameSizeKeepsTheBuffer(t *testing.T) {
-	s := NewScreen(&ScreenConfig{Width: 320, Height: 180, ResolutionScale: 1})
+	s := NewScreen(ScreenConfig{Width: 320, Height: 180, ResolutionScale: 1})
 	buffer := s.buffer
 
 	s.Resize(320, 180)
@@ -163,13 +163,13 @@ func TestNewScreenRejectsNonPositiveResolutionScale(t *testing.T) {
 					t.Errorf("NewScreen with resolution scale %v did not panic", scale)
 				}
 			}()
-			NewScreen(&ScreenConfig{Width: 320, Height: 180, ResolutionScale: scale})
+			NewScreen(ScreenConfig{Width: 320, Height: 180, ResolutionScale: scale})
 		}()
 	}
 }
 
 func TestScreenPresentDrawsIntoTheBuffer(t *testing.T) {
-	s := NewScreen(&ScreenConfig{Width: 320, Height: 180, ResolutionScale: 1})
+	s := NewScreen(ScreenConfig{Width: 320, Height: 180, ResolutionScale: 1})
 
 	var got *ebiten.Image
 	inner := engine.DrawFunc(func(target *ebiten.Image) { got = target })

@@ -14,8 +14,8 @@ type Images interface {
 	Get(handle uint64) *ebiten.Image
 }
 
-// NewRenderAdapter queues a draw command for each entry that has a Sprite and a Transform.
-func NewRenderAdapter(images Images) render.Adapter {
+// NewRenderAdapter returns a render.Adapter that enqueues render commands for entities with a Sprite and a Transform.
+func NewRenderAdapter(images Images) render.AdapterFunc {
 	return render.AdapterFunc(func(queue *render.Queue, entries []*donburi.Entry, view render.View) {
 		for _, e := range entries {
 			if !e.HasComponent(Component) || !e.HasComponent(transform.Component) {
@@ -23,6 +23,7 @@ func NewRenderAdapter(images Images) render.Adapter {
 			}
 
 			s := Component.Get(e)
+
 			img := images.Get(s.handle)
 			if img == nil {
 				continue // not loaded yet

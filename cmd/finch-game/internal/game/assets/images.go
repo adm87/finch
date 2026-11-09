@@ -19,7 +19,7 @@ func NewImages() *Images {
 	return &Images{missing: missing}
 }
 
-// Image always returns the missing texture.
+// Get always returns the missing texture.
 func (i *Images) Get(_ uint64) *ebiten.Image {
 	return i.missing
 }

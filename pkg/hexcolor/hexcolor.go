@@ -1,51 +1,37 @@
+// Package hexcolor reads colours written as hex strings, like "#6495ED".
 package hexcolor
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"image/color"
 	"strings"
-
-	"go.yaml.in/yaml/v3"
 )
 
+// Color is a colour that config files can write as "#RRGGBB" or "#RRGGBBAA".
 type Color color.RGBA
 
-func ToRGBA(c Color) color.RGBA {
-	return color.RGBA{
-		R: c.R,
-		G: c.G,
-		B: c.B,
-		A: c.A,
-	}
-}
-
-func (c *Color) ParseHexColor(s string) error {
-	s = strings.TrimPrefix(s, "#")
-	b, err := hex.DecodeString(s)
+// UnmarshalText lets YAML and JSON decode a Color from a hex string.
+func (c *Color) UnmarshalText(text []byte) error {
+	parsed, err := Parse(string(text))
 	if err != nil {
-		return fmt.Errorf("invalid hex color %q: %w", s, err)
+		return err
 	}
-	if len(b) != 4 {
-		return fmt.Errorf("invalid hex color %q: expected 4 bytes (RGBA), got %d", s, len(b))
-	}
-	*c = Color{R: b[0], G: b[1], B: b[2], A: b[3]}
+	*c = parsed
 	return nil
 }
 
-func (c *Color) UnmarshalJSON(data []byte) error {
-	var s string
-	if err := json.Unmarshal(data, &s); err != nil {
-		return err
+// Parse reads "#RRGGBB" or "#RRGGBBAA". The # is optional, and alpha defaults to FF.
+func Parse(s string) (Color, error) {
+	b, err := hex.DecodeString(strings.TrimPrefix(s, "#"))
+	if err != nil {
+		return Color{}, fmt.Errorf("invalid hex color %q: %w", s, err)
 	}
-	return c.ParseHexColor(s)
-}
-
-func (c *Color) UnmarshalYAML(value *yaml.Node) error {
-	var s string
-	if err := value.Decode(&s); err != nil {
-		return err
+	switch len(b) {
+	case 3:
+		return Color{R: b[0], G: b[1], B: b[2], A: 0xff}, nil
+	case 4:
+		return Color{R: b[0], G: b[1], B: b[2], A: b[3]}, nil
 	}
-	return c.ParseHexColor(s)
+	return Color{}, fmt.Errorf("invalid hex color %q: want 6 or 8 digits", s)
 }
