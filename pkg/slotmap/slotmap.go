@@ -12,12 +12,7 @@ const maxSlots = min(math.MaxUint32, math.MaxInt)
 type slot struct {
 	pos     uint32 // index into values while occupied
 	next    uint32 // next free slot while free
-	version uint32
-}
-
-// The low bit of the version is set while the slot holds a value.
-func (s *slot) occupied() bool {
-	return s.version&1 == 1
+	version uint32 // low bit is set while the slot holds a value
 }
 
 // Key finds a value in a SlotMap. The zero Key is never valid.
@@ -82,9 +77,12 @@ func (s *SlotMap[T]) Insert(value T) Key {
 
 // Get reports false once k's value is deleted.
 func (s *SlotMap[T]) Get(k Key) (T, bool) {
-	sl, ok := s.lookup(k)
-	if !ok {
-		var zero T
+	var zero T
+	if k.index == 0 || k.index >= uint32(len(s.slots)) {
+		return zero, false
+	}
+	sl := &s.slots[k.index]
+	if sl.version != k.version || sl.version&1 == 0 {
 		return zero, false
 	}
 	return s.values[sl.pos], true
@@ -93,16 +91,22 @@ func (s *SlotMap[T]) Get(k Key) (T, bool) {
 // GetPtr returns a pointer to the value, or nil if k's value is deleted.
 // The pointer is only valid until the next Insert, Delete or Grow.
 func (s *SlotMap[T]) GetPtr(k Key) (*T, bool) {
-	sl, ok := s.lookup(k)
-	if !ok {
+	if k.index == 0 || k.index >= uint32(len(s.slots)) {
+		return nil, false
+	}
+	sl := &s.slots[k.index]
+	if sl.version != k.version || sl.version&1 == 0 {
 		return nil, false
 	}
 	return &s.values[sl.pos], true
 }
 
 func (s *SlotMap[T]) Set(k Key, value T) bool {
-	sl, ok := s.lookup(k)
-	if !ok {
+	if k.index == 0 || k.index >= uint32(len(s.slots)) {
+		return false
+	}
+	sl := &s.slots[k.index]
+	if sl.version != k.version || sl.version&1 == 0 {
 		return false
 	}
 	s.values[sl.pos] = value
@@ -111,9 +115,11 @@ func (s *SlotMap[T]) Set(k Key, value T) bool {
 
 func (s *SlotMap[T]) Delete(k Key) (T, bool) {
 	var zero T
-
-	sl, ok := s.lookup(k)
-	if !ok {
+	if k.index == 0 || k.index >= uint32(len(s.slots)) {
+		return zero, false
+	}
+	sl := &s.slots[k.index]
+	if sl.version != k.version || sl.version&1 == 0 {
 		return zero, false
 	}
 	old := s.values[sl.pos]
@@ -181,18 +187,6 @@ func (s *SlotMap[T]) Grow(n int) {
 
 	s.values = slices.Grow(s.values, s.Cap()-len(s.values))
 	s.slotOf = slices.Grow(s.slotOf, s.Cap()-len(s.slotOf))
-}
-
-func (s *SlotMap[T]) lookup(k Key) (*slot, bool) {
-	if k.index == 0 || k.index >= uint32(len(s.slots)) {
-		return nil, false
-	}
-
-	sl := &s.slots[k.index]
-	if sl.version != k.version || !sl.occupied() {
-		return nil, false
-	}
-	return sl, true
 }
 
 // growBy doubles the slots, but never past maxSlots.
