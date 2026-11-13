@@ -12,7 +12,6 @@ import (
 	"github.com/adm87/finch/pkg/ecs/render"
 	"github.com/adm87/finch/pkg/ecs/sprite"
 	"github.com/adm87/finch/pkg/ecs/transform"
-	"github.com/adm87/finch/pkg/geom"
 	"github.com/adm87/finch/pkg/internal/ebitentest"
 )
 
@@ -44,9 +43,6 @@ func TestIntegrationRenderAdapter(t *testing.T) {
 		{"view matrix", func(_ *donburi.Entry, view *render.View) {
 			view.Matrix.Translate(2, 0)
 		}, 6, 4, white},
-		{"culled outside view", func(_ *donburi.Entry, view *render.View) {
-			view.Bounds = geom.Rect{X: 8, Y: 8, Width: 8, Height: 8}
-		}, 4, 4, blank},
 		{"image not loaded", func(e *donburi.Entry, _ *render.View) {
 			sprite.Component.Get(e).SetHandle(0)
 		}, 4, 4, blank},
@@ -66,7 +62,7 @@ func TestIntegrationRenderAdapter(t *testing.T) {
 			e := w.Entry(w.Create(render.Component, sprite.Component, transform.Component))
 			sprite.Component.Get(e).SetHandle(1)
 			transform.Component.Get(e).SetPosition(4, 4)
-			view := render.View{Bounds: geom.Rect{Width: size, Height: size}}
+			var view render.View
 			if tt.setup != nil {
 				tt.setup(e, &view)
 			}

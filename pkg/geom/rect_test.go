@@ -42,3 +42,41 @@ func TestRectIntersects(t *testing.T) {
 		})
 	}
 }
+
+func TestRectCenterSizeArea(t *testing.T) {
+	r := geom.Rect{X: 10, Y: 20, Width: 30, Height: 40}
+
+	if x, y := r.Center(); x != 25 || y != 40 {
+		t.Errorf("Center() = (%v, %v), want (25, 40)", x, y)
+	}
+	if w, h := r.Size(); w != 30 || h != 40 {
+		t.Errorf("Size() = (%v, %v), want (30, 40)", w, h)
+	}
+	if got := r.Area(); got != 1200 {
+		t.Errorf("Area() = %v, want 1200", got)
+	}
+}
+
+func TestRectContains(t *testing.T) {
+	r := geom.Rect{X: 0, Y: 0, Width: 10, Height: 10}
+
+	tests := []struct {
+		name string
+		x, y float64
+		want bool
+	}{
+		{"inside", 5, 5, true},
+		{"min corner", 0, 0, true},
+		{"max edge", 10, 5, false},
+		{"max corner", 10, 10, false},
+		{"left", -1, 5, false},
+		{"below", 5, 11, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := r.Contains(tt.x, tt.y); got != tt.want {
+				t.Errorf("Contains(%v, %v) = %v, want %v", tt.x, tt.y, got, tt.want)
+			}
+		})
+	}
+}

@@ -32,14 +32,16 @@ func Boot() error {
 }
 
 func boot(config game.Config) error {
+	images := assets.NewImages()
+
 	renderPipeline := render.NewPipeline(
-		sprite.NewRenderAdapter(assets.NewImages()),
+		sprite.NewRenderAdapter(images),
 	)
 
 	world := ecs.NewWorld(renderPipeline)
 	screen := display.NewScreen(config.Display.Screen)
 
-	scene.Scatter(world, screen.Visible(), 50)
+	scene.Scatter(world, images, screen.Visible(), 50)
 
 	crt, err := effects.NewCRT(screen.Visible().Height)
 	if err != nil {

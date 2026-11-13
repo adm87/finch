@@ -5,6 +5,7 @@ import (
 
 	"github.com/adm87/finch/cmd/finch-game/internal/game/shuffle"
 	"github.com/adm87/finch/pkg/ecs"
+	"github.com/adm87/finch/pkg/ecs/bounds"
 	"github.com/adm87/finch/pkg/ecs/render"
 	"github.com/adm87/finch/pkg/ecs/sprite"
 	"github.com/adm87/finch/pkg/ecs/transform"
@@ -12,14 +13,25 @@ import (
 )
 
 // Scatter spreads count sprites across area.
-func Scatter(world *ecs.World, area geom.Rect, count int) {
+func Scatter(world *ecs.World, images sprite.Images, area geom.Rect, count int) {
 	w := world.Donburi()
 	for i := range count {
-		e := w.Entry(w.Create(render.Component, sprite.Component, transform.Component, shuffle.Component))
+		e := w.Entry(w.Create(
+			render.Component,
+			sprite.Component,
+			transform.Component,
+			shuffle.Component,
+			bounds.Component,
+		))
 
-		sprite.Component.Get(e).SetAnchor(0.5, 0.5)
+		spr := sprite.Component.Get(e)
+		spr.SetAnchor(0.5, 0.5)
 
-		// The R2 sequence spreads sprites out evenly, and it's the same every run.
+		size := images.Get(spr.Handle()).Bounds().Size()
+		width, height := float64(size.X), float64(size.Y)
+		ax, ay := spr.Anchor()
+		bounds.Component.Get(e).SetLocal(geom.Rect{X: -ax * width, Y: -ay * height, Width: width, Height: height})
+
 		n := float64(i + 1)
 		_, fx := math.Modf(n * 0.7548776662466927)
 		_, fy := math.Modf(n * 0.5698402909980532)

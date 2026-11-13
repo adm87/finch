@@ -3,6 +3,9 @@ package render
 import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
+
+	"github.com/adm87/finch/pkg/ecs/bounds"
+	"github.com/adm87/finch/pkg/ecs/transform"
 )
 
 // Adapter turns the entities it knows how to draw into draw commands.
@@ -36,22 +39,34 @@ func NewPipeline(adapters ...Adapter) *Pipeline {
 }
 
 // Draw hands each adapter the entries with a visible Layering, then draws
-// what they queued. The queue is cleared afterwards, even if an adapter panics.
+// what they queued. The queue is cleared afterward, even if an adapter panics.
 func (p *Pipeline) Draw(target *ebiten.Image, view View, entries []*donburi.Entry) {
 	defer p.queue.Reset()
 
 	p.visible = p.visible[:0]
 
+	// Collect visible entities
 	for _, e := range entries {
 		if !e.HasComponent(Component) || !Component.Get(e).Visible() {
 			continue
 		}
+
+		// Cull entities that have a Bounds and Transform if they are outside the view.
+		if e.HasComponent(bounds.Component) && e.HasComponent(transform.Component) {
+			t := transform.Component.Get(e)
+			if !view.Bounds.Intersects(bounds.Component.Get(e).World(t.Matrix())) {
+				continue
+			}
+		}
+
 		p.visible = append(p.visible, e)
 	}
 
+	// Add draw commands for each adapter for each visible entity.
 	for _, a := range p.adapters {
 		a.Enqueue(&p.queue, p.visible, view)
 	}
 
+	// Draw the queued commands to the target.
 	p.queue.flush(target)
 }

@@ -6,6 +6,10 @@ import (
 	"testing"
 
 	"github.com/yohamta/donburi"
+
+	"github.com/adm87/finch/pkg/ecs/bounds"
+	"github.com/adm87/finch/pkg/ecs/transform"
+	"github.com/adm87/finch/pkg/geom"
 )
 
 var other = donburi.NewTag()
@@ -31,6 +35,25 @@ func TestPipelineDrawSkipsHidden(t *testing.T) {
 	p.Draw(nil, View{}, []*donburi.Entry{shown, hidden, none})
 
 	if want := []*donburi.Entry{shown}; !slices.Equal(a.got, want) {
+		t.Errorf("adapter got %v, want %v", a.got, want)
+	}
+}
+
+func TestPipelineDrawCullsOffscreen(t *testing.T) {
+	w := donburi.NewWorld()
+	a := &recorder{}
+	p := NewPipeline(a)
+
+	onscreen := newBoundedEntry(w, 50, 50)
+	edge := newBoundedEntry(w, 105, 50) // half inside the view
+	offscreen := newBoundedEntry(w, 500, 50)
+	unbounded := newEntry(w, 0, 0) // never culled
+	transform.Update(w)
+
+	view := View{Bounds: geom.Rect{Width: 100, Height: 100}}
+	p.Draw(nil, view, []*donburi.Entry{onscreen, edge, offscreen, unbounded})
+
+	if want := []*donburi.Entry{onscreen, edge, unbounded}; !slices.Equal(a.got, want) {
 		t.Errorf("adapter got %v, want %v", a.got, want)
 	}
 }
@@ -108,5 +131,12 @@ func newEntry(w donburi.World, layer, depth int16) *donburi.Entry {
 	r := Component.Get(e)
 	r.SetLayer(layer)
 	r.SetDepth(depth)
+	return e
+}
+
+func newBoundedEntry(w donburi.World, x, y float64) *donburi.Entry {
+	e := w.Entry(w.Create(Component, transform.Component, bounds.Component))
+	transform.Component.Get(e).SetPosition(x, y)
+	bounds.Component.Get(e).SetLocal(geom.Rect{X: -8, Y: -8, Width: 16, Height: 16})
 	return e
 }
