@@ -29,6 +29,12 @@ func (r *FinchDev) WithGraphQLQuery(q *querybuilder.Selection) *FinchDev {
 	}
 }
 
+// withLoadedID is the FinchDev that q, a query of the node whose
+// ID is id, selects, knowing that ID (Loaded).
+func (r *FinchDev) withLoadedID(q *querybuilder.Selection, id ID) *FinchDev {
+	return &FinchDev{query: q, id: &id}
+}
+
 // A unique identifier for this FinchDev.
 func (r *FinchDev) ID(ctx context.Context) (ID, error) {
 	if r.id != nil {
