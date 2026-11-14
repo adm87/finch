@@ -5,7 +5,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/adm87/finch/cmd/finch-game/internal/game/camera"
-	"github.com/adm87/finch/cmd/finch-game/internal/game/effects"
 	"github.com/adm87/finch/cmd/finch-game/internal/game/shuffle"
 	"github.com/adm87/finch/pkg/display"
 	"github.com/adm87/finch/pkg/ecs"
@@ -14,14 +13,12 @@ import (
 
 type Updater struct {
 	world  *ecs.World
-	crt    *effects.CRT
 	screen *display.Screen
 }
 
-func New(world *ecs.World, crt *effects.CRT, screen *display.Screen) *Updater {
+func New(world *ecs.World, screen *display.Screen) *Updater {
 	return &Updater{
 		world:  world,
-		crt:    crt,
 		screen: screen,
 	}
 }
@@ -33,9 +30,7 @@ func (u *Updater) Main() engine.Updater {
 		u.panCamera(),
 		u.easeCamera(),
 		u.fitCamera(),
-		u.toggleEffects(),
 		u.shuffle(),
-		u.crt,
 		u.syncWorld(),
 	}
 }
@@ -43,15 +38,6 @@ func (u *Updater) Main() engine.Updater {
 func (u *Updater) shuffle() engine.UpdaterFunc {
 	return func(dt float64) error {
 		shuffle.Update(u.world.Donburi(), dt)
-		return nil
-	}
-}
-
-func (u *Updater) toggleEffects() engine.UpdaterFunc {
-	return func(_ float64) error {
-		if inpututil.IsKeyJustPressed(ebiten.Key1) {
-			u.crt.Toggle()
-		}
 		return nil
 	}
 }

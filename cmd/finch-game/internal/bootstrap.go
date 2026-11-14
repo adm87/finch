@@ -13,7 +13,6 @@ import (
 	"github.com/adm87/finch/cmd/finch-game/internal/game/assets"
 	"github.com/adm87/finch/cmd/finch-game/internal/game/camera"
 	"github.com/adm87/finch/cmd/finch-game/internal/game/draw"
-	"github.com/adm87/finch/cmd/finch-game/internal/game/effects"
 	"github.com/adm87/finch/cmd/finch-game/internal/game/scene"
 	"github.com/adm87/finch/cmd/finch-game/internal/game/update"
 	"github.com/adm87/finch/content/embedded"
@@ -47,13 +46,8 @@ func boot(config game.Config) error {
 
 	scene.Scatter(world, images, screen.Visible(), 50)
 
-	crt, err := effects.NewCRT(screen.Visible().Height)
-	if err != nil {
-		return err
-	}
-
-	drawer := draw.New(world, screen, crt)
-	updater := update.New(world, crt, screen)
+	drawer := draw.New(world, screen)
+	updater := update.New(world, screen)
 
 	return engine.Run(
 		engine.WithConfig(config.Engine),

@@ -8,7 +8,6 @@ import (
 
 	"github.com/adm87/finch/cmd/finch-game/internal/devinfo"
 	"github.com/adm87/finch/cmd/finch-game/internal/game/camera"
-	"github.com/adm87/finch/cmd/finch-game/internal/game/effects"
 	"github.com/adm87/finch/pkg/display"
 	"github.com/adm87/finch/pkg/ecs"
 	"github.com/adm87/finch/pkg/engine"
@@ -17,14 +16,12 @@ import (
 type Drawer struct {
 	world  *ecs.World
 	screen *display.Screen
-	crt    *effects.CRT
 }
 
-func New(world *ecs.World, screen *display.Screen, crt *effects.CRT) *Drawer {
+func New(world *ecs.World, screen *display.Screen) *Drawer {
 	return &Drawer{
 		world:  world,
 		screen: screen,
-		crt:    crt,
 	}
 }
 
@@ -33,7 +30,6 @@ func (d *Drawer) Pipeline() engine.Drawer {
 		d.drawWorld(),
 		d.drawUI(),
 		d.drawToScreen(),
-		d.drawCRT(),
 		devinfo.DrawInfo(),
 	)
 }
@@ -61,10 +57,6 @@ func (d *Drawer) drawUI() engine.DrawPass {
 			vector.FillRect(target, float32(maxX-margin), float32(maxY-margin), margin, margin, color.RGBA{R: 255, G: 255, A: 255}, false)
 		})
 	}
-}
-
-func (d *Drawer) drawCRT() engine.DrawPass {
-	return d.crt.Pass()
 }
 
 func (d *Drawer) drawToScreen() engine.DrawPass {
