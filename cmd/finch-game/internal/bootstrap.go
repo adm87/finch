@@ -41,8 +41,7 @@ func boot(config game.Config) error {
 	world := ecs.NewWorld(renderPipeline)
 	screen := display.NewScreen(config.Display.Screen)
 
-	cx, cy := screen.Visible().Center()
-	camera.New(world.Donburi(), cx, cy)
+	camera.New(world.Donburi(), 0, 0)
 
 	scene.Scatter(world, images, screen.Visible(), 50)
 

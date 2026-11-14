@@ -12,9 +12,9 @@ import (
 	"github.com/adm87/finch/pkg/geom"
 )
 
-// Scatter spreads count sprites across area.
 func Scatter(world *ecs.World, images sprite.Images, area geom.Rect, count int) {
 	w := world.Donburi()
+	hw, hh := area.Width/2, area.Height/2
 	for i := range count {
 		e := w.Entry(w.Create(
 			rendering.Component,
@@ -35,7 +35,7 @@ func Scatter(world *ecs.World, images sprite.Images, area geom.Rect, count int) 
 		n := float64(i + 1)
 		_, fx := math.Modf(n * 0.7548776662466927)
 		_, fy := math.Modf(n * 0.5698402909980532)
-		x, y := area.X+fx*area.Width, area.Y+fy*area.Height
+		x, y := -hw+area.X+fx*area.Width, -hh+area.Y+fy*area.Height
 		transform.Component.Get(e).SetPosition(x, y)
 
 		s := shuffle.Component.Get(e)

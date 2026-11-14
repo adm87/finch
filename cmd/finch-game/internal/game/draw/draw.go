@@ -30,6 +30,7 @@ func (d *Drawer) Pipeline() engine.Drawer {
 		d.drawWorld(),
 		d.drawUI(),
 		d.drawToScreen(),
+		devinfo.DrawWorldZero(d.world.Donburi(), d.screen),
 		devinfo.DrawInfo(),
 	)
 }
