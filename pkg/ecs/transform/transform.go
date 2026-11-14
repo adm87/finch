@@ -88,12 +88,12 @@ func Update(w donburi.World) {
 	}
 }
 
-// local scales and rotates around the origin, then moves into position.
+// local scales and rotates around the origin, which ends up at the position.
 func local(t *Transform) ebiten.GeoM {
 	var m ebiten.GeoM
 	m.Translate(-t.ox, -t.oy)
 	m.Scale(t.sx, t.sy)
 	m.Rotate(t.angle)
-	m.Translate(t.x+t.ox, t.y+t.oy)
+	m.Translate(t.x, t.y)
 	return m
 }

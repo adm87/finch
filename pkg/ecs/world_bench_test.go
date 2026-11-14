@@ -6,26 +6,26 @@ import (
 
 	"github.com/yohamta/donburi"
 
-	"github.com/adm87/finch/pkg/ecs/render"
+	"github.com/adm87/finch/pkg/ecs/rendering"
 	"github.com/adm87/finch/pkg/ecs/transform"
 )
 
 type noop struct{}
 
-func (noop) Enqueue(*render.Queue, []*donburi.Entry, render.View) {}
+func (noop) Enqueue(*rendering.Queue, []*donburi.Entry, rendering.View) {}
 
 func BenchmarkWorldRender(b *testing.B) {
 	for _, n := range []int{100, 1_000, 10_000} {
 		b.Run(fmt.Sprintf("entities=%d", n), func(b *testing.B) {
-			w := NewWorld(render.NewPipeline(noop{}))
+			w := NewWorld(rendering.NewPipeline(noop{}))
 			d := w.Donburi()
 			for range n {
-				d.Create(render.Component)
+				d.Create(rendering.Component)
 			}
 
 			b.ReportAllocs()
 			for b.Loop() {
-				w.Render(nil, render.View{})
+				w.Render(nil, rendering.View{})
 			}
 		})
 	}
@@ -34,7 +34,7 @@ func BenchmarkWorldRender(b *testing.B) {
 func BenchmarkWorldSync(b *testing.B) {
 	for _, n := range []int{100, 1_000, 10_000} {
 		b.Run(fmt.Sprintf("entities=%d", n), func(b *testing.B) {
-			w := NewWorld(render.NewPipeline())
+			w := NewWorld(rendering.NewPipeline())
 			d := w.Donburi()
 			transforms := make([]*transform.Transform, n)
 			for i := range transforms {

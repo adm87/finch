@@ -6,7 +6,7 @@ import (
 
 	"github.com/yohamta/donburi"
 
-	"github.com/adm87/finch/pkg/ecs/render"
+	"github.com/adm87/finch/pkg/ecs/rendering"
 	"github.com/adm87/finch/pkg/ecs/transform"
 )
 
@@ -14,7 +14,7 @@ type recorder struct {
 	got []*donburi.Entry
 }
 
-func (a *recorder) Enqueue(_ *render.Queue, entries []*donburi.Entry, _ render.View) {
+func (a *recorder) Enqueue(_ *rendering.Queue, entries []*donburi.Entry, _ rendering.View) {
 	a.got = append(a.got, entries...)
 }
 
@@ -28,7 +28,7 @@ func TestNewWorldPanicsOnNilPipeline(t *testing.T) {
 }
 
 func TestWorldSyncRebuildsTransforms(t *testing.T) {
-	w := NewWorld(render.NewPipeline())
+	w := NewWorld(rendering.NewPipeline())
 	d := w.Donburi()
 	tr := transform.Component.Get(d.Entry(d.Create(transform.Component)))
 	tr.SetPosition(3, 4)
@@ -43,12 +43,12 @@ func TestWorldSyncRebuildsTransforms(t *testing.T) {
 
 func TestWorldRenderDrawsOnlyLayered(t *testing.T) {
 	a := &recorder{}
-	w := NewWorld(render.NewPipeline(a))
+	w := NewWorld(rendering.NewPipeline(a))
 	d := w.Donburi()
-	drawn := d.Entry(d.Create(render.Component))
+	drawn := d.Entry(d.Create(rendering.Component))
 	d.Create(transform.Component) // no Layering, so never drawn
 
-	w.Render(nil, render.View{})
+	w.Render(nil, rendering.View{})
 
 	if want := []*donburi.Entry{drawn}; !slices.Equal(a.got, want) {
 		t.Errorf("adapter got %v, want %v", a.got, want)
@@ -57,15 +57,15 @@ func TestWorldRenderDrawsOnlyLayered(t *testing.T) {
 
 func TestWorldRenderAllocs(t *testing.T) {
 	a := &recorder{}
-	w := NewWorld(render.NewPipeline(a))
+	w := NewWorld(rendering.NewPipeline(a))
 	d := w.Donburi()
 	for range 100 {
-		d.Create(render.Component)
+		d.Create(rendering.Component)
 	}
 
 	frame := func() {
 		a.got = a.got[:0]
-		w.Render(nil, render.View{})
+		w.Render(nil, rendering.View{})
 	}
 	frame()
 

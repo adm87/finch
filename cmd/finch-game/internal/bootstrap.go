@@ -11,6 +11,7 @@ import (
 
 	"github.com/adm87/finch/cmd/finch-game/internal/game"
 	"github.com/adm87/finch/cmd/finch-game/internal/game/assets"
+	"github.com/adm87/finch/cmd/finch-game/internal/game/camera"
 	"github.com/adm87/finch/cmd/finch-game/internal/game/draw"
 	"github.com/adm87/finch/cmd/finch-game/internal/game/effects"
 	"github.com/adm87/finch/cmd/finch-game/internal/game/scene"
@@ -18,7 +19,7 @@ import (
 	"github.com/adm87/finch/content/embedded"
 	"github.com/adm87/finch/pkg/display"
 	"github.com/adm87/finch/pkg/ecs"
-	"github.com/adm87/finch/pkg/ecs/render"
+	"github.com/adm87/finch/pkg/ecs/rendering"
 	"github.com/adm87/finch/pkg/ecs/sprite"
 	"github.com/adm87/finch/pkg/engine"
 )
@@ -34,12 +35,15 @@ func Boot() error {
 func boot(config game.Config) error {
 	images := assets.NewImages()
 
-	renderPipeline := render.NewPipeline(
+	renderPipeline := rendering.NewPipeline(
 		sprite.NewRenderAdapter(images),
 	)
 
 	world := ecs.NewWorld(renderPipeline)
 	screen := display.NewScreen(config.Display.Screen)
+
+	cx, cy := screen.Visible().Center()
+	camera.New(world.Donburi(), cx, cy)
 
 	scene.Scatter(world, images, screen.Visible(), 50)
 
@@ -49,7 +53,7 @@ func boot(config game.Config) error {
 	}
 
 	drawer := draw.New(world, screen, crt)
-	updater := update.New(world, crt)
+	updater := update.New(world, crt, screen)
 
 	return engine.Run(
 		engine.WithConfig(config.Engine),

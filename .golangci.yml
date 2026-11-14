@@ -18,7 +18,7 @@ linters:
       - comments
     rules:
       # Sort keys, cells and slot keys pack integers into bits on purpose.
-      - path: pkg/(ecs/render/queue|hashgrid/cell|slotmap/slotmap)\.go
+      - path: pkg/(ecs/rendering/queue|hashgrid/cell|slotmap/slotmap)\.go
         linters: [gosec]
         text: G115
       - path: _test\.go

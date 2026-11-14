@@ -4,7 +4,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 
-	"github.com/adm87/finch/pkg/ecs/render"
+	"github.com/adm87/finch/pkg/ecs/rendering"
 	"github.com/adm87/finch/pkg/ecs/transform"
 )
 
@@ -14,11 +14,11 @@ type Images interface {
 }
 
 // NewRenderAdapter draws entities that have a Sprite and a Transform.
-func NewRenderAdapter(images Images) render.AdapterFunc {
+func NewRenderAdapter(images Images) rendering.AdapterFunc {
 	if images == nil {
 		panic("sprite: nil images")
 	}
-	return func(queue *render.Queue, entries []*donburi.Entry, view render.View) {
+	return func(queue *rendering.Queue, entries []*donburi.Entry, view rendering.View) {
 		for _, e := range entries {
 			if !e.HasComponent(Component) || !e.HasComponent(transform.Component) {
 				continue
@@ -39,8 +39,8 @@ func NewRenderAdapter(images Images) render.AdapterFunc {
 			geo.Concat(transform.Component.Get(e).Matrix())
 			geo.Concat(view.Matrix)
 
-			r := render.Component.Get(e)
-			queue.Push(render.Command{
+			r := rendering.Component.Get(e)
+			queue.Push(rendering.Command{
 				Image: img,
 				Options: ebiten.DrawImageOptions{
 					GeoM:       geo,

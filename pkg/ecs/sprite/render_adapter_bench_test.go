@@ -7,7 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 
-	"github.com/adm87/finch/pkg/ecs/render"
+	"github.com/adm87/finch/pkg/ecs/rendering"
 	"github.com/adm87/finch/pkg/ecs/sprite"
 	"github.com/adm87/finch/pkg/ecs/transform"
 )
@@ -20,7 +20,7 @@ func BenchmarkRenderAdapterEnqueue(b *testing.B) {
 
 			entries := make([]*donburi.Entry, n)
 			for i := range entries {
-				e := w.Entry(w.Create(render.Component, sprite.Component, transform.Component))
+				e := w.Entry(w.Create(rendering.Component, sprite.Component, transform.Component))
 				sprite.Component.Get(e).SetHandle(1)
 				t := transform.Component.Get(e)
 				t.SetPosition(float64(i%400), float64(i%300))
@@ -29,10 +29,10 @@ func BenchmarkRenderAdapterEnqueue(b *testing.B) {
 			}
 			transform.Update(w)
 
-			var q render.Queue
+			var q rendering.Queue
 			b.ReportAllocs()
 			for b.Loop() {
-				a.Enqueue(&q, entries, render.View{})
+				a.Enqueue(&q, entries, rendering.View{})
 				q.Reset()
 			}
 		})

@@ -1,6 +1,6 @@
 //go:build integration
 
-package render_test
+package rendering_test
 
 import (
 	"image/color"
@@ -9,7 +9,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 
-	"github.com/adm87/finch/pkg/ecs/render"
+	"github.com/adm87/finch/pkg/ecs/rendering"
 	"github.com/adm87/finch/pkg/internal/ebitentest"
 )
 
@@ -39,15 +39,15 @@ func TestIntegrationDrawOrder(t *testing.T) {
 	got := make([]color.Color, len(tests))
 	ebitentest.InFrame(t, func() {
 		for i, tt := range tests {
-			p := render.NewPipeline(render.AdapterFunc(func(q *render.Queue, _ []*donburi.Entry, _ render.View) {
+			p := rendering.NewPipeline(rendering.AdapterFunc(func(q *rendering.Queue, _ []*donburi.Entry, _ rendering.View) {
 				for _, d := range tt.draws {
 					img := ebiten.NewImage(1, 1)
 					img.Fill(d.color)
-					q.Push(render.Command{Image: img, Layer: d.layer, Depth: d.depth})
+					q.Push(rendering.Command{Image: img, Layer: d.layer, Depth: d.depth})
 				}
 			}))
 			target := ebiten.NewImage(1, 1)
-			p.Draw(target, render.View{}, nil)
+			p.Draw(target, rendering.View{}, nil)
 			got[i] = target.At(0, 0)
 		}
 	})

@@ -9,7 +9,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 
-	"github.com/adm87/finch/pkg/ecs/render"
+	"github.com/adm87/finch/pkg/ecs/rendering"
 	"github.com/adm87/finch/pkg/ecs/sprite"
 	"github.com/adm87/finch/pkg/ecs/transform"
 	"github.com/adm87/finch/pkg/internal/ebitentest"
@@ -26,27 +26,27 @@ var (
 func TestIntegrationRenderAdapter(t *testing.T) {
 	tests := []struct {
 		name  string
-		setup func(e *donburi.Entry, view *render.View)
+		setup func(e *donburi.Entry, view *rendering.View)
 		x, y  int
 		want  color.RGBA
 	}{
 		{"draws at position", nil, 4, 4, white},
 		{"nothing before position", nil, 3, 3, blank},
-		{"anchor", func(e *donburi.Entry, _ *render.View) {
+		{"anchor", func(e *donburi.Entry, _ *rendering.View) {
 			sprite.Component.Get(e).SetAnchor(0.5, 0.5)
 		}, 3, 3, white},
-		{"color", func(e *donburi.Entry, _ *render.View) {
+		{"color", func(e *donburi.Entry, _ *rendering.View) {
 			var c ebiten.ColorScale
 			c.Scale(1, 0, 0, 1)
 			sprite.Component.Get(e).SetColor(c)
 		}, 4, 4, red},
-		{"view matrix", func(_ *donburi.Entry, view *render.View) {
+		{"view matrix", func(_ *donburi.Entry, view *rendering.View) {
 			view.Matrix.Translate(2, 0)
 		}, 6, 4, white},
-		{"image not loaded", func(e *donburi.Entry, _ *render.View) {
+		{"image not loaded", func(e *donburi.Entry, _ *rendering.View) {
 			sprite.Component.Get(e).SetHandle(0)
 		}, 4, 4, blank},
-		{"no transform", func(e *donburi.Entry, _ *render.View) {
+		{"no transform", func(e *donburi.Entry, _ *rendering.View) {
 			e.RemoveComponent(transform.Component)
 		}, 0, 0, blank},
 	}
@@ -55,14 +55,14 @@ func TestIntegrationRenderAdapter(t *testing.T) {
 	ebitentest.InFrame(t, func() {
 		square := ebiten.NewImage(2, 2)
 		square.Fill(white)
-		p := render.NewPipeline(sprite.NewRenderAdapter(images{square}))
+		p := rendering.NewPipeline(sprite.NewRenderAdapter(images{square}))
 
 		for i, tt := range tests {
 			w := donburi.NewWorld()
-			e := w.Entry(w.Create(render.Component, sprite.Component, transform.Component))
+			e := w.Entry(w.Create(rendering.Component, sprite.Component, transform.Component))
 			sprite.Component.Get(e).SetHandle(1)
 			transform.Component.Get(e).SetPosition(4, 4)
-			var view render.View
+			var view rendering.View
 			if tt.setup != nil {
 				tt.setup(e, &view)
 			}

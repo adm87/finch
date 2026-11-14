@@ -74,20 +74,20 @@ func TestMatrixScalesAndRotatesAroundOrigin(t *testing.T) {
 		wantX, wantY float64
 	}{
 		{"position", func(t *Transform) { t.SetPosition(10, 20) }, 0, 0, 10, 20},
-		{"origin stays put", func(t *Transform) {
+		{"origin lands on position", func(t *Transform) {
 			t.SetPosition(10, 20)
 			t.SetOrigin(4, 4)
 			t.SetScale(3, 3)
 			t.SetAngle(math.Pi / 2)
-		}, 4, 4, 14, 24},
+		}, 4, 4, 10, 20},
 		{"scale around origin", func(t *Transform) {
 			t.SetOrigin(4, 4)
 			t.SetScale(2, 2)
-		}, 5, 4, 6, 4},
+		}, 5, 4, 2, 0},
 		{"rotate around origin", func(t *Transform) {
 			t.SetOrigin(4, 4)
 			t.SetAngle(math.Pi / 2)
-		}, 5, 4, 4, 5},
+		}, 5, 4, 0, 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

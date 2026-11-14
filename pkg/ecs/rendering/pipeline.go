@@ -1,4 +1,4 @@
-package render
+package rendering
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
@@ -38,7 +38,7 @@ func NewPipeline(adapters ...Adapter) *Pipeline {
 	return &Pipeline{adapters: adapters}
 }
 
-// Draw hands each adapter the entries with a visible Layering, then draws
+// Draw hands each adapter the entries with a visible Rendering, then draws
 // what they queued. The queue is cleared afterward, even if an adapter panics.
 func (p *Pipeline) Draw(target *ebiten.Image, view View, entries []*donburi.Entry) {
 	defer p.queue.Reset()

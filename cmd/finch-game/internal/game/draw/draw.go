@@ -7,10 +7,10 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"github.com/adm87/finch/cmd/finch-game/internal/devinfo"
+	"github.com/adm87/finch/cmd/finch-game/internal/game/camera"
 	"github.com/adm87/finch/cmd/finch-game/internal/game/effects"
 	"github.com/adm87/finch/pkg/display"
 	"github.com/adm87/finch/pkg/ecs"
-	"github.com/adm87/finch/pkg/ecs/render"
 	"github.com/adm87/finch/pkg/engine"
 )
 
@@ -40,7 +40,7 @@ func (d *Drawer) Pipeline() engine.Drawer {
 
 func (d *Drawer) drawWorld() engine.DrawFunc {
 	return func(target *ebiten.Image) {
-		d.world.Render(target, render.View{Bounds: d.screen.Visible()})
+		d.world.Render(target, camera.View(d.world.Donburi(), d.screen.Visible()))
 	}
 }
 

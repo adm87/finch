@@ -6,7 +6,7 @@ import (
 	"github.com/adm87/finch/cmd/finch-game/internal/game/shuffle"
 	"github.com/adm87/finch/pkg/ecs"
 	"github.com/adm87/finch/pkg/ecs/bounds"
-	"github.com/adm87/finch/pkg/ecs/render"
+	"github.com/adm87/finch/pkg/ecs/rendering"
 	"github.com/adm87/finch/pkg/ecs/sprite"
 	"github.com/adm87/finch/pkg/ecs/transform"
 	"github.com/adm87/finch/pkg/geom"
@@ -17,7 +17,7 @@ func Scatter(world *ecs.World, images sprite.Images, area geom.Rect, count int) 
 	w := world.Donburi()
 	for i := range count {
 		e := w.Entry(w.Create(
-			render.Component,
+			rendering.Component,
 			sprite.Component,
 			transform.Component,
 			shuffle.Component,
