@@ -15,4 +15,4 @@ display:
     width: 640
     height: 360
     resolution_scale: 1.0
-    clear_color: "#6495EDFF"
+    clear_color: "#000000FF"

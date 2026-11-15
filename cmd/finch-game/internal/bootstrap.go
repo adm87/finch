@@ -13,7 +13,6 @@ import (
 	"github.com/adm87/finch/cmd/finch-game/internal/game/assets"
 	"github.com/adm87/finch/cmd/finch-game/internal/game/camera"
 	"github.com/adm87/finch/cmd/finch-game/internal/game/draw"
-	"github.com/adm87/finch/cmd/finch-game/internal/game/scene"
 	"github.com/adm87/finch/cmd/finch-game/internal/game/update"
 	"github.com/adm87/finch/content/embedded"
 	"github.com/adm87/finch/pkg/display"
@@ -42,8 +41,6 @@ func boot(config game.Config) error {
 	screen := display.NewScreen(config.Display.Screen)
 
 	camera.New(world.Donburi(), 0, 0)
-
-	scene.Scatter(world, images, screen.Visible(), 50)
 
 	drawer := draw.New(world, screen)
 	updater := update.New(world, screen)
