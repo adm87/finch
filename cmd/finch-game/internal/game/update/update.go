@@ -3,7 +3,6 @@ package update
 import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/yohamta/donburi"
 
 	"github.com/adm87/finch/cmd/finch-game/internal/game/camera"
 	"github.com/adm87/finch/cmd/finch-game/internal/game/shuffle"
@@ -15,14 +14,12 @@ import (
 type Updater struct {
 	world  *ecs.World
 	screen *display.Screen
-	camera *donburi.Entry
 }
 
-func New(world *ecs.World, screen *display.Screen, camera *donburi.Entry) *Updater {
+func New(world *ecs.World, screen *display.Screen) *Updater {
 	return &Updater{
 		world:  world,
 		screen: screen,
-		camera: camera,
 	}
 }
 

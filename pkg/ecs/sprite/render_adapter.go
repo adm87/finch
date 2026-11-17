@@ -4,13 +4,14 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
 
+	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/ecs/rendering"
 	"github.com/adm87/finch/pkg/ecs/transform"
 )
 
 // Images resolves sprite handles to loaded images.
 type Images interface {
-	Get(handle uint64) *ebiten.Image
+	Get(handle assets.Handle[*ebiten.Image]) (*ebiten.Image, bool)
 }
 
 // NewRenderAdapter draws entities that have a Sprite and a Transform.
@@ -26,8 +27,8 @@ func NewRenderAdapter(images Images) rendering.AdapterFunc {
 
 			s := Component.Get(e)
 
-			img := images.Get(s.handle)
-			if img == nil {
+			img, ok := images.Get(s.handle)
+			if !ok {
 				continue // not loaded yet
 			}
 

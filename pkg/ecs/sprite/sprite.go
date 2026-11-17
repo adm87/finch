@@ -3,11 +3,13 @@ package sprite
 import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/donburi"
+
+	"github.com/adm87/finch/pkg/assets"
 )
 
 // Sprite is an image drawn at an entity's transform.
 type Sprite struct {
-	handle  uint64
+	handle  assets.Handle[*ebiten.Image]
 	anchorX float64
 	anchorY float64
 	color   ebiten.ColorScale
@@ -15,7 +17,7 @@ type Sprite struct {
 
 var Component = donburi.NewComponentType[Sprite]()
 
-func (s *Sprite) Handle() uint64 {
+func (s *Sprite) Handle() assets.Handle[*ebiten.Image] {
 	return s.handle
 }
 
@@ -28,7 +30,7 @@ func (s *Sprite) Anchor() (x, y float64) {
 	return s.anchorX, s.anchorY
 }
 
-func (s *Sprite) SetHandle(handle uint64) {
+func (s *Sprite) SetHandle(handle assets.Handle[*ebiten.Image]) {
 	s.handle = handle
 }
 
