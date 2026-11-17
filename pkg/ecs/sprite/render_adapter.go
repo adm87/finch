@@ -14,8 +14,8 @@ type Images interface {
 	Get(handle assets.Handle[*ebiten.Image]) (*ebiten.Image, bool)
 }
 
-// NewRenderAdapter draws entities that have a Sprite and a Transform.
-func NewRenderAdapter(images Images) rendering.AdapterFunc {
+// RenderAdapter draws entities that have a Sprite and a Transform.
+func RenderAdapter(images Images) rendering.AdapterFunc {
 	if images == nil {
 		panic("sprite: nil images")
 	}

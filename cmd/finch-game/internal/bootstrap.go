@@ -46,7 +46,7 @@ func boot(config game.Config, fsys fs.FS) error {
 	}
 
 	renderPipeline := rendering.NewPipeline(
-		sprite.NewRenderAdapter(imgs),
+		sprite.RenderAdapter(imgs),
 	)
 
 	world := ecs.NewWorld(renderPipeline)

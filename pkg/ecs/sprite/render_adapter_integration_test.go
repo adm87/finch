@@ -55,7 +55,7 @@ func TestIntegrationRenderAdapter(t *testing.T) {
 	ebitentest.InFrame(t, func() {
 		square := ebiten.NewImage(2, 2)
 		square.Fill(white)
-		p := rendering.NewPipeline(sprite.NewRenderAdapter(images{square}))
+		p := rendering.NewPipeline(sprite.RenderAdapter(images{square}))
 
 		for i, tt := range tests {
 			w := donburi.NewWorld()

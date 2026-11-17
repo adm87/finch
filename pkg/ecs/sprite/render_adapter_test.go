@@ -9,8 +9,8 @@ import (
 func TestNewRenderAdapterPanicsOnNilImages(t *testing.T) {
 	defer func() {
 		if recover() == nil {
-			t.Error("NewRenderAdapter(nil) did not panic")
+			t.Error("RenderAdapter(nil) did not panic")
 		}
 	}()
-	sprite.NewRenderAdapter(nil)
+	sprite.RenderAdapter(nil)
 }

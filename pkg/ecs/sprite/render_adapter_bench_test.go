@@ -16,7 +16,7 @@ func BenchmarkRenderAdapterEnqueue(b *testing.B) {
 	for _, n := range []int{100, 1_000, 10_000} {
 		b.Run(fmt.Sprintf("entities=%d", n), func(b *testing.B) {
 			w := donburi.NewWorld()
-			a := sprite.NewRenderAdapter(images{ebiten.NewImage(10, 10)})
+			a := sprite.RenderAdapter(images{ebiten.NewImage(10, 10)})
 
 			entries := make([]*donburi.Entry, n)
 			for i := range entries {
