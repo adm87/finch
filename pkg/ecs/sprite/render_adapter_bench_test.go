@@ -10,18 +10,19 @@ import (
 	"github.com/adm87/finch/pkg/ecs/rendering"
 	"github.com/adm87/finch/pkg/ecs/sprite"
 	"github.com/adm87/finch/pkg/ecs/transform"
+	"github.com/adm87/finch/pkg/images"
 )
 
 func BenchmarkRenderAdapterEnqueue(b *testing.B) {
 	for _, n := range []int{100, 1_000, 10_000} {
 		b.Run(fmt.Sprintf("entities=%d", n), func(b *testing.B) {
 			w := donburi.NewWorld()
-			a := sprite.RenderAdapter(images{ebiten.NewImage(10, 10)})
+			a := sprite.RenderAdapter(textures{images.NewTexture(ebiten.NewImage(10, 10))})
 
 			entries := make([]*donburi.Entry, n)
 			for i := range entries {
 				e := w.Entry(w.Create(rendering.Component, sprite.Component, transform.Component))
-				sprite.Component.Get(e).SetHandle(1)
+				sprite.Component.Get(e).SetTexture(1)
 				t := transform.Component.Get(e)
 				t.SetPosition(float64(i%400), float64(i%300))
 				t.SetAngle(float64(i))

@@ -3,6 +3,7 @@
 package sprite_test
 
 import (
+	"image"
 	"image/color"
 	"testing"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/adm87/finch/pkg/ecs/rendering"
 	"github.com/adm87/finch/pkg/ecs/sprite"
 	"github.com/adm87/finch/pkg/ecs/transform"
+	"github.com/adm87/finch/pkg/images"
 	"github.com/adm87/finch/pkg/internal/ebitentest"
 )
 
@@ -40,11 +42,14 @@ func TestIntegrationRenderAdapter(t *testing.T) {
 			c.Scale(1, 0, 0, 1)
 			sprite.Component.Get(e).SetColor(c)
 		}, 4, 4, red},
+		{"frame offset", func(e *donburi.Entry, _ *rendering.View) {
+			sprite.Component.Get(e).SetFrame(1)
+		}, 6, 4, white},
 		{"view matrix", func(_ *donburi.Entry, view *rendering.View) {
 			view.Matrix.Translate(2, 0)
 		}, 6, 4, white},
-		{"image not loaded", func(e *donburi.Entry, _ *rendering.View) {
-			sprite.Component.Get(e).SetHandle(0)
+		{"texture not loaded", func(e *donburi.Entry, _ *rendering.View) {
+			sprite.Component.Get(e).SetTexture(0)
 		}, 4, 4, blank},
 		{"no transform", func(e *donburi.Entry, _ *rendering.View) {
 			e.RemoveComponent(transform.Component)
@@ -55,12 +60,20 @@ func TestIntegrationRenderAdapter(t *testing.T) {
 	ebitentest.InFrame(t, func() {
 		square := ebiten.NewImage(2, 2)
 		square.Fill(white)
-		p := rendering.NewPipeline(sprite.RenderAdapter(images{square}))
+		tex := images.NewTexture(square)
+		// frame 1 is the same square trimmed 2px in from the left of a 4x2 frame
+		if err := tex.SliceRegions([]images.Region{
+			{Rect: image.Rect(0, 0, 2, 2), Size: image.Pt(2, 2)},
+			{Rect: image.Rect(0, 0, 2, 2), Offset: image.Pt(2, 0), Size: image.Pt(4, 2)},
+		}); err != nil {
+			t.Fatalf("SliceRegions() = %v, want nil", err)
+		}
+		p := rendering.NewPipeline(sprite.RenderAdapter(textures{tex}))
 
 		for i, tt := range tests {
 			w := donburi.NewWorld()
 			e := w.Entry(w.Create(rendering.Component, sprite.Component, transform.Component))
-			sprite.Component.Get(e).SetHandle(1)
+			sprite.Component.Get(e).SetTexture(1)
 			transform.Component.Get(e).SetPosition(4, 4)
 			var view rendering.View
 			if tt.setup != nil {

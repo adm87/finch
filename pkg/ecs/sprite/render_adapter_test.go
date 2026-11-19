@@ -6,7 +6,7 @@ import (
 	"github.com/adm87/finch/pkg/ecs/sprite"
 )
 
-func TestNewRenderAdapterPanicsOnNilImages(t *testing.T) {
+func TestRenderAdapterPanicsOnNilTextures(t *testing.T) {
 	defer func() {
 		if recover() == nil {
 			t.Error("RenderAdapter(nil) did not panic")

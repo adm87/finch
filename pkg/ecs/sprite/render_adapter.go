@@ -7,17 +7,18 @@ import (
 	"github.com/adm87/finch/pkg/assets"
 	"github.com/adm87/finch/pkg/ecs/rendering"
 	"github.com/adm87/finch/pkg/ecs/transform"
+	"github.com/adm87/finch/pkg/images"
 )
 
-// Images resolves sprite handles to loaded images.
-type Images interface {
-	Get(handle assets.Handle[*ebiten.Image]) (*ebiten.Image, bool)
+// Textures resolves sprite handles to loaded textures.
+type Textures interface {
+	Get(handle assets.Handle[*images.Texture]) (*images.Texture, bool)
 }
 
 // RenderAdapter draws entities that have a Sprite and a Transform.
-func RenderAdapter(images Images) rendering.AdapterFunc {
-	if images == nil {
-		panic("sprite: nil images")
+func RenderAdapter(textures Textures) rendering.AdapterFunc {
+	if textures == nil {
+		panic("sprite: nil textures")
 	}
 	return func(queue *rendering.Queue, entries []*donburi.Entry, view rendering.View) {
 		for _, e := range entries {
@@ -27,22 +28,22 @@ func RenderAdapter(images Images) rendering.AdapterFunc {
 
 			s := Component.Get(e)
 
-			img, ok := images.Get(s.handle)
+			tex, ok := textures.Get(s.texture)
 			if !ok {
 				continue // not loaded yet
 			}
 
-			size := img.Bounds().Size()
-			w, h := float64(size.X), float64(size.Y)
+			f := tex.Frame(s.frame)
+			w, h := float64(f.Size.X), float64(f.Size.Y)
 
 			var geo ebiten.GeoM
-			geo.Translate(-s.anchorX*w, -s.anchorY*h)
+			geo.Translate(float64(f.Offset.X)-s.anchorX*w, float64(f.Offset.Y)-s.anchorY*h)
 			geo.Concat(transform.Component.Get(e).Matrix())
 			geo.Concat(view.Matrix)
 
 			r := rendering.Component.Get(e)
 			queue.Push(rendering.Command{
-				Image: img,
+				Image: f.Image,
 				Options: ebiten.DrawImageOptions{
 					GeoM:       geo,
 					ColorScale: s.color,

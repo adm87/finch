@@ -45,6 +45,10 @@ func boot(config game.Config, fsys fs.FS) error {
 		return fmt.Errorf("register images: %w", err)
 	}
 
+	if _, err := router.Load(config.Bundle...); err != nil {
+		return fmt.Errorf("load bundle: %w", err)
+	}
+
 	renderPipeline := rendering.NewPipeline(
 		sprite.RenderAdapter(imgs),
 	)

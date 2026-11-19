@@ -16,3 +16,7 @@ display:
     height: 360
     resolution_scale: 1.0
     clear_color: "#000000FF"
+
+# Static asset bundle. Loads on boot.
+bundle:
+  - images/default_10x10.png

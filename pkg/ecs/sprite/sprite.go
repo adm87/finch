@@ -5,11 +5,13 @@ import (
 	"github.com/yohamta/donburi"
 
 	"github.com/adm87/finch/pkg/assets"
+	"github.com/adm87/finch/pkg/images"
 )
 
-// Sprite is an image drawn at an entity's transform.
+// Sprite is a texture frame drawn at an entity's transform.
 type Sprite struct {
-	handle  assets.Handle[*ebiten.Image]
+	texture assets.Handle[*images.Texture]
+	frame   int
 	anchorX float64
 	anchorY float64
 	color   ebiten.ColorScale
@@ -17,21 +19,29 @@ type Sprite struct {
 
 var Component = donburi.NewComponentType[Sprite]()
 
-func (s *Sprite) Handle() assets.Handle[*ebiten.Image] {
-	return s.handle
+func (s *Sprite) Texture() assets.Handle[*images.Texture] {
+	return s.texture
+}
+
+func (s *Sprite) Frame() int {
+	return s.frame
 }
 
 func (s *Sprite) Color() ebiten.ColorScale {
 	return s.color
 }
 
-// Anchor is the pivot as a fraction of the image size, so 0.5, 0.5 is the centre.
+// Anchor is the pivot as a fraction of the frame size, so 0.5, 0.5 is the centre.
 func (s *Sprite) Anchor() (x, y float64) {
 	return s.anchorX, s.anchorY
 }
 
-func (s *Sprite) SetHandle(handle assets.Handle[*ebiten.Image]) {
-	s.handle = handle
+func (s *Sprite) SetTexture(texture assets.Handle[*images.Texture]) {
+	s.texture = texture
+}
+
+func (s *Sprite) SetFrame(frame int) {
+	s.frame = frame
 }
 
 func (s *Sprite) SetColor(c ebiten.ColorScale) {
